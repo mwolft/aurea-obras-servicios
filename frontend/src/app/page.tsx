@@ -1,26 +1,42 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 
 import styles from "./page.module.css";
 
+const siteUrl = "https://www.aureaobrasyservicios.com";
+const socialImageUrl = `${siteUrl}/brand/aurea-social.png`;
+const socialDescription =
+  "AUREA Obras y Servicios S.L. prepara soluciones para obras y reformas, jardinería y alquiler de herramientas.";
+
 export const metadata: Metadata = {
   title: "AUREA Obras y Servicios S.L. | Obras, jardinería y alquiler de herramientas",
-  description:
-    "AUREA Obras y Servicios S.L. prepara soluciones para obras y reformas, jardinería y alquiler de herramientas.",
+  description: socialDescription,
+  openGraph: {
+    title: "AUREA Obras y Servicios S.L.",
+    description: socialDescription,
+    url: siteUrl,
+    type: "website",
+    images: [
+      {
+        url: socialImageUrl,
+        width: 1200,
+        height: 630,
+        alt: "AUREA Obras y Servicios S.L.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AUREA Obras y Servicios S.L.",
+    description: socialDescription,
+    images: [socialImageUrl],
+  },
 };
 
 export default function Home() {
   return (
     <div className={styles.page}>
       <header className={styles.navbar}>
-        <Image
-          alt="AUREA Obras y Servicios S.L."
-          className={styles.logo}
-          height={48}
-          priority
-          src="/brand/aurea-logo.jpg"
-          width={48}
-        />
+        <span className={styles.brand}>AUREA Obras y Servicios S.L.</span>
         <span className={styles.navStatus}>Próximamente</span>
       </header>
 

@@ -21,11 +21,10 @@
   padding: 1.5rem 0;
 }
 
-.logo {
-  display: block;
-  width: 3rem;
-  height: 3rem;
-  object-fit: contain;
+.brand {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 
 .navStatus,
