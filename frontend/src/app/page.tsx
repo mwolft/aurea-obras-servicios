@@ -36,7 +36,6 @@ export default function Home() {
   return (
     <div className={styles.page}>
       <header className={styles.navbar}>
-        <span className={styles.brand}>AUREA Obras y Servicios S.L.</span>
         <span className={styles.navStatus}>Próximamente</span>
       </header>
 
