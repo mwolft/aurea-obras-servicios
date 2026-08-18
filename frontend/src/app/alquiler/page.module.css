@@ -1,0 +1,94 @@
+.header {
+  margin-bottom: 2rem;
+}
+
+.eyebrow,
+.category {
+  color: #555;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0.5rem 0;
+}
+
+.header p:last-child,
+.description,
+.options {
+  color: #555;
+}
+
+.message {
+  padding: 1rem;
+  border: 1px solid #d4d4d4;
+  border-radius: 0.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid #d4d4d4;
+  border-radius: 0.5rem;
+}
+
+.image,
+.placeholder {
+  display: block;
+  width: 100%;
+  height: 12rem;
+}
+
+.image {
+  object-fit: cover;
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  color: #666;
+  background: #f2f2f2;
+}
+
+.content {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.price {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.available,
+.unavailable {
+  width: fit-content;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.available {
+  color: #0f5132;
+  background: #d1e7dd;
+}
+
+.unavailable {
+  color: #842029;
+  background: #f8d7da;
+}
+
+.options {
+  display: grid;
+  gap: 0.25rem;
+  padding-left: 1.25rem;
+}
