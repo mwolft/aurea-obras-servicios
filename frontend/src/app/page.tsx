@@ -1,18 +1,26 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "AUREA Obras y Servicios | Obras, jardinería y alquiler de herramientas",
+  title: "AUREA Obras y Servicios S.L. | Obras, jardinería y alquiler de herramientas",
   description:
-    "AUREA Obras y Servicios prepara soluciones para obras y reformas, jardinería y alquiler de herramientas.",
+    "AUREA Obras y Servicios S.L. prepara soluciones para obras y reformas, jardinería y alquiler de herramientas.",
 };
 
 export default function Home() {
   return (
     <div className={styles.page}>
       <header className={styles.navbar}>
-        <span className={styles.brand}>AUREA Obras y Servicios</span>
+        <Image
+          alt="AUREA Obras y Servicios S.L."
+          className={styles.logo}
+          height={48}
+          priority
+          src="/brand/aurea-logo.jpg"
+          width={48}
+        />
         <span className={styles.navStatus}>Próximamente</span>
       </header>
 
@@ -22,7 +30,7 @@ export default function Home() {
             <p className={styles.eyebrow}>En construcción</p>
             <h1 id="hero-title">Estamos construyendo algo sólido.</h1>
             <p className={styles.intro}>
-              AUREA Obras y Servicios prepara una forma cercana y práctica de encontrar apoyo para
+              AUREA Obras y Servicios S.L. prepara una forma cercana y práctica de encontrar apoyo para
               obras y reformas, jardinería y alquiler de herramientas.
             </p>
             <p className={styles.comingSoon}>Muy pronto compartiremos más novedades.</p>
@@ -50,7 +58,9 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className={styles.footer}>© {new Date().getFullYear()} AUREA Obras y Servicios</footer>
+      <footer className={styles.footer}>
+        © {new Date().getFullYear()} AUREA Obras y Servicios S.L.
+      </footer>
     </div>
   );
 }
