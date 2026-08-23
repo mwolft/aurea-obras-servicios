@@ -1,0 +1,27 @@
+.section { display: grid; gap: var(--space-4); padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.section h2, .reservationForm h3 { color: var(--color-primary); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.035em; }
+.section > p:not(.step), .reservationForm > p:not(.step) { color: var(--color-text-muted); line-height: 1.6; }
+.step { width: fit-content; padding: 0.3rem 0.5rem; border-radius: 999px; color: var(--color-accent-dark); background: #fff0e6; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); align-items: end; padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-background); }
+.form label, .reservationForm label { display: grid; gap: 0.45rem; color: var(--color-primary); font-size: 0.92rem; font-weight: 800; }
+.form input, .form button, .reservationForm input, .reservationForm textarea, .reservationForm button { min-height: 3rem; padding: 0.65rem 0.75rem; border-radius: var(--radius-sm); font: inherit; }
+.form input, .reservationForm input, .reservationForm textarea { border: 1px solid var(--color-border); color: var(--color-text); background: var(--color-surface); }
+.reservationForm textarea { min-height: 6rem; resize: vertical; }
+.form button, .reservationForm button { border: 0; color: var(--color-surface); background: var(--color-accent); font-weight: 800; cursor: pointer; }
+.form button:hover, .reservationForm button:hover { background: var(--color-accent-dark); }
+.form button:disabled, .reservationForm button:disabled { cursor: wait; opacity: 0.65; }
+.reservationForm { display: grid; gap: var(--space-4); padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
+.reservationForm > p:not(.step) { margin-top: -0.5rem; }
+.fulfillment { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); padding: 0; margin: 0; border: 0; }
+.fulfillment legend { grid-column: 1 / -1; margin-bottom: var(--space-2); color: var(--color-primary); font-weight: 800; }
+.fulfillment label { grid-template-columns: auto 1fr; align-items: start; min-height: 5.25rem; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-background); font-weight: 700; }
+.fulfillment label:first-of-type::after { content: "Sin transporte"; grid-column: 2; color: var(--color-text-muted); font-size: 0.82rem; font-weight: 400; }
+.fulfillment label:last-of-type::after { content: "Revisaremos la dirección y los kilómetros"; grid-column: 2; color: var(--color-text-muted); font-size: 0.82rem; font-weight: 400; }
+.fulfillment input, .checkbox input { min-height: auto !important; padding: 0; margin-top: 0.25rem; accent-color: var(--color-primary); }
+.checkbox { grid-template-columns: auto 1fr; align-items: start; color: var(--color-text) !important; font-weight: 600 !important; }
+.pending, .available, .unavailable { width: fit-content; padding: 0.5rem 0.65rem; border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 800; }
+.pending { color: var(--color-text-muted); background: var(--color-background); }.available { color: #155d3e; background: #e3f3ea; }.unavailable { color: #842029; background: #fbe8e9; }
+.fieldError, .formError { color: #842029 !important; font-size: 0.9rem; font-weight: 700; }.formError { padding: var(--space-3); border-left: 0.25rem solid #a13a2a; border-radius: var(--radius-sm); background: #fbe8e9; }
+.summary { display: grid; gap: 0; margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }.summary div { display: grid; grid-template-columns: minmax(10rem, 1fr) 1fr; gap: var(--space-4); padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-border); }.summary div:last-child { border-bottom: 0; }.summary dt { color: var(--color-text-muted); font-weight: 700; }.summary dd { margin: 0; color: var(--color-primary); font-weight: 800; }.summary div:nth-child(5) dd { color: var(--color-accent-dark); font-size: 1.15rem; }
+.notice { padding: var(--space-4); border-left: 0.3rem solid var(--color-accent); color: var(--color-text) !important; background: #fff0e6; }
+@media (max-width: 700px) { .form, .fulfillment { grid-template-columns: 1fr; } .form { padding: var(--space-3); } .fulfillment legend { grid-column: auto; } .summary div { grid-template-columns: 1fr; gap: 0.2rem; } }

@@ -1,0 +1,46 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<h3>Revisar transporte de reserva #{{ reservation.id }}</h3>
+
+<p>
+  <strong>Herramienta:</strong> {{ reservation.tool.name }}<br>
+  <strong>Cliente:</strong> {{ reservation.customer_name }} ({{ reservation.customer_email }})<br>
+  <strong>Fechas:</strong> {{ reservation.start_date }} — {{ reservation.end_date }}<br>
+  <strong>Dirección de entrega:</strong> {{ reservation.delivery_address }}<br>
+  <strong>Tarifa actual:</strong>
+  {% if reservation.tool.delivery_price_per_km is not none %}
+    {{ "%.2f"|format(reservation.tool.delivery_price_per_km) }} €/km
+  {% else %}
+    No configurada
+  {% endif %}
+</p>
+
+<p>
+  Introduce el total de kilómetros facturables de ida y vuelta. El sistema calculará y congelará
+  automáticamente el presupuesto usando la tarifa actual de la herramienta.
+</p>
+
+<form method="post" class="form-horizontal">
+  <div class="form-group">
+    <label class="col-md-2 control-label" for="billable_km">Kilómetros facturables</label>
+    <div class="col-md-4">
+      <input
+        class="form-control"
+        id="billable_km"
+        name="billable_km"
+        type="text"
+        inputmode="decimal"
+        required
+        autocomplete="off"
+      >
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-md-offset-2 col-md-10">
+      <button class="btn btn-primary" type="submit">Preparar pago</button>
+      <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Cancelar</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

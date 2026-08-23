@@ -1,0 +1,76 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+  <div class="container-fluid">
+    <h2>Agenda</h2>
+    <p class="text-muted">Ocupación operativa por herramienta en el rango seleccionado.</p>
+
+    <form class="form-inline well" method="get" action="{{ url_for('calendar.index') }}">
+      <div class="form-group">
+        <label for="start_date">Fecha inicio</label>
+        <input class="form-control" id="start_date" name="start_date" required type="date" value="{{ start_date }}">
+      </div>
+      <div class="form-group">
+        <label for="end_date">Fecha fin</label>
+        <input class="form-control" id="end_date" name="end_date" required type="date" value="{{ end_date }}">
+      </div>
+      <div class="form-group">
+        <label for="tool_id">Herramienta</label>
+        <select class="form-control" id="tool_id" name="tool_id">
+          <option value="">Todas</option>
+          {% for tool in tools %}
+            <option value="{{ tool.id }}" {% if tool.id == selected_tool_id %}selected{% endif %}>{{ tool.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Consultar agenda</button>
+    </form>
+
+    {% if error_message %}
+      <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+    {% elif not groups %}
+      <div class="alert alert-info" role="status">
+        No hay reservas ni bloqueos administrativos para este rango{% if selected_tool_id %} y herramienta{% endif %}.
+      </div>
+    {% else %}
+      {% for group in groups %}
+        <section class="panel panel-default">
+          <div class="panel-heading">
+            <strong>{{ group.tool_name }}</strong>
+          </div>
+          <div class="list-group">
+            {% for event in group.events %}
+              <article class="list-group-item">
+                <div class="clearfix">
+                  <strong>{{ event.start_date.strftime('%d/%m/%Y') }} – {{ event.end_date.strftime('%d/%m/%Y') }}</strong>
+                  {% if event.type == 'reservation' %}
+                    {% if event.status_label in ('Pago caducado', 'Caducada', 'Cancelada') %}
+                      {% set badge_class = 'label-default' %}
+                    {% elif event.status == 'confirmed' %}
+                      {% set badge_class = 'label-success' %}
+                    {% elif event.status == 'pending_review' %}
+                      {% set badge_class = 'label-warning' %}
+                    {% else %}
+                      {% set badge_class = 'label-primary' %}
+                    {% endif %}
+                    <span class="label {{ badge_class }} pull-right">{{ event.status_label }}</span>
+                    <p class="mb-0">
+                      Reserva #{{ event.id }}
+                      {% if event.customer_name %} · Cliente: {{ event.customer_name }}{% endif %}
+                      {% if event.fulfillment_method %} · {{ 'Recogida' if event.fulfillment_method == 'pickup' else 'Transporte' }}{% endif %}
+                    </p>
+                    <a href="{{ url_for('reservation.details_view', id=event.id) }}">Ver reserva</a>
+                  {% else %}
+                    <span class="label label-warning pull-right">Bloqueo administrativo</span>
+                    <p class="mb-0">Motivo: {{ event.reason }}</p>
+                    <a href="{{ url_for('toolblock.edit_view', id=event.id) }}">Ver bloqueo</a>
+                  {% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    {% endif %}
+  </div>
+{% endblock %}

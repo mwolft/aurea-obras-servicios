@@ -1,0 +1,26 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<h3>Cancelar reserva #{{ reservation.id }}</h3>
+
+<p>
+  <strong>Herramienta:</strong> {{ reservation.tool.name }}<br>
+  <strong>Cliente:</strong> {{ reservation.customer_name }} ({{ reservation.customer_email }})<br>
+  <strong>Fechas:</strong> {{ reservation.start_date }} — {{ reservation.end_date }}<br>
+  <strong>Estado actual:</strong> {{ status_label }}
+</p>
+
+<p>
+  Esta acción cambia el estado de la reserva a cancelada y libera su disponibilidad.
+  No procesa pagos, reembolsos ni fianzas.
+</p>
+
+<form method="post" class="form-horizontal">
+  <div class="form-group">
+    <div class="col-md-10">
+      <button class="btn btn-warning" type="submit">Confirmar cancelación</button>
+      <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Volver</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

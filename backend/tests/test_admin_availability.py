@@ -14,6 +14,10 @@ class AdminAvailabilityTestCase(unittest.TestCase):
                 "APP_ENV": app_env,
                 "DATABASE_URL": "sqlite:///:memory:",
                 "SECRET_KEY": "admin-test-secret",
+                "FRONTEND_ORIGIN": "https://www.example.test",
+                "CLOUDINARY_CLOUD_NAME": "test-cloud",
+                "CLOUDINARY_API_KEY": "test-key",
+                "CLOUDINARY_API_SECRET": "test-secret",
             },
             clear=False,
         ):
