@@ -1,8 +1,58 @@
 {% extends 'admin/base.html' %}
 
-{% block access_control %}
-  <form action="{{ url_for('admin_logout') }}" method="post" class="form-inline ml-auto">
-    {{ admin_logout_form.csrf_token }}
-    <button class="btn btn-outline-light btn-sm" type="submit">Cerrar sesión</button>
-  </form>
+{% block head_css %}
+  {{ super() }}
+  <link href="{{ url_for('static', filename='admin/admin-header.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block page_body %}
+  <div class="container{% if theme.fluid %}-fluid{% endif %}">
+    <header class="aurea-admin-header">
+      <div class="aurea-admin-topbar">
+        <a class="aurea-admin-brand" href="{{ admin_view.admin.url }}">
+          <img src="{{ url_for('static', filename='admin/aurea-icon.png') }}" alt="" aria-hidden="true">
+          <span>AUREA Administración</span>
+        </a>
+
+        <div class="aurea-admin-session">
+          <span class="aurea-admin-user">{{ admin_current_user.name or admin_current_user.email }}</span>
+          <form action="{{ url_for('admin_logout') }}" method="post">
+            {{ admin_logout_form.csrf_token }}
+            <button class="btn btn-outline-light btn-sm" type="submit">Cerrar sesión</button>
+          </form>
+        </div>
+      </div>
+
+      <nav class="navbar navbar-expand-lg navbar-dark aurea-admin-navigation" aria-label="Navegación administrativa">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#admin-navbar-collapse"
+                aria-controls="admin-navbar-collapse" aria-expanded="false" aria-label="Abrir navegación administrativa">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="admin-navbar-collapse">
+          <ul class="nav navbar-nav">
+            {{ layout.menu() }}
+          </ul>
+          <ul class="nav navbar-nav ml-lg-auto">
+            {{ layout.menu_links() }}
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    {% block messages %}
+      {{ layout.messages() }}
+    {% endblock %}
+
+    {# Store the Jinja context for Flask-Admin form rules. #}
+    {% set render_ctx = h.resolve_ctx() %}
+
+    {% block page_title %}
+      <h4 class="mb-4">
+        {{ layout.menu_icon(admin_view.menu) }}
+        {{ admin_view.name }}
+      </h4>
+    {% endblock %}
+
+    {% block body %}{% endblock %}
+  </div>
 {% endblock %}

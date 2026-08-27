@@ -155,6 +155,8 @@ class AdminAuthorizationTestCase(unittest.TestCase):
         content = response.get_data(as_text=True)
 
         for label in (
+            "AUREA Administración",
+            "Admin test",
             "Inicio",
             "Herramientas",
             "Fotografías",

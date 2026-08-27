@@ -105,8 +105,12 @@
   font-size: 0.8rem;
 }
 
-.menuButton {
+.mobileActions {
   display: none;
+}
+
+.accountLink,
+.menuButton {
   align-items: center;
   justify-content: center;
   width: 2.75rem;
@@ -118,6 +122,27 @@
   color: var(--color-primary);
   background: var(--color-surface);
   cursor: pointer;
+}
+
+.accountLink {
+  display: inline-flex;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.accountLink svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.accountLoading {
+  color: var(--color-text-muted);
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .menuIcon {
@@ -152,6 +177,7 @@
 .desktopNavigation button:focus-visible,
 .mobileNavigation a:focus-visible,
 .mobileNavigation button:focus-visible,
+.accountLink:focus-visible,
 .menuButton:focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 3px;
@@ -168,6 +194,10 @@
     display: none;
   }
 
+  .content {
+    gap: 0.65rem;
+  }
+
   .brand {
     gap: 0.5rem;
     font-size: 0.9rem;
@@ -180,6 +210,13 @@
 
   .menuButton {
     display: inline-flex;
+  }
+
+  .mobileActions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .mobileMenu {
@@ -212,5 +249,42 @@
 
   .loginLink {
     justify-content: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand {
+    gap: 0.35rem;
+    flex: 1 1 auto;
+    font-size: 0.78rem;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+
+  .brandIcon {
+    width: 2.9rem;
+    height: 1.933rem;
+  }
+
+  .mobileActions {
+    gap: 0.35rem;
+  }
+
+  .accountLink,
+  .menuButton {
+    width: 2.65rem;
+    min-width: 2.65rem;
+    min-height: 2.65rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .brand {
+    font-size: 0.7rem;
+  }
+
+  .brandIcon {
+    width: 2.7rem;
+    height: 1.8rem;
   }
 }

@@ -77,6 +77,36 @@ function NavigationActions({ closeMenu, isLoggingOut, onLogout }: NavigationActi
   );
 }
 
+function MobileAccountLink({ closeMenu }: Pick<NavigationActionsProps, "closeMenu">) {
+  const { isLoading, user } = useAuth();
+
+  const icon = (
+    <svg aria-hidden="true" fill="none" focusable="false" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M4.5 20c0-3.3 3.4-5.5 7.5-5.5s7.5 2.2 7.5 5.5" />
+    </svg>
+  );
+
+  if (isLoading) {
+    return (
+      <span aria-hidden="true" className={`${styles.accountLink} ${styles.accountLoading}`}>
+        {icon}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      aria-label={user ? "Mi cuenta" : "Iniciar sesión"}
+      className={styles.accountLink}
+      href={user ? "/mi-cuenta" : "/login"}
+      onClick={closeMenu}
+    >
+      {icon}
+    </Link>
+  );
+}
+
 export function SiteHeader() {
   const { logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -159,20 +189,23 @@ export function SiteHeader() {
           />
         </nav>
 
-        <button
-          aria-controls="mobile-navigation"
-          aria-expanded={isMenuOpen}
-          aria-label={isMenuOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación"}
-          className={styles.menuButton}
-          onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
-          type="button"
-        >
-          <span aria-hidden="true" className={styles.menuIcon}>
-            <span />
-            <span />
-            <span />
-          </span>
-        </button>
+        <div className={styles.mobileActions}>
+          <MobileAccountLink closeMenu={closeMenu} />
+          <button
+            aria-controls="mobile-navigation"
+            aria-expanded={isMenuOpen}
+            aria-label={isMenuOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación"}
+            className={styles.menuButton}
+            onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
+            type="button"
+          >
+            <span aria-hidden="true" className={styles.menuIcon}>
+              <span />
+              <span />
+              <span />
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className={styles.mobileMenu} hidden={!isMenuOpen} id="mobile-navigation">

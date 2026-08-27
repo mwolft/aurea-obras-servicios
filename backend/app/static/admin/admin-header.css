@@ -1,0 +1,155 @@
+.aurea-admin-header {
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  border-radius: 0.35rem;
+  color: #edf3fa;
+  background: #061f3f;
+  box-shadow: 0 0.35rem 1rem rgba(6, 31, 63, 0.16);
+}
+
+.aurea-admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.25rem;
+  padding: 0.5rem 1rem;
+}
+
+.aurea-admin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.aurea-admin-brand:hover,
+.aurea-admin-brand:focus {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.aurea-admin-brand img {
+  display: block;
+  flex: 0 0 auto;
+  width: 3.75rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.aurea-admin-session {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.aurea-admin-session form {
+  margin: 0;
+}
+
+.aurea-admin-user {
+  overflow: hidden;
+  color: #dbe7f3;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aurea-admin-session .btn-outline-light {
+  border-color: rgba(255, 255, 255, 0.62);
+  font-weight: 600;
+}
+
+.aurea-admin-navigation {
+  min-height: 2.875rem;
+  padding: 0 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0;
+  background: #082c59;
+}
+
+.aurea-admin-navigation .navbar-nav {
+  align-items: stretch;
+}
+
+.aurea-admin-navigation .nav-link {
+  padding: 0.75rem 0.8rem;
+  color: #dbe7f3 !important;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.aurea-admin-navigation .nav-item.active > .nav-link,
+.aurea-admin-navigation .nav-item > .nav-link:hover,
+.aurea-admin-navigation .dropdown.active > .dropdown-toggle,
+.aurea-admin-navigation .dropdown > .dropdown-toggle:hover {
+  color: #ffffff !important;
+  background: rgba(255, 98, 0, 0.16);
+  box-shadow: inset 0 -3px #ff6200;
+}
+
+.aurea-admin-navigation .dropdown-menu {
+  margin-top: 0;
+  border-color: rgba(6, 31, 63, 0.18);
+  box-shadow: 0 0.5rem 1rem rgba(6, 31, 63, 0.16);
+}
+
+.aurea-admin-navigation .dropdown-item.active,
+.aurea-admin-navigation .dropdown-item:active {
+  color: #ffffff;
+  background: #082c59;
+}
+
+@media (max-width: 991.98px) {
+  .aurea-admin-topbar {
+    flex-wrap: wrap;
+  }
+
+  .aurea-admin-session {
+    flex: 1 1 auto;
+  }
+
+  .aurea-admin-navigation {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .aurea-admin-navigation .navbar-nav {
+    padding-top: 0.35rem;
+  }
+
+  .aurea-admin-navigation .nav-link {
+    padding: 0.65rem 0.75rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .aurea-admin-topbar {
+    align-items: flex-start;
+  }
+
+  .aurea-admin-brand {
+    font-size: 0.95rem;
+  }
+
+  .aurea-admin-brand img {
+    width: 3.25rem;
+    height: 2.167rem;
+  }
+
+  .aurea-admin-session {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .aurea-admin-user {
+    max-width: calc(100vw - 11rem);
+  }
+}

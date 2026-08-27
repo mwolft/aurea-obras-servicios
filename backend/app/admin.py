@@ -732,6 +732,9 @@ def init_admin(app: Flask) -> Admin:
 
     @app.context_processor
     def inject_admin_logout_form():
-        return {"admin_logout_form": AdminCsrfForm()}
+        return {
+            "admin_current_user": get_current_user(),
+            "admin_logout_form": AdminCsrfForm(),
+        }
 
     return admin
