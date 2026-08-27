@@ -540,10 +540,10 @@ def init_admin(app: Flask) -> Admin:
         url="/admin",
         index_view=AuthenticatedAdminIndexView(name="Inicio", url="/admin"),
     )
-    admin.add_view(ToolAdmin(Tool, db, category="Catálogo"))
-    admin.add_view(ToolImageAdmin(ToolImage, db, category="Catálogo"))
-    admin.add_view(ToolBlockAdmin(ToolBlock, db, category="Reservas"))
-    admin.add_view(ReservationAdmin(Reservation, db, category="Reservas"))
+    admin.add_view(ToolAdmin(Tool, db, name="Herramientas", category="Catálogo"))
+    admin.add_view(ToolImageAdmin(ToolImage, db, name="Fotografías", category="Catálogo"))
+    admin.add_view(ToolBlockAdmin(ToolBlock, db, name="Bloqueos", category="Reservas"))
+    admin.add_view(ReservationAdmin(Reservation, db, name="Reservas", category="Reservas"))
     admin.add_view(AgendaAdminView(name="Agenda", endpoint="calendar", url="calendar", category="Reservas"))
 
     app.add_url_rule("/admin/login", endpoint="admin_login", view_func=admin_login, methods=("GET", "POST"))

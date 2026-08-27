@@ -13,6 +13,7 @@ from app.services.authentication import (
     authenticate_with_password,
     get_current_user,
     is_valid_email,
+    is_valid_password,
     normalize_email,
     serialize_user,
     start_user_session,
@@ -21,9 +22,6 @@ from app.services.google_authentication import GoogleIdentityError, get_or_creat
 
 
 auth_bp = Blueprint("auth", __name__)
-
-MINIMUM_PASSWORD_LENGTH = 8
-
 
 def google_is_configured() -> bool:
     return bool(current_app.config["GOOGLE_CLIENT_ID"] and current_app.config["GOOGLE_CLIENT_SECRET"])
@@ -71,9 +69,9 @@ def parse_email(value: object) -> tuple[str | None, tuple[dict[str, str], int] |
 
 
 def parse_password(value: object) -> tuple[str | None, tuple[dict[str, str], int] | None]:
-    if not isinstance(value, str) or len(value) < MINIMUM_PASSWORD_LENGTH:
+    if not is_valid_password(value):
         return None, (
-            {"error": f"password must contain at least {MINIMUM_PASSWORD_LENGTH} characters."},
+            {"error": "password must contain at least 8 characters."},
             400,
         )
 

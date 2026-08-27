@@ -8,6 +8,7 @@ from app.models import User
 
 
 EMAIL_PATTERN = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+MINIMUM_PASSWORD_LENGTH = 8
 
 
 def normalize_email(value: str) -> str:
@@ -17,6 +18,11 @@ def normalize_email(value: str) -> str:
 
 def is_valid_email(value: str) -> bool:
     return bool(EMAIL_PATTERN.fullmatch(value))
+
+
+def is_valid_password(value: object) -> bool:
+    """Apply the minimum password rule shared by registration and CLI operations."""
+    return isinstance(value, str) and len(value) >= MINIMUM_PASSWORD_LENGTH
 
 
 def authenticate_with_password(email: str, password: str) -> User | None:

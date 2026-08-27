@@ -130,6 +130,16 @@ class AdminAuthorizationTestCase(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 200)
 
+    def test_admin_navigation_uses_spanish_labels(self):
+        self.authenticate(is_admin=True)
+
+        response = self.client.get("/admin/")
+        content = response.get_data(as_text=True)
+
+        for label in ("Inicio", "Herramientas", "Fotografías", "Bloqueos", "Reservas", "Cerrar sesión"):
+            with self.subTest(label=label):
+                self.assertIn(label, content)
+
     def test_production_registers_the_same_protected_admin(self):
         app = self.create_test_app("production")
         with app.app_context():
