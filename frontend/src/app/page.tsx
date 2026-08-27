@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Sans } from "next/font/google";
 import Link from "next/link";
 
 import { getPublicUrl, siteUrl } from "@/lib/site";
 
 import styles from "./page.module.css";
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 const socialImageUrl = `${siteUrl}/brand/aurea-social.png`;
 const socialDescription =
@@ -42,7 +49,7 @@ function ToolsIcon() {
 
 export default function Home() {
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${ibmPlexSans.className}`}>
       <main className={styles.main}>
         <section className={styles.hero} aria-labelledby="hero-title">
           <div className={styles.heroCopy}>

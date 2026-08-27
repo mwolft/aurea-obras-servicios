@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from flask_admin import Admin, AdminIndexView, BaseView
+from flask_admin import babel as admin_babel
 from flask_admin.base import expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.form import SecureForm
@@ -43,6 +44,17 @@ from app.services.tool_blocks import (
 
 logger = logging.getLogger(__name__)
 
+ADMIN_TEXT_OVERRIDES = {
+    "Save": "Guardar",
+    "Save and Add Another": "Guardar y agregar otro",
+    "Save and Continue Editing": "Guardar y continuar editando",
+}
+
+
+def spanish_admin_gettext(message: str, **variables: str) -> str:
+    """Keep Flask-Admin's Spanish catalog, correcting its save labels for Spain."""
+    return ADMIN_TEXT_OVERRIDES.get(message, admin_babel.gettext(message, **variables))
+
 
 class AdminAccessMixin:
     """Apply the Flask session's administrator flag to every Admin view."""
@@ -64,6 +76,10 @@ class AuthenticatedAdminIndexView(AdminAccessMixin, AdminIndexView):
 
 class SecureModelView(AdminAccessMixin, ModelView):
     form_base_class = SecureForm
+
+    def render(self, template, **kwargs):
+        self._template_args["_gettext"] = spanish_admin_gettext
+        return super().render(template, **kwargs)
 
 
 class AdminCsrfForm(SecureForm):
@@ -167,6 +183,11 @@ class ToolImageAdmin(SecureModelView):
         "image_file": "Archivo de imagen",
         "position": "Orden",
         "created_at": "Creada",
+    }
+    form_args = {
+        "position": {
+            "description": "1 = imagen principal; 2, 3… = imágenes siguientes.",
+        }
     }
 
     def on_model_change(self, form, model, is_created):

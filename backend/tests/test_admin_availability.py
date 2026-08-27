@@ -1,11 +1,12 @@
 import os
 import re
 import unittest
+from decimal import Decimal
 from unittest.mock import patch
 
 from app import create_app
 from app.extensions import db
-from app.models import User
+from app.models import Tool, User
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -305,6 +306,35 @@ class AdminAuthorizationTestCase(unittest.TestCase):
             self.assertIn(label, tool_response.get_data(as_text=True))
         for label in ("Herramienta", "Orden", "Creada"):
             self.assertIn(label, image_response.get_data(as_text=True))
+
+    def test_tool_name_is_used_for_image_relationships_and_save_controls_use_guardar(self):
+        tool = Tool(
+            name="Mini retroexcavadora",
+            category="Maquinaria",
+            daily_price=Decimal("100.00"),
+            deposit_amount=Decimal("250.00"),
+            pickup_available=True,
+            delivery_available=False,
+            is_published=True,
+            is_available=True,
+        )
+        db.session.add(tool)
+        db.session.commit()
+        self.authenticate(is_admin=True)
+
+        image_form = self.client.get("/admin/toolimage/new/")
+        image_content = image_form.get_data(as_text=True)
+        tool_form = self.client.get("/admin/tool/new/")
+        tool_content = tool_form.get_data(as_text=True)
+
+        self.assertEqual(str(tool), "Mini retroexcavadora")
+        self.assertEqual(image_form.status_code, 200)
+        self.assertIn("Mini retroexcavadora", image_content)
+        self.assertNotIn(f"&lt;Tool {tool.id}&gt;", image_content)
+        self.assertIn("1 = imagen principal; 2, 3", image_content)
+        for label in ("Guardar", "Guardar y agregar otro", "Guardar y continuar editando", "Cancelar"):
+            self.assertIn(label, tool_content)
+        self.assertNotIn('value="Salvar"', tool_content)
 
     def test_production_registers_the_same_protected_admin(self):
         app = self.create_test_app("production")

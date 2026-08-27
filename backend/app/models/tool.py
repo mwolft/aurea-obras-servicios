@@ -41,6 +41,10 @@ class Tool(db.Model):
     reservations = db.relationship("Reservation", back_populates="tool")
     blocks = db.relationship("ToolBlock", back_populates="tool")
 
+    def __str__(self) -> str:
+        """Use the human-readable tool name in administrative relationships."""
+        return self.name
+
 
 class ToolImage(db.Model):
     __tablename__ = "tool_images"
