@@ -11,11 +11,18 @@ from flask_admin.form import SecureForm
 from markupsafe import Markup
 from wtforms import FileField, PasswordField, StringField
 from wtforms.validators import InputRequired
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
-from app.models import Reservation, Tool, ToolBlock, ToolImage
-from app.services.authentication import authenticate_with_password, get_current_user, start_user_session
+from app.models import Reservation, Tool, ToolBlock, ToolImage, User
+from app.services.authentication import (
+    authenticate_with_password,
+    get_current_user,
+    is_valid_password,
+    start_user_session,
+)
 from app.services.admin_calendar import get_agenda_events, group_agenda_events
+from app.services.admin_users import AdminAccessChangeError, change_admin_access
 from app.services.availability import reservation_status_label
 from app.services.cloudinary_storage import get_cloudinary_storage
 from app.services.reservations import (
@@ -68,6 +75,12 @@ class AdminLoginForm(SecureForm):
     password = PasswordField("Contraseña", validators=[InputRequired()])
 
 
+class ChangePasswordForm(SecureForm):
+    current_password = PasswordField("Contraseña actual")
+    new_password = PasswordField("Nueva contraseña", validators=[InputRequired()])
+    confirm_password = PasswordField("Repetir nueva contraseña", validators=[InputRequired()])
+
+
 def admin_login():
     """Authenticate an existing administrator using the regular User credentials."""
     current_user = get_current_user()
@@ -112,6 +125,22 @@ class ToolAdmin(SecureModelView):
     )
     column_searchable_list = ("name", "category")
     column_filters = ("category", "is_published", "is_available")
+    column_labels = {
+        "name": "Nombre",
+        "category": "Categoría",
+        "description": "Descripción",
+        "daily_price": "Precio diario",
+        "deposit_amount": "Fianza",
+        "pickup_available": "Recogida en almacén",
+        "delivery_available": "Transporte disponible",
+        "delivery_price_per_km": "Tarifa transporte €/km",
+        "is_published": "Publicada",
+        "is_available": "Disponible",
+        "included_km": "Kilómetros incluidos",
+        "extra_km_price": "Precio km excedido",
+        "created_at": "Creada",
+        "updated_at": "Actualizada",
+    }
     form_columns = (
         "name",
         "category",
@@ -129,11 +158,16 @@ class ToolAdmin(SecureModelView):
 
 
 class ToolImageAdmin(SecureModelView):
-    column_list = ("tool", "storage_key", "position", "created_at")
-    column_searchable_list = ("storage_key",)
+    column_list = ("tool", "position", "created_at")
     column_default_sort = ("position", False)
     form_extra_fields = {"image_file": FileField("Archivo de imagen")}
     form_columns = ("tool", "image_file", "position")
+    column_labels = {
+        "tool": "Herramienta",
+        "image_file": "Archivo de imagen",
+        "position": "Orden",
+        "created_at": "Creada",
+    }
 
     def on_model_change(self, form, model, is_created):
         image_file = form.image_file.data
@@ -184,6 +218,123 @@ class ToolImageAdmin(SecureModelView):
 
         if storage_key:
             self._delete_asset_safely(storage_key)
+
+
+class UserAdmin(SecureModelView):
+    """Read-only user administration with explicit administrator-access actions."""
+
+    can_create = False
+    can_edit = False
+    can_delete = False
+    can_view_details = True
+    column_list = ("name", "email", "account_type", "is_admin", "created_at", "admin_access_action")
+    column_searchable_list = ("name", "email")
+    column_filters = ("is_admin",)
+    column_default_sort = ("created_at", True)
+    column_details_list = ("name", "email", "account_type", "is_admin", "created_at", "admin_access_action")
+    column_labels = {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "account_type": "Tipo de cuenta",
+        "is_admin": "Administrador",
+        "created_at": "Creado",
+        "admin_access_action": "Acceso administrativo",
+    }
+    column_formatters = {
+        "is_admin": lambda view, context, model, name: "Sí" if model.is_admin else "No",
+        "admin_access_action": lambda view, context, model, name: view._access_action_link(model),
+    }
+
+    @staticmethod
+    def _access_action_link(user: User):
+        if user.is_admin:
+            action_url = url_for(".revoke_admin_access", user_id=user.id)
+            return Markup(f'<a class="btn btn-warning btn-xs" href="{action_url}">Retirar acceso</a>')
+
+        action_url = url_for(".grant_admin_access", user_id=user.id)
+        return Markup(f'<a class="btn btn-primary btn-xs" href="{action_url}">Dar acceso</a>')
+
+    def _change_access(self, user_id: int, grant_access: bool):
+        csrf_form = AdminCsrfForm(request.form)
+        target = db.session.get(User, user_id)
+        if target is None:
+            flash("El usuario no existe.", "error")
+            return redirect(url_for(".index_view"))
+
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+
+            actor = get_current_user()
+            actor_id = actor.id if actor is not None else None
+            if actor_id is None:
+                return redirect(url_for("admin_login"))
+
+            # The service owns the transaction and locks the affected users.
+            db.session.rollback()
+            try:
+                change_admin_access(actor_id, user_id, grant_access)
+            except AdminAccessChangeError as error:
+                flash(str(error), "error")
+            else:
+                flash(
+                    "Acceso administrativo concedido."
+                    if grant_access
+                    else "Acceso administrativo retirado.",
+                    "success",
+                )
+
+            return redirect(url_for(".details_view", id=user_id))
+
+        return self.render(
+            "admin/change_admin_access.html",
+            target=target,
+            grant_access=grant_access,
+            csrf_form=csrf_form,
+        )
+
+    @expose("/grant-admin-access/<int:user_id>", methods=("GET", "POST"))
+    def grant_admin_access(self, user_id: int):
+        return self._change_access(user_id, grant_access=True)
+
+    @expose("/revoke-admin-access/<int:user_id>", methods=("GET", "POST"))
+    def revoke_admin_access(self, user_id: int):
+        return self._change_access(user_id, grant_access=False)
+
+
+class AccountAdminView(AdminAccessMixin, BaseView):
+    """Allow the current administrator to set or change only their own password."""
+
+    @expose("/", methods=("GET", "POST"))
+    def index(self):
+        user = get_current_user()
+        if user is None:
+            return redirect(url_for("admin_login"))
+
+        form = ChangePasswordForm(request.form)
+        requires_current_password = user.password_hash is not None
+        if request.method == "POST":
+            if not form.validate():
+                abort(400)
+            if form.new_password.data != form.confirm_password.data:
+                flash("Las nuevas contraseñas no coinciden.", "error")
+            elif not is_valid_password(form.new_password.data):
+                flash("La nueva contraseña debe contener al menos 8 caracteres.", "error")
+            elif requires_current_password and not check_password_hash(
+                user.password_hash, form.current_password.data or ""
+            ):
+                flash("La contraseña actual no es correcta.", "error")
+            else:
+                user.password_hash = generate_password_hash(form.new_password.data)
+                db.session.commit()
+                flash("Contraseña actualizada.", "success")
+                return redirect(url_for(".index"))
+
+        return self.render(
+            "admin/change_password.html",
+            form=form,
+            requires_current_password=requires_current_password,
+        )
 
 
 class ToolBlockAdmin(SecureModelView):
@@ -545,6 +696,15 @@ def init_admin(app: Flask) -> Admin:
     admin.add_view(ToolBlockAdmin(ToolBlock, db, name="Bloqueos", category="Reservas"))
     admin.add_view(ReservationAdmin(Reservation, db, name="Reservas", category="Reservas"))
     admin.add_view(AgendaAdminView(name="Agenda", endpoint="calendar", url="calendar", category="Reservas"))
+    admin.add_view(UserAdmin(User, db, name="Usuarios", category="Usuarios"))
+    admin.add_view(
+        AccountAdminView(
+            name="Cambiar contraseña",
+            endpoint="admin_account",
+            url="account",
+            category="Cuenta",
+        )
+    )
 
     app.add_url_rule("/admin/login", endpoint="admin_login", view_func=admin_login, methods=("GET", "POST"))
     app.add_url_rule("/admin/logout", endpoint="admin_logout", view_func=admin_logout, methods=("POST",))

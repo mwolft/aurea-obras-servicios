@@ -4,7 +4,7 @@ import app.models
 from app.admin import init_admin
 from app.cli import init_cli
 from app.config import load_config
-from app.extensions import db, init_oauth, migrate
+from app.extensions import babel, db, init_oauth, migrate
 from app.routes.health import health_bp
 from app.routes.auth import auth_bp
 from app.routes.account import account_bp
@@ -17,6 +17,7 @@ def create_app() -> Flask:
     app.config.from_mapping(load_config())
     db.init_app(app)
     migrate.init_app(app, db)
+    babel.init_app(app)
     init_oauth(app)
     init_cli(app)
     init_admin(app)

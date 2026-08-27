@@ -70,6 +70,7 @@ def load_config() -> dict[str, str | bool | None]:
         "SESSION_COOKIE_HTTPONLY": True,
         "SESSION_COOKIE_SAMESITE": "Lax",
         "SESSION_COOKIE_SECURE": app_env == "production",
+        "BABEL_DEFAULT_LOCALE": "es",
         **google_values,
         **cloudinary_values,
     }

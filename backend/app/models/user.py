@@ -25,3 +25,14 @@ class User(db.Model):
     )
 
     reservations = db.relationship("Reservation", back_populates="user")
+
+    @property
+    def account_type(self) -> str:
+        """Provide a safe, human-readable account type for administration."""
+        if self.google_sub and self.password_hash:
+            return "Google y contraseña"
+        if self.google_sub:
+            return "Google"
+        if self.password_hash:
+            return "Correo y contraseña"
+        return "Sin contraseña"

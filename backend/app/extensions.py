@@ -1,4 +1,5 @@
 from authlib.integrations.flask_client import OAuth
+from flask_babel import Babel
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
@@ -6,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 migrate = Migrate()
 oauth = OAuth()
+babel = Babel()
 
 
 def init_oauth(app) -> None:

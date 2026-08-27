@@ -6,7 +6,7 @@ from unittest.mock import patch
 from app import create_app
 from app.extensions import db
 from app.models import User
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 class AdminAuthorizationTestCase(unittest.TestCase):
@@ -43,6 +43,22 @@ class AdminAuthorizationTestCase(unittest.TestCase):
         user = User(name="Admin test", email=f"admin-{is_admin}@example.com", is_admin=is_admin)
         db.session.add(user)
         db.session.commit()
+        with self.client.session_transaction() as session:
+            session["user_id"] = user.id
+
+    def create_user(self, email: str, *, is_admin: bool = False, password: str | None = None, google_sub: str | None = None):
+        user = User(
+            name=email.split("@", 1)[0],
+            email=email,
+            is_admin=is_admin,
+            password_hash=generate_password_hash(password) if password else None,
+            google_sub=google_sub,
+        )
+        db.session.add(user)
+        db.session.commit()
+        return user
+
+    def authenticate_user(self, user: User):
         with self.client.session_transaction() as session:
             session["user_id"] = user.id
 
@@ -115,6 +131,7 @@ class AdminAuthorizationTestCase(unittest.TestCase):
         self.authenticate(is_admin=False)
 
         self.assertEqual(self.client.get("/admin/").status_code, 403)
+        self.assertEqual(self.client.get("/admin/user/").status_code, 403)
 
     def test_admin_can_access_all_registered_admin_views(self):
         self.authenticate(is_admin=True)
@@ -136,9 +153,158 @@ class AdminAuthorizationTestCase(unittest.TestCase):
         response = self.client.get("/admin/")
         content = response.get_data(as_text=True)
 
-        for label in ("Inicio", "Herramientas", "Fotografías", "Bloqueos", "Reservas", "Cerrar sesión"):
+        for label in (
+            "Inicio",
+            "Herramientas",
+            "Fotografías",
+            "Bloqueos",
+            "Reservas",
+            "Usuarios",
+            "Cambiar contraseña",
+            "Cerrar sesión",
+        ):
             with self.subTest(label=label):
                 self.assertIn(label, content)
+
+    def test_user_admin_is_read_only_and_uses_controlled_access_changes(self):
+        administrator = self.create_user("admin@example.com", is_admin=True, password="secure-password")
+        target = self.create_user("target@example.com", google_sub="google-subject")
+        self.authenticate_user(administrator)
+
+        listing = self.client.get("/admin/user/")
+        content = listing.get_data(as_text=True)
+        self.assertEqual(listing.status_code, 200)
+        self.assertNotIn("password_hash", content)
+        self.assertNotIn("google-subject", content)
+        self.assertNotIn("Create New Record", content)
+        self.assertIn("Google", content)
+
+        grant_page = self.client.get(f"/admin/user/grant-admin-access/{target.id}")
+        grant = self.client.post(
+            f"/admin/user/grant-admin-access/{target.id}",
+            data={"csrf_token": self.csrf_token(grant_page)},
+        )
+        self.assertEqual(grant.status_code, 302)
+        self.assertTrue(db.session.get(User, target.id).is_admin)
+
+        revoke_page = self.client.get(f"/admin/user/revoke-admin-access/{target.id}")
+        revoke = self.client.post(
+            f"/admin/user/revoke-admin-access/{target.id}",
+            data={"csrf_token": self.csrf_token(revoke_page)},
+        )
+        self.assertEqual(revoke.status_code, 302)
+        self.assertFalse(db.session.get(User, target.id).is_admin)
+
+    def test_last_admin_and_self_revocation_are_rejected(self):
+        administrator = self.create_user("admin@example.com", is_admin=True, password="secure-password")
+        self.authenticate_user(administrator)
+
+        page = self.client.get(f"/admin/user/revoke-admin-access/{administrator.id}")
+        response = self.client.post(
+            f"/admin/user/revoke-admin-access/{administrator.id}",
+            data={"csrf_token": self.csrf_token(page)},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(db.session.get(User, administrator.id).is_admin)
+        self.assertIn("No puedes retirar tu propio acceso administrativo.", response.get_data(as_text=True))
+
+    def test_password_change_requires_current_password_but_google_user_can_set_one(self):
+        administrator = self.create_user("admin@example.com", is_admin=True, password="secure-password")
+        self.authenticate_user(administrator)
+
+        page = self.client.get("/admin/account/")
+        invalid = self.client.post(
+            "/admin/account/",
+            data={
+                "csrf_token": self.csrf_token(page),
+                "current_password": "wrong-password",
+                "new_password": "updated-password",
+                "confirm_password": "updated-password",
+            },
+            follow_redirects=True,
+        )
+        self.assertIn("La contraseña actual no es correcta.", invalid.get_data(as_text=True))
+        self.assertTrue(check_password_hash(db.session.get(User, administrator.id).password_hash, "secure-password"))
+
+        page = self.client.get("/admin/account/")
+        updated = self.client.post(
+            "/admin/account/",
+            data={
+                "csrf_token": self.csrf_token(page),
+                "current_password": "secure-password",
+                "new_password": "updated-password",
+                "confirm_password": "updated-password",
+            },
+        )
+        self.assertEqual(updated.status_code, 302)
+        self.assertTrue(check_password_hash(db.session.get(User, administrator.id).password_hash, "updated-password"))
+
+        google_admin = self.create_user("google@example.com", is_admin=True, google_sub="google-subject")
+        self.authenticate_user(google_admin)
+        page = self.client.get("/admin/account/")
+        response = self.client.post(
+            "/admin/account/",
+            data={
+                "csrf_token": self.csrf_token(page),
+                "new_password": "google-password",
+                "confirm_password": "google-password",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(check_password_hash(db.session.get(User, google_admin.id).password_hash, "google-password"))
+
+    def test_admin_password_change_rejects_missing_csrf_token_and_new_password_works_for_admin_login(self):
+        administrator = self.create_user("admin@example.com", is_admin=True, password="secure-password")
+        self.authenticate_user(administrator)
+
+        missing_csrf = self.client.post(
+            "/admin/account/",
+            data={"current_password": "secure-password", "new_password": "updated-password", "confirm_password": "updated-password"},
+        )
+        self.assertEqual(missing_csrf.status_code, 400)
+
+        page = self.client.get("/admin/account/")
+        self.client.post(
+            "/admin/account/",
+            data={
+                "csrf_token": self.csrf_token(page),
+                "current_password": "secure-password",
+                "new_password": "updated-password",
+                "confirm_password": "updated-password",
+            },
+        )
+        self.client.post("/admin/logout", data={"csrf_token": self.csrf_token(self.client.get("/admin/"))})
+        login_page = self.client.get("/admin/login")
+        login = self.client.post(
+            "/admin/login",
+            data={"email": "admin@example.com", "password": "updated-password", "csrf_token": self.csrf_token(login_page)},
+        )
+        self.assertEqual(login.status_code, 302)
+
+    def test_tool_and_image_views_use_spanish_labels(self):
+        self.authenticate(is_admin=True)
+
+        tool_response = self.client.get("/admin/tool/")
+        image_response = self.client.get("/admin/toolimage/")
+        self.assertEqual(tool_response.status_code, 200)
+        self.assertEqual(image_response.status_code, 200)
+        for label in (
+            "Nombre",
+            "Categoría",
+            "Precio diario",
+            "Fianza",
+            "Publicada",
+            "Disponible",
+            "Listado",
+            "Crear",
+            "Buscar",
+            "Añadir filtro",
+        ):
+            self.assertIn(label, tool_response.get_data(as_text=True))
+        for label in ("Herramienta", "Orden", "Creada"):
+            self.assertIn(label, image_response.get_data(as_text=True))
 
     def test_production_registers_the_same_protected_admin(self):
         app = self.create_test_app("production")

@@ -1,0 +1,18 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+  <p>
+    {% if grant_access %}
+      Vas a dar acceso administrativo a <strong>{{ target.email }}</strong>.
+    {% else %}
+      Vas a retirar el acceso administrativo a <strong>{{ target.email }}</strong>.
+    {% endif %}
+  </p>
+  <form method="post">
+    {{ csrf_form.csrf_token }}
+    <button class="btn {% if grant_access %}btn-primary{% else %}btn-warning{% endif %}" type="submit">
+      {% if grant_access %}Dar acceso de administrador{% else %}Retirar acceso de administrador{% endif %}
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('.details_view', id=target.id) }}">Cancelar</a>
+  </form>
+{% endblock %}
