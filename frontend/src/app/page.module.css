@@ -39,9 +39,17 @@
 .serviceCard p { color: var(--color-text-muted); line-height: 1.6; }
 .icon { display: grid; place-items: center; width: 3.25rem; aspect-ratio: 1; border-radius: var(--radius-md); color: var(--color-accent); background: #fff0e6; }
 .icon svg { width: 1.8rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.25; }
+.gardenCard { grid-column: span 2; border-color: var(--color-primary); background: var(--color-primary); box-shadow: var(--shadow-md); }
+.gardenCard h3 { font-size: clamp(1.7rem, 3vw, 2.35rem); color: var(--color-surface); }
+.gardenCard p { max-width: 34rem; color: #c8d5e3; font-size: 1.05rem; }
+.gardenCard .icon { color: var(--color-surface); background: var(--color-accent); }
+.gardenCard .cardLink { color: var(--color-surface); text-decoration-color: var(--color-accent); }
+.gardenCard .cardLink:hover { color: #ffb17d; }
 .toolsCard { border-color: rgba(255, 98, 0, 0.32); }
 .cardLink { align-self: end; width: fit-content; margin-top: auto; color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 0.3rem; }
 .cardLink:hover { color: var(--color-accent-dark); }
+.servicesAction { justify-self: start; color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 0.3rem; }
+.servicesAction:hover { color: var(--color-accent-dark); }
 
 .positioning { display: grid; grid-template-columns: 1fr minmax(16rem, 0.85fr); gap: clamp(2rem, 7vw, 7rem); align-items: end; padding: clamp(2rem, 5vw, 4rem); border-radius: var(--radius-lg); background: var(--color-primary-dark); }
 .positioning h2 { max-width: 16ch; margin-top: var(--space-3); color: var(--color-surface); }
@@ -73,6 +81,7 @@
   .buildingScene { min-height: 20rem; }
   .serviceGrid { grid-template-columns: 1fr; }
   .serviceCard { min-height: auto; }
+  .gardenCard { grid-column: auto; }
   .positioning { padding: 2rem 1.5rem; }
   .development { grid-template-columns: 1rem minmax(0, 1fr); gap: var(--space-4); padding: 1.5rem; }
   .developmentMark { width: 0.65rem; height: 100%; min-height: 5rem; }

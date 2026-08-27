@@ -75,9 +75,16 @@ class AuthenticationApiTestCase(unittest.TestCase):
         self.assertIn("HttpOnly", response.headers["Set-Cookie"])
         user = db.session.get(User, 1)
         self.assertEqual(user.email, "user@example.com")
+        self.assertFalse(user.is_admin)
         self.assertNotEqual(user.password_hash, "secure-password")
         self.assertNotIn("secure-password", user.password_hash)
         self.assertEqual(self.client.get("/api/auth/me").get_json()["email"], "user@example.com")
+
+    def test_register_ignores_client_supplied_admin_flag(self):
+        response = self.register(is_admin=True)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertFalse(db.session.get(User, response.get_json()["id"]).is_admin)
 
     def test_duplicate_email_is_rejected(self):
         self.assertEqual(self.register().status_code, 201)

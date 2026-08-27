@@ -77,11 +77,12 @@ class ProductionConfigurationTestCase(unittest.TestCase):
                 db.session.remove()
                 db.drop_all()
 
-    def test_production_disables_admin_and_keeps_health_public(self):
+    def test_production_protects_admin_and_keeps_health_public(self):
         app = self.create_production_app()
         client = app.test_client()
 
-        self.assertEqual(client.get("/admin/").status_code, 404)
+        self.assertEqual(client.get("/admin/").status_code, 302)
+        self.assertEqual(client.get("/admin/").headers["Location"], "https://www.example.test/login")
         health = client.get("/api/health")
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.get_json(), {"status": "ok"})

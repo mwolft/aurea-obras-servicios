@@ -22,6 +22,7 @@
 </p>
 
 <form method="post" class="form-horizontal">
+  {{ csrf_form.csrf_token }}
   <div class="form-group">
     <label class="col-md-2 control-label" for="billable_km">Kilómetros facturables</label>
     <div class="col-md-4">

@@ -16,7 +16,9 @@ export function SiteFooter() {
 
         <nav aria-label="Navegación del pie de página" className={styles.navigation}>
           <Link href="/">Inicio</Link>
+          <Link href="/servicios">Servicios</Link>
           <Link href="/alquiler">Alquiler</Link>
+          <Link href="/contacto">Contacto</Link>
           <span>Web en desarrollo</span>
         </nav>
       </div>

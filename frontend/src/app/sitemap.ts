@@ -1,13 +1,25 @@
 import type { MetadataRoute } from "next";
 
-const siteUrl = "https://www.aureaobrasyservicios.com";
+import { getRentalCategories, getToolPublicPath } from "@/lib/category-slug";
+import { getCatalogTools } from "@/lib/api";
+import { getPublicUrl } from "@/lib/site";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: siteUrl,
-      changeFrequency: "monthly",
-      priority: 1,
-    },
-  ];
+export const dynamic = "force-dynamic";
+
+const staticPaths = ["/", "/servicios", "/servicios/jardineria", "/alquiler", "/contacto"];
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const staticEntries = staticPaths.map((path) => ({ url: getPublicUrl(path) }));
+  const catalog = await getCatalogTools();
+
+  if (catalog.status !== "success") {
+    return staticEntries;
+  }
+
+  const categoryEntries = getRentalCategories(catalog.tools).map((category) => ({
+    url: getPublicUrl(`/alquiler/${category.slug}`),
+  }));
+  const toolEntries = catalog.tools.map((tool) => ({ url: getPublicUrl(getToolPublicPath(tool)) }));
+
+  return [...staticEntries, ...categoryEntries, ...toolEntries];
 }

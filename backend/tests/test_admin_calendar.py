@@ -9,7 +9,7 @@ os.environ["APP_ENV"] = "development"
 
 from app import create_app
 from app.extensions import db
-from app.models import Reservation, Tool, ToolBlock
+from app.models import Reservation, Tool, ToolBlock, User
 from app.services.admin_calendar import get_agenda_events, group_agenda_events
 
 
@@ -20,6 +20,11 @@ class AdminCalendarTestCase(unittest.TestCase):
         self.context.push()
         db.create_all()
         self.client = self.app.test_client()
+        admin = User(name="Calendar admin", email="calendar-admin@example.com", is_admin=True)
+        db.session.add(admin)
+        db.session.commit()
+        with self.client.session_transaction() as session:
+            session["user_id"] = admin.id
 
     def tearDown(self):
         db.session.remove()

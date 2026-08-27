@@ -7,6 +7,7 @@ import styles from "./page.module.css";
 export const metadata: Metadata = {
   title: "Iniciar sesión | AUREA Obras y Servicios S.L.",
   description: "Accede o crea una cuenta para gestionar tus solicitudes de alquiler en AUREA.",
+  robots: { index: false, follow: false },
 };
 
 export default function LoginPage() {

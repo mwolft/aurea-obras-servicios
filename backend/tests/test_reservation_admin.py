@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -11,7 +12,7 @@ os.environ["APP_ENV"] = "development"
 from app import create_app
 from app.admin import ReservationAdmin
 from app.extensions import db
-from app.models import Reservation, Tool
+from app.models import Reservation, Tool, User
 from app.services.availability import is_tool_available
 from app.services.reservations import cancel_reservation, review_delivery_reservation
 
@@ -23,11 +24,24 @@ class ReservationAdminTestCase(unittest.TestCase):
         self.context.push()
         db.create_all()
         self.client = self.app.test_client()
+        admin = User(name="Reservation admin", email="reservation-admin@example.com", is_admin=True)
+        db.session.add(admin)
+        db.session.commit()
+        with self.client.session_transaction() as session:
+            session["user_id"] = admin.id
 
     def tearDown(self):
         db.session.remove()
         db.drop_all()
         self.context.pop()
+
+    def post_admin(self, path, data=None, csrf_path=None):
+        form_page = self.client.get(csrf_path or path)
+        token = re.search(
+            r'name="csrf_token"[^>]*value="([^"]+)"', form_page.get_data(as_text=True)
+        )
+        self.assertIsNotNone(token)
+        return self.client.post(path, data={**(data or {}), "csrf_token": token.group(1)})
 
     def create_pending_delivery_review(self, **overrides):
         tool = Tool(
@@ -141,7 +155,7 @@ class ReservationAdminTestCase(unittest.TestCase):
             "app.admin.review_delivery_reservation",
             wraps=review_delivery_reservation,
         ) as review_service:
-            response = self.client.post(
+            response = self.post_admin(
                 f"/admin/reservation/review-delivery/{reservation_id}",
                 data={
                     "billable_km": "12.50",
@@ -171,7 +185,7 @@ class ReservationAdminTestCase(unittest.TestCase):
     def test_invalid_kilometres_do_not_change_reservation(self):
         reservation_id = self.create_pending_delivery_review()
 
-        response = self.client.post(
+        response = self.post_admin(
             f"/admin/reservation/review-delivery/{reservation_id}",
             data={"billable_km": "-1"},
         )
@@ -182,13 +196,25 @@ class ReservationAdminTestCase(unittest.TestCase):
         self.assertIsNone(reservation.billable_km)
         self.assertIsNone(reservation.total_amount)
 
-    def test_stale_review_is_rejected_without_changes(self):
-        reservation_id = self.create_pending_delivery_review(status="confirmed")
-        db.session.remove()
+    def test_sensitive_admin_actions_require_a_csrf_token(self):
+        reservation_id = self.create_pending_delivery_review()
 
         response = self.client.post(
+            f"/admin/reservation/review-delivery/{reservation_id}", data={"billable_km": "12.50"}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "pending_review")
+
+    def test_stale_review_is_rejected_without_changes(self):
+        reservation_id = self.create_pending_delivery_review(status="confirmed")
+        csrf_reservation_id = self.create_pending_delivery_review()
+        db.session.remove()
+
+        response = self.post_admin(
             f"/admin/reservation/review-delivery/{reservation_id}",
             data={"billable_km": "12.50"},
+            csrf_path=f"/admin/reservation/review-delivery/{csrf_reservation_id}",
         )
 
         self.assertEqual(response.status_code, 302)
@@ -205,7 +231,7 @@ class ReservationAdminTestCase(unittest.TestCase):
             "app.admin.cancel_reservation",
             wraps=cancel_reservation,
         ) as cancellation_service:
-            response = self.client.post(f"/admin/reservation/cancel/{reservation_id}")
+            response = self.post_admin(f"/admin/reservation/cancel/{reservation_id}")
 
         self.assertEqual(response.status_code, 302)
         cancellation_service.assert_called_once_with(reservation_id)
@@ -224,8 +250,8 @@ class ReservationAdminTestCase(unittest.TestCase):
         confirmed_id = self.create_cancellable_reservation("confirmed")
         db.session.remove()
 
-        pending_response = self.client.post(f"/admin/reservation/cancel/{pending_payment_id}")
-        confirmed_response = self.client.post(f"/admin/reservation/cancel/{confirmed_id}")
+        pending_response = self.post_admin(f"/admin/reservation/cancel/{pending_payment_id}")
+        confirmed_response = self.post_admin(f"/admin/reservation/cancel/{confirmed_id}")
 
         self.assertEqual(pending_response.status_code, 302)
         self.assertEqual(confirmed_response.status_code, 302)
@@ -235,10 +261,16 @@ class ReservationAdminTestCase(unittest.TestCase):
     def test_cancelled_or_expired_reservation_cannot_be_cancelled_again(self):
         cancelled_id = self.create_cancellable_reservation("cancelled")
         expired_id = self.create_cancellable_reservation("expired")
+        csrf_reservation_id = self.create_cancellable_reservation("pending_review")
         db.session.remove()
 
-        cancelled_response = self.client.post(f"/admin/reservation/cancel/{cancelled_id}")
-        expired_response = self.client.post(f"/admin/reservation/cancel/{expired_id}")
+        csrf_path = f"/admin/reservation/cancel/{csrf_reservation_id}"
+        cancelled_response = self.post_admin(
+            f"/admin/reservation/cancel/{cancelled_id}", csrf_path=csrf_path
+        )
+        expired_response = self.post_admin(
+            f"/admin/reservation/cancel/{expired_id}", csrf_path=csrf_path
+        )
 
         self.assertEqual(cancelled_response.status_code, 302)
         self.assertEqual(expired_response.status_code, 302)

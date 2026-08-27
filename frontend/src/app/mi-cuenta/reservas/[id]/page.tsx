@@ -6,6 +6,7 @@ import styles from "./page.module.css";
 export const metadata: Metadata = {
   title: "Detalle de reserva | AUREA Obras y Servicios S.L.",
   description: "Consulta privada de una reserva de AUREA Obras y Servicios S.L.",
+  robots: { index: false, follow: false },
 };
 
 export default function ReservationDetailPage() {

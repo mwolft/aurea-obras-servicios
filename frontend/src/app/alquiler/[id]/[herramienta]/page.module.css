@@ -1,0 +1,4 @@
+.page { display: grid; gap: 2rem; }
+.backLink { width: fit-content; color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 0.3rem; }
+.message { display: grid; gap: var(--space-3); padding: 2rem; border: 1px solid var(--color-border); border-left: 0.35rem solid #a13a2a; border-radius: var(--radius-md); background: var(--color-surface); }
+.message h1 { color: var(--color-primary); font-size: 1.7rem; } .message p { color: var(--color-text-muted); }

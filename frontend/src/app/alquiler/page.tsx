@@ -1,22 +1,23 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
+import { RentalToolCard } from "@/components/rental-tool-card";
+import { getRentalCategories } from "@/lib/category-slug";
 import { getCatalogTools } from "@/lib/api";
 
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
 
-function ToolPlaceholder() {
-  return (
-    <div aria-label="Imagen de herramienta no disponible" className={styles.placeholder} role="img">
-      <svg aria-hidden="true" viewBox="0 0 48 48"><path d="m30 10 8 8-10 10-8-8 10-10ZM22 18 10 30l8 8 12-12M10 14l8 8m-8 0 10-10" /></svg>
-      <span>Imagen próximamente</span>
-    </div>
-  );
-}
+export const metadata: Metadata = {
+  title: "Alquiler de herramientas | AUREA Obras y Servicios S.L.",
+  description: "Consulta el catálogo público de herramientas de alquiler de AUREA Obras y Servicios S.L.",
+  alternates: { canonical: "/alquiler" },
+};
 
 export default async function RentalCatalogPage() {
   const catalog = await getCatalogTools();
+  const categories = catalog.status === "success" ? getRentalCategories(catalog.tools) : [];
 
   return (
     <main className={styles.page}>
@@ -37,35 +38,19 @@ export default async function RentalCatalogPage() {
           <p>Aún no hay herramientas publicadas. Vuelve a consultar esta sección próximamente.</p>
         </section>
       ) : (
-        <section aria-label="Herramientas de alquiler" className={styles.grid}>
-          {catalog.tools.map((tool) => {
-            const mainImage = tool.images[0];
-
-            return (
-              <article className={styles.card} key={tool.id}>
-                <div className={styles.media}>
-                  {mainImage ? (
-                    // Cloudinary supplies a public HTTPS URL; no remote image config is needed.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img alt={tool.name} className={styles.image} src={mainImage.url} />
-                  ) : <ToolPlaceholder />}
-                  <p className={tool.is_available ? styles.available : styles.unavailable}>
-                    {tool.is_available ? "Disponible" : "No disponible"}
-                  </p>
-                </div>
-                <div className={styles.content}>
-                  <p className={styles.category}>{tool.category}</p>
-                  <h2>{tool.name}</h2>
-                  {tool.description && <p className={styles.description}>{tool.description}</p>}
-                  <div className={styles.cardFooter}>
-                    <p className={styles.price}><strong>{tool.daily_price} €</strong><span>/ día</span></p>
-                    <Link className={styles.detailLink} href={`/alquiler/${tool.id}`}>Ver herramienta</Link>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </section>
+        <>
+          <section aria-labelledby="categories-title" className={styles.categories}>
+            <h2 id="categories-title">Explorar por categoría</h2>
+            <div className={styles.categoryLinks}>
+              {categories.map((category) => (
+                <Link href={`/alquiler/${category.slug}`} key={category.slug}>{category.name}</Link>
+              ))}
+            </div>
+          </section>
+          <section aria-label="Herramientas de alquiler" className={styles.grid}>
+            {catalog.tools.map((tool) => <RentalToolCard key={tool.id} tool={tool} />)}
+          </section>
+        </>
       )}
     </main>
   );

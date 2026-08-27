@@ -2,6 +2,7 @@ from flask import Flask, request
 
 import app.models
 from app.admin import init_admin
+from app.cli import init_cli
 from app.config import load_config
 from app.extensions import db, init_oauth, migrate
 from app.routes.health import health_bp
@@ -17,8 +18,8 @@ def create_app() -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
     init_oauth(app)
-    if app.config["APP_ENV"] == "development":
-        init_admin(app)
+    init_cli(app)
+    init_admin(app)
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(account_bp, url_prefix="/api/account")

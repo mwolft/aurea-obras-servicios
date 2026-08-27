@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { getPublicUrl, siteUrl } from "@/lib/site";
+
 import styles from "./page.module.css";
 
-const siteUrl = "https://www.aureaobrasyservicios.com";
 const socialImageUrl = `${siteUrl}/brand/aurea-social.png`;
 const socialDescription =
   "AUREA Obras y Servicios S.L. prepara soluciones para obras y reformas, jardinería y alquiler de herramientas.";
@@ -11,10 +12,11 @@ const socialDescription =
 export const metadata: Metadata = {
   title: "AUREA Obras y Servicios S.L. | Obras, jardinería y alquiler de herramientas",
   description: socialDescription,
+  alternates: { canonical: "/" },
   openGraph: {
     title: "AUREA Obras y Servicios S.L.",
     description: socialDescription,
-    url: siteUrl,
+    url: getPublicUrl(),
     type: "website",
     images: [{ url: socialImageUrl, width: 1200, height: 630, alt: "AUREA Obras y Servicios S.L." }],
   },
@@ -50,7 +52,9 @@ export default function Home() {
               Obras y reformas, jardinería y alquiler de herramientas en una nueva web pensada para facilitar tus consultas y próximos proyectos.
             </p>
             <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/alquiler">Ver alquiler de herramientas</Link>
+              <Link className={styles.primaryAction} href="/servicios/jardineria">
+                Ver servicios de jardinería
+              </Link>
               <span className={styles.status}>Web en desarrollo</span>
             </div>
           </div>
@@ -74,12 +78,15 @@ export default function Home() {
           </div>
           <div className={styles.serviceGrid}>
             <article className={styles.serviceCard}>
-              <div className={styles.icon}><WorksIcon /></div><h3>Obras y reformas</h3>
-              <p>Apoyo para dar forma a tus proyectos de obra y reforma.</p>
+              <div className={styles.icon}><WorksIcon /></div><h3>Obras y servicios</h3>
+              <p>Estamos preparando la información de esta área de trabajo.</p>
             </article>
-            <article className={styles.serviceCard}>
+            <article className={`${styles.serviceCard} ${styles.gardenCard}`}>
               <div className={styles.icon}><GardenIcon /></div><h3>Jardinería</h3>
-              <p>Soluciones cercanas para cuidar y mejorar espacios exteriores.</p>
+              <p>Una línea especialmente relevante de AUREA para el cuidado de espacios exteriores.</p>
+              <Link className={styles.cardLink} href="/servicios/jardineria">
+                Ver servicios de jardinería <span aria-hidden="true">→</span>
+              </Link>
             </article>
             <article className={`${styles.serviceCard} ${styles.toolsCard}`}>
               <div className={styles.icon}><ToolsIcon /></div><h3>Alquiler de herramientas</h3>
@@ -87,6 +94,7 @@ export default function Home() {
               <Link className={styles.cardLink} href="/alquiler">Ver catálogo <span aria-hidden="true">→</span></Link>
             </article>
           </div>
+          <Link className={styles.servicesAction} href="/servicios">Ver todos los servicios</Link>
         </section>
 
         <section className={styles.positioning} aria-labelledby="positioning-title">

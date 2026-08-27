@@ -16,6 +16,7 @@
 </p>
 
 <form method="post" class="form-horizontal">
+  {{ csrf_form.csrf_token }}
   <div class="form-group">
     <div class="col-md-10">
       <button class="btn btn-warning" type="submit">Confirmar cancelación</button>

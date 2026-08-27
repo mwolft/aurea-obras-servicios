@@ -3,15 +3,17 @@ from calendar import monthrange
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from flask import Flask, flash, redirect, request, url_for
-from flask_admin import Admin, BaseView
+from flask import Flask, abort, current_app, flash, redirect, request, url_for
+from flask_admin import Admin, AdminIndexView, BaseView
 from flask_admin.base import expose
 from flask_admin.contrib.sqla import ModelView
+from flask_admin.form import SecureForm
 from markupsafe import Markup
 from wtforms import FileField
 
 from app.extensions import db
 from app.models import Reservation, Tool, ToolBlock, ToolImage
+from app.services.authentication import get_current_user
 from app.services.admin_calendar import get_agenda_events, group_agenda_events
 from app.services.availability import reservation_status_label
 from app.services.cloudinary_storage import get_cloudinary_storage
@@ -34,7 +36,33 @@ from app.services.tool_blocks import (
 logger = logging.getLogger(__name__)
 
 
-class ToolAdmin(ModelView):
+class AdminAccessMixin:
+    """Apply the Flask session's administrator flag to every Admin view."""
+
+    def is_accessible(self) -> bool:
+        user = get_current_user()
+        return user is not None and user.is_admin
+
+    def inaccessible_callback(self, name, **kwargs):
+        if get_current_user() is None:
+            return redirect(f"{current_app.config['FRONTEND_ORIGIN'].rstrip('/')}/login")
+
+        abort(403)
+
+
+class AuthenticatedAdminIndexView(AdminAccessMixin, AdminIndexView):
+    pass
+
+
+class SecureModelView(AdminAccessMixin, ModelView):
+    form_base_class = SecureForm
+
+
+class AdminCsrfForm(SecureForm):
+    pass
+
+
+class ToolAdmin(SecureModelView):
     can_delete = False
     column_list = (
         "name",
@@ -63,7 +91,7 @@ class ToolAdmin(ModelView):
     )
 
 
-class ToolImageAdmin(ModelView):
+class ToolImageAdmin(SecureModelView):
     column_list = ("tool", "storage_key", "position", "created_at")
     column_searchable_list = ("storage_key",)
     column_default_sort = ("position", False)
@@ -121,7 +149,7 @@ class ToolImageAdmin(ModelView):
             self._delete_asset_safely(storage_key)
 
 
-class ToolBlockAdmin(ModelView):
+class ToolBlockAdmin(SecureModelView):
     """Administrative CRUD backed by the serialized ToolBlock domain service."""
 
     can_view_details = True
@@ -192,7 +220,7 @@ class ToolBlockAdmin(ModelView):
             return False
 
 
-class ReservationAdmin(ModelView):
+class ReservationAdmin(SecureModelView):
     """Read-only reservation administration with controlled domain actions."""
 
     can_create = False
@@ -338,9 +366,15 @@ class ReservationAdmin(ModelView):
 
     @expose("/review-delivery/<int:reservation_id>", methods=("GET", "POST"))
     def review_delivery(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
         if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
             try:
                 billable_km = self._parse_billable_km(request.form.get("billable_km"))
+                # Access control loaded the session user. The domain service owns the
+                # transactional operation, so begin it with a clean session.
+                db.session.rollback()
                 review_delivery_reservation(reservation_id, billable_km)
             except ValueError as error:
                 flash(str(error), "error")
@@ -360,12 +394,19 @@ class ReservationAdmin(ModelView):
             flash("La reserva ya no está pendiente de revisión de transporte.", "error")
             return redirect(url_for(".details_view", id=reservation_id))
 
-        return self.render("admin/review_delivery.html", reservation=reservation)
+        return self.render(
+            "admin/review_delivery.html", reservation=reservation, csrf_form=csrf_form
+        )
 
     @expose("/cancel/<int:reservation_id>", methods=("GET", "POST"))
     def cancel_reservation(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
         if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
             try:
+                # See review_delivery: cancellation owns its own transaction.
+                db.session.rollback()
                 cancel_reservation(reservation_id)
             except ReservationCancellationError:
                 flash("La reserva ya no se puede cancelar.", "error")
@@ -390,10 +431,11 @@ class ReservationAdmin(ModelView):
             "admin/cancel_reservation.html",
             reservation=reservation,
             status_label=self._status_label(reservation),
+            csrf_form=csrf_form,
         )
 
 
-class AgendaAdminView(BaseView):
+class AgendaAdminView(AdminAccessMixin, BaseView):
     """Read-only agenda grouping operational events by tool."""
 
     @staticmethod
@@ -455,7 +497,12 @@ class AgendaAdminView(BaseView):
 
 
 def init_admin(app: Flask) -> Admin:
-    admin = Admin(app, name="AUREA Administración", url="/admin")
+    admin = Admin(
+        app,
+        name="AUREA Administración",
+        url="/admin",
+        index_view=AuthenticatedAdminIndexView(name="Inicio", url="/admin"),
+    )
     admin.add_view(ToolAdmin(Tool, db, category="Catálogo"))
     admin.add_view(ToolImageAdmin(ToolImage, db, category="Catálogo"))
     admin.add_view(ToolBlockAdmin(ToolBlock, db, category="Reservas"))

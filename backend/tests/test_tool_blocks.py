@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -9,7 +10,7 @@ os.environ["APP_ENV"] = "development"
 
 from app import create_app
 from app.extensions import db
-from app.models import Reservation, Tool, ToolBlock
+from app.models import Reservation, Tool, ToolBlock, User
 from app.services.availability import is_tool_available
 from app.services.tool_blocks import create_tool_block, delete_tool_block
 
@@ -21,11 +22,27 @@ class ToolBlockTestCase(unittest.TestCase):
         self.context.push()
         db.create_all()
         self.client = self.app.test_client()
+        admin = User(name="Tool block admin", email="tool-block-admin@example.com", is_admin=True)
+        db.session.add(admin)
+        db.session.commit()
+        with self.client.session_transaction() as session:
+            session["user_id"] = admin.id
 
     def tearDown(self):
         db.session.remove()
         db.drop_all()
         self.context.pop()
+
+    def admin_csrf_token(self):
+        form_page = self.client.get("/admin/toolblock/")
+        token = re.search(
+            r'name="csrf_token"[^>]*value="([^"]+)"', form_page.get_data(as_text=True)
+        )
+        self.assertIsNotNone(token)
+        return token.group(1)
+
+    def post_admin(self, path, data):
+        return self.client.post(path, data={**data, "csrf_token": self.admin_csrf_token()})
 
     def create_tool(self, **overrides):
         values = {
@@ -158,7 +175,7 @@ class ToolBlockTestCase(unittest.TestCase):
         tool_id = tool.id
         db.session.remove()
 
-        create_response = self.client.post(
+        create_response = self.post_admin(
             "/admin/toolblock/new/",
             data={
                 "tool": str(tool_id),
@@ -173,7 +190,7 @@ class ToolBlockTestCase(unittest.TestCase):
         self.assertEqual(block.reason, "Uso interno")
         db.session.remove()
 
-        edit_response = self.client.post(
+        edit_response = self.post_admin(
             f"/admin/toolblock/edit/?id={block_id}",
             data={
                 "tool": str(tool_id),
@@ -188,7 +205,9 @@ class ToolBlockTestCase(unittest.TestCase):
         self.assertEqual(block.reason, "Uso interno actualizado")
         db.session.remove()
 
-        delete_response = self.client.post(f"/admin/toolblock/delete/?id={block_id}")
+        delete_response = self.post_admin(
+            f"/admin/toolblock/delete/?id={block_id}", {"id": str(block_id)}
+        )
         self.assertEqual(delete_response.status_code, 302)
         self.assertIsNone(db.session.get(ToolBlock, block_id))
         self.assertTrue(is_tool_available(db.session.get(Tool, tool_id), date(2026, 8, 21), date(2026, 8, 23)))
@@ -199,7 +218,7 @@ class ToolBlockTestCase(unittest.TestCase):
         self.create_reservation(tool, date(2026, 8, 20), date(2026, 8, 22))
         db.session.remove()
 
-        conflicting_reservation = self.client.post(
+        conflicting_reservation = self.post_admin(
             "/admin/toolblock/new/",
             data={
                 "tool": str(tool_id),
@@ -212,7 +231,7 @@ class ToolBlockTestCase(unittest.TestCase):
         self.assertEqual(ToolBlock.query.count(), 0)
 
         db.session.remove()
-        invalid_range = self.client.post(
+        invalid_range = self.post_admin(
             "/admin/toolblock/new/",
             data={
                 "tool": str(tool_id),
@@ -225,7 +244,7 @@ class ToolBlockTestCase(unittest.TestCase):
         self.assertEqual(ToolBlock.query.count(), 0)
 
         db.session.remove()
-        missing_reason = self.client.post(
+        missing_reason = self.post_admin(
             "/admin/toolblock/new/",
             data={
                 "tool": str(tool_id),
@@ -237,6 +256,22 @@ class ToolBlockTestCase(unittest.TestCase):
         self.assertEqual(missing_reason.status_code, 200)
         self.assertEqual(ToolBlock.query.count(), 0)
 
+    def test_admin_tool_block_form_requires_csrf_token(self):
+        tool = self.create_tool()
+
+        response = self.client.post(
+            "/admin/toolblock/new/",
+            data={
+                "tool": str(tool.id),
+                "start_date": "2026-08-23",
+                "end_date": "2026-08-24",
+                "reason": "Mantenimiento",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ToolBlock.query.count(), 0)
+
     def test_admin_rejects_overlapping_tool_blocks(self):
         tool = self.create_tool()
         tool_id = tool.id
@@ -244,7 +279,7 @@ class ToolBlockTestCase(unittest.TestCase):
         block_id = block.id
         db.session.remove()
 
-        response = self.client.post(
+        response = self.post_admin(
             "/admin/toolblock/new/",
             data={
                 "tool": str(tool_id),

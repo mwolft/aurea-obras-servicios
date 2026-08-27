@@ -48,6 +48,7 @@ class GoogleAuthenticationTestCase(unittest.TestCase):
         self.assertEqual(user.email, "google.user@example.com")
         self.assertEqual(user.google_sub, "google-subject-123")
         self.assertIsNone(user.password_hash)
+        self.assertFalse(user.is_admin)
         self.assertEqual(User.query.count(), 1)
 
     def test_existing_google_subject_logs_in_without_creating_duplicate(self):
