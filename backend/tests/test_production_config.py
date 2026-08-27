@@ -82,7 +82,8 @@ class ProductionConfigurationTestCase(unittest.TestCase):
         client = app.test_client()
 
         self.assertEqual(client.get("/admin/").status_code, 302)
-        self.assertEqual(client.get("/admin/").headers["Location"], "https://www.example.test/login")
+        self.assertEqual(client.get("/admin/").headers["Location"], "/admin/login")
+        self.assertEqual(client.get("/admin/login").status_code, 200)
         health = client.get("/api/health")
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.get_json(), {"status": "ok"})

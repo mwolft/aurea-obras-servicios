@@ -1,4 +1,3 @@
-import re
 import secrets
 
 from authlib.integrations.base_client.errors import OAuthError
@@ -6,17 +5,23 @@ from flask import Blueprint, current_app, jsonify, redirect, request, session, u
 from joserfc.errors import JoseError
 from requests import RequestException
 from sqlalchemy.exc import IntegrityError
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash
 
 from app.extensions import db, oauth
 from app.models import User
-from app.services.authentication import get_current_user, serialize_user
+from app.services.authentication import (
+    authenticate_with_password,
+    get_current_user,
+    is_valid_email,
+    normalize_email,
+    serialize_user,
+    start_user_session,
+)
 from app.services.google_authentication import GoogleIdentityError, get_or_create_google_user
 
 
 auth_bp = Blueprint("auth", __name__)
 
-EMAIL_PATTERN = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 MINIMUM_PASSWORD_LENGTH = 8
 
 
@@ -58,8 +63,8 @@ def parse_email(value: object) -> tuple[str | None, tuple[dict[str, str], int] |
     if error:
         return None, error
 
-    normalized_email = email.lower()
-    if not EMAIL_PATTERN.fullmatch(normalized_email):
+    normalized_email = normalize_email(email)
+    if not is_valid_email(normalized_email):
         return None, ({"error": "email must be a valid email address."}, 400)
 
     return normalized_email, None
@@ -108,8 +113,7 @@ def register():
         db.session.rollback()
         return jsonify({"error": "An account with that email already exists."}), 409
 
-    session.clear()
-    session["user_id"] = user.id
+    start_user_session(user)
 
     return jsonify(serialize_user(user)), 201
 
@@ -128,12 +132,11 @@ def login():
     if password_error:
         return jsonify(password_error[0]), password_error[1]
 
-    user = User.query.filter_by(email=email).first()
-    if user is None or user.password_hash is None or not check_password_hash(user.password_hash, password):
+    user = authenticate_with_password(email, password)
+    if user is None:
         return jsonify({"error": "Invalid email or password."}), 401
 
-    session.clear()
-    session["user_id"] = user.id
+    start_user_session(user)
 
     return jsonify(serialize_user(user))
 
@@ -173,8 +176,7 @@ def google_callback():
     except (GoogleIdentityError, JoseError, OAuthError, RequestException):
         return google_login_failed_redirect()
 
-    session.clear()
-    session["user_id"] = user.id
+    start_user_session(user)
 
     return redirect(f"{current_app.config['FRONTEND_ORIGIN'].rstrip('/')}/login")
 

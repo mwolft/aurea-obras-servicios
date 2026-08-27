@@ -3,17 +3,18 @@ from calendar import monthrange
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from flask import Flask, abort, current_app, flash, redirect, request, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from flask_admin import Admin, AdminIndexView, BaseView
 from flask_admin.base import expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.form import SecureForm
 from markupsafe import Markup
-from wtforms import FileField
+from wtforms import FileField, PasswordField, StringField
+from wtforms.validators import InputRequired
 
 from app.extensions import db
 from app.models import Reservation, Tool, ToolBlock, ToolImage
-from app.services.authentication import get_current_user
+from app.services.authentication import authenticate_with_password, get_current_user, start_user_session
 from app.services.admin_calendar import get_agenda_events, group_agenda_events
 from app.services.availability import reservation_status_label
 from app.services.cloudinary_storage import get_cloudinary_storage
@@ -45,7 +46,7 @@ class AdminAccessMixin:
 
     def inaccessible_callback(self, name, **kwargs):
         if get_current_user() is None:
-            return redirect(f"{current_app.config['FRONTEND_ORIGIN'].rstrip('/')}/login")
+            return redirect(url_for("admin_login"))
 
         abort(403)
 
@@ -60,6 +61,42 @@ class SecureModelView(AdminAccessMixin, ModelView):
 
 class AdminCsrfForm(SecureForm):
     pass
+
+
+class AdminLoginForm(SecureForm):
+    email = StringField("Correo electrónico", validators=[InputRequired()])
+    password = PasswordField("Contraseña", validators=[InputRequired()])
+
+
+def admin_login():
+    """Authenticate an existing administrator using the regular User credentials."""
+    current_user = get_current_user()
+    if current_user is not None and current_user.is_admin:
+        return redirect(url_for("admin.index"))
+
+    form = AdminLoginForm(request.form)
+    if request.method == "POST":
+        if not form.validate():
+            abort(400)
+
+        user = authenticate_with_password(form.email.data, form.password.data)
+        if user is not None and user.is_admin:
+            start_user_session(user)
+            return redirect(url_for("admin.index"))
+
+        flash("Credenciales incorrectas o acceso no autorizado.", "error")
+
+    return render_template("admin/login.html", form=form)
+
+
+def admin_logout():
+    """End the shared Flask session from the administrative interface."""
+    form = AdminCsrfForm(request.form)
+    if not form.validate():
+        abort(400)
+
+    session.clear()
+    return redirect(url_for("admin_login"))
 
 
 class ToolAdmin(SecureModelView):
@@ -508,5 +545,12 @@ def init_admin(app: Flask) -> Admin:
     admin.add_view(ToolBlockAdmin(ToolBlock, db, category="Reservas"))
     admin.add_view(ReservationAdmin(Reservation, db, category="Reservas"))
     admin.add_view(AgendaAdminView(name="Agenda", endpoint="calendar", url="calendar", category="Reservas"))
+
+    app.add_url_rule("/admin/login", endpoint="admin_login", view_func=admin_login, methods=("GET", "POST"))
+    app.add_url_rule("/admin/logout", endpoint="admin_logout", view_func=admin_logout, methods=("POST",))
+
+    @app.context_processor
+    def inject_admin_logout_form():
+        return {"admin_logout_form": AdminCsrfForm()}
 
     return admin
