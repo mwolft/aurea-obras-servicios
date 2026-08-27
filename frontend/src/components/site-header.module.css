@@ -22,6 +22,9 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   min-width: 0;
   color: var(--color-primary);
   font-size: 1rem;
@@ -29,6 +32,13 @@
   letter-spacing: -0.02em;
   line-height: 1.2;
   text-decoration: none;
+}
+
+.brandIcon {
+  flex: 0 0 auto;
+  width: 3.75rem;
+  height: 2.5rem;
+  object-fit: contain;
 }
 
 .desktopNavigation,
@@ -156,6 +166,16 @@
 
   .desktopNavigation {
     display: none;
+  }
+
+  .brand {
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .brandIcon {
+    width: 3.25rem;
+    height: 2.167rem;
   }
 
   .menuButton {

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -137,7 +138,16 @@ export function SiteHeader() {
     <header className={styles.header} ref={headerRef}>
       <div className={styles.content}>
         <Link className={styles.brand} href="/" onClick={closeMenu}>
-          AUREA Obras y Servicios S.L.
+          <Image
+            alt=""
+            aria-hidden="true"
+            className={styles.brandIcon}
+            height={40}
+            priority
+            src="/brand/aurea-icon.png"
+            width={60}
+          />
+          <span>AUREA Obras y Servicios S.L.</span>
         </Link>
 
         <nav aria-label="Navegación principal" className={styles.desktopNavigation}>
