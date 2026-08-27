@@ -74,7 +74,7 @@
   min-height: 28rem;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-primary);
+  background: var(--color-brand-blue);
   box-shadow: var(--shadow-md);
 }
 
@@ -249,7 +249,7 @@
 }
 
 .approach {
-  background: var(--color-primary-dark);
+  background: var(--color-brand-blue-dark);
 }
 
 .approach .eyebrow {

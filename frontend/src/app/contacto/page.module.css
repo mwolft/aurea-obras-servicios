@@ -19,7 +19,7 @@
 .formFooter { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
 .formFooter p { max-width: 30rem; color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.55; }
 .formFooter button { padding: 0.8rem 1rem; border: 0; border-radius: var(--radius-sm); color: var(--color-text-muted); background: #e8ebed; cursor: not-allowed; font-weight: 800; white-space: nowrap; }
-.closing { display: grid; gap: var(--space-3); padding: 2.5rem; border-radius: var(--radius-lg); color: var(--color-surface); background: var(--color-primary); }
+.closing { display: grid; gap: var(--space-3); padding: 2.5rem; border-radius: var(--radius-lg); color: var(--color-surface); background: var(--color-brand-blue); }
 .closing .eyebrow { color: #ffb37b; }
 .closing h2 { color: inherit; max-width: 44rem; }
 .closing > p { color: #dbe4ee; max-width: 42rem; }

@@ -6,7 +6,7 @@
 
 .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(22rem, 0.9fr); gap: clamp(3rem, 7vw, 7rem); align-items: center; }
 .heroCopy { max-width: 43rem; }
-.hero h1 { max-width: 11ch; margin: 0.9rem 0 1.5rem; color: #20252b; font-size: clamp(2.9rem, 6vw, 5.25rem); font-weight: 700; line-height: 0.99; letter-spacing: -0.055em; }
+.hero h1 { max-width: 11ch; margin: 0.9rem 0 1.5rem; color: var(--color-primary); font-size: clamp(2.9rem, 6vw, 5.25rem); font-weight: 700; line-height: 0.99; letter-spacing: -0.055em; }
 .intro { max-width: 39rem; color: var(--color-text-muted); font-size: clamp(1.05rem, 2vw, 1.25rem); line-height: 1.65; }
 .heroActions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-top: var(--space-8); }
 
@@ -15,7 +15,7 @@
 .primaryAction:hover { background: var(--color-accent-dark); box-shadow: var(--shadow-md); }
 .status { color: var(--color-text-muted); font-size: 0.9rem; font-weight: 700; }
 
-.buildingScene { position: relative; display: grid; min-height: 28rem; overflow: hidden; border-radius: var(--radius-lg); background: var(--color-primary); box-shadow: var(--shadow-md); }
+.buildingScene { position: relative; display: grid; min-height: 28rem; overflow: hidden; border-radius: var(--radius-lg); background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
 .buildingScene::before, .buildingScene::after { position: absolute; content: ""; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 50%; }
 .buildingScene::before { inset: 2rem auto auto 2rem; width: 12rem; aspect-ratio: 1; }
 .buildingScene::after { right: -4rem; bottom: -4rem; width: 17rem; aspect-ratio: 1; }
@@ -32,14 +32,14 @@
 
 .services { display: grid; gap: var(--space-8); }
 .sectionHeading { display: grid; gap: var(--space-3); max-width: 43rem; }
-.sectionHeading h2, .positioning h2, .development h2 { color: #20252b; font-size: clamp(2rem, 4vw, 3.4rem); font-weight: 700; line-height: 1.02; letter-spacing: -0.05em; }
+.sectionHeading h2, .positioning h2, .development h2 { color: var(--color-primary); font-size: clamp(2rem, 4vw, 3.4rem); font-weight: 700; line-height: 1.02; letter-spacing: -0.05em; }
 .serviceGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
 .serviceCard { display: grid; align-content: start; gap: var(--space-4); min-height: 18rem; padding: clamp(1.5rem, 3vw, 2rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
-.serviceCard h3 { color: #20252b; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.025em; }
+.serviceCard h3 { color: var(--color-primary); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.025em; }
 .serviceCard p { color: var(--color-text-muted); line-height: 1.6; }
 .icon { display: grid; place-items: center; width: 3.25rem; aspect-ratio: 1; border-radius: var(--radius-md); color: var(--color-accent); background: #fff0e6; }
 .icon svg { width: 1.8rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.25; }
-.gardenCard { grid-column: span 2; border-color: var(--color-primary); background: var(--color-primary); box-shadow: var(--shadow-md); }
+.gardenCard { grid-column: span 2; border-color: var(--color-brand-blue); background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
 .gardenCard h3 { font-size: clamp(1.7rem, 3vw, 2.35rem); color: var(--color-surface); }
 .gardenCard p { max-width: 34rem; color: #c8d5e3; font-size: 1.05rem; }
 .gardenCard .icon { color: var(--color-surface); background: var(--color-accent); }
@@ -51,7 +51,7 @@
 .servicesAction { justify-self: start; color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 0.3rem; }
 .servicesAction:hover { color: var(--color-accent-dark); }
 
-.positioning { display: grid; grid-template-columns: 1fr minmax(16rem, 0.85fr); gap: clamp(2rem, 7vw, 7rem); align-items: end; padding: clamp(2rem, 5vw, 4rem); border-radius: var(--radius-lg); background: var(--color-primary-dark); }
+.positioning { display: grid; grid-template-columns: 1fr minmax(16rem, 0.85fr); gap: clamp(2rem, 7vw, 7rem); align-items: end; padding: clamp(2rem, 5vw, 4rem); border-radius: var(--radius-lg); background: var(--color-brand-blue-dark); }
 .positioning h2 { max-width: 16ch; margin-top: var(--space-3); color: var(--color-surface); }
 .positioning .eyebrow { color: #ff934d; }
 .positioning > p { color: #c8d5e3; font-size: 1.08rem; line-height: 1.7; }

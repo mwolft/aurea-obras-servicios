@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AuthProvider } from "@/components/auth-provider";
@@ -7,6 +8,12 @@ import { siteUrl } from "@/lib/site";
 import { SiteHeader } from "@/components/site-header";
 
 import "./globals.css";
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -17,7 +24,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es">
-      <body>
+      <body className={ibmPlexSans.className}>
         <AuthProvider>
           <div className="appShell">
             <SiteHeader />

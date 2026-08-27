@@ -1,6 +1,7 @@
 :root {
-  --color-primary: #082c59;
-  --color-primary-dark: #061f3f;
+  --color-primary: #102a43;
+  --color-brand-blue: #082c59;
+  --color-brand-blue-dark: #061f3f;
   --color-accent: #ff6200;
   --color-accent-dark: #d94f00;
   --color-background: #f7f6f2;
@@ -37,7 +38,6 @@ body {
   min-height: 100vh;
   color: var(--color-text);
   background: var(--color-background);
-  font-family: Arial, Helvetica, sans-serif;
   line-height: 1.5;
 }
 
