@@ -23,6 +23,7 @@ from app.services.authentication import (
     start_user_session,
 )
 from app.services.admin_calendar import get_agenda_events, group_agenda_events
+from app.services.admin_dashboard import get_dashboard_summary
 from app.services.admin_users import AdminAccessChangeError, change_admin_access
 from app.services.availability import reservation_status_label
 from app.services.cloudinary_storage import get_cloudinary_storage
@@ -71,7 +72,9 @@ class AdminAccessMixin:
 
 
 class AuthenticatedAdminIndexView(AdminAccessMixin, AdminIndexView):
-    pass
+    @expose("/")
+    def index(self):
+        return self.render("admin/dashboard.html", dashboard=get_dashboard_summary())
 
 
 class SecureModelView(AdminAccessMixin, ModelView):

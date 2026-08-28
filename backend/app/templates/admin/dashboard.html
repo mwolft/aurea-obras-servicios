@@ -1,0 +1,85 @@
+{% extends 'admin/master.html' %}
+
+{% block head_css %}
+  {{ super() }}
+  <link href="{{ url_for('static', filename='admin/admin-dashboard.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block page_title %}
+  <header class="aurea-dashboard-intro">
+    <p class="aurea-dashboard-eyebrow">Inicio</p>
+    <h1>Inicio</h1>
+    <p>Resumen de la actividad de AUREA.</p>
+  </header>
+{% endblock %}
+
+{% block body %}
+  <section aria-label="Resumen operativo" class="aurea-dashboard-metrics">
+    <a class="aurea-dashboard-metric" href="{{ url_for('reservation.index_view') }}">
+      <span>Reservas</span>
+      <strong>{{ dashboard.metrics.pending_reservations }}</strong>
+      <small>pendientes</small>
+    </a>
+    <a class="aurea-dashboard-metric" href="{{ url_for('reservation.index_view') }}">
+      <span>Próximas</span>
+      <strong>{{ dashboard.metrics.upcoming_deliveries }}</strong>
+      <small>entregas (30 días)</small>
+    </a>
+    <a class="aurea-dashboard-metric" href="{{ url_for('reservation.index_view') }}">
+      <span>Próximas</span>
+      <strong>{{ dashboard.metrics.upcoming_returns }}</strong>
+      <small>devoluciones (30 días)</small>
+    </a>
+    <a class="aurea-dashboard-metric" href="{{ url_for('tool.index_view') }}">
+      <span>Herramientas</span>
+      <strong>{{ dashboard.metrics.available_tools }} / {{ dashboard.metrics.published_tools }}</strong>
+      <small>disponibles</small>
+    </a>
+  </section>
+
+  <div class="aurea-dashboard-grid">
+    <section aria-labelledby="upcoming-activity-title" class="aurea-dashboard-panel aurea-dashboard-activity">
+      <div class="aurea-dashboard-panel-heading">
+        <h2 id="upcoming-activity-title">Próxima actividad</h2>
+        <a href="{{ url_for('calendar.index') }}">Ver agenda</a>
+      </div>
+      {% if dashboard.upcoming_activity %}
+        <ol class="aurea-dashboard-activity-list">
+          {% for activity in dashboard.upcoming_activity %}
+            <li>
+              <time datetime="{{ activity.date.isoformat() }}">{{ activity.date.strftime('%d/%m/%Y') }}</time>
+              <div>
+                <strong>{{ activity.tool_name }}</strong>
+                <span>{{ activity.operation }} · {% if activity.fulfillment_method == 'delivery' %}Transporte a domicilio{% else %}Recogida en almacén{% endif %}</span>
+                <small>Cliente: {{ activity.customer_name }}</small>
+              </div>
+              <a href="{{ url_for('reservation.details_view', id=activity.reservation_id) }}">Ver reserva</a>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="aurea-dashboard-empty">No hay entregas ni devoluciones próximas.</p>
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="attention-title" class="aurea-dashboard-panel aurea-dashboard-attention">
+      <h2 id="attention-title">Requieren atención</h2>
+      {% if dashboard.pending_delivery_reviews %}
+        <p class="aurea-dashboard-attention-count">{{ dashboard.pending_delivery_reviews }} {{ 'reserva pendiente de revisión de transporte' if dashboard.pending_delivery_reviews == 1 else 'reservas pendientes de revisión de transporte' }}.</p>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('reservation.index_view') }}">Ver reservas</a>
+      {% else %}
+        <p class="aurea-dashboard-clear">✓ No hay gestiones pendientes.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <section aria-labelledby="quick-links-title" class="aurea-dashboard-panel aurea-dashboard-quick-links">
+    <h2 id="quick-links-title">Accesos rápidos</h2>
+    <div>
+      <a href="{{ url_for('tool.create_view') }}">+ Nueva herramienta</a>
+      <a href="{{ url_for('calendar.index') }}">Calendario de reservas</a>
+      <a href="{{ url_for('toolimage.index_view') }}">Fotografías</a>
+      <a href="{{ url_for('user.index_view') }}">Usuarios</a>
+    </div>
+  </section>
+{% endblock %}
