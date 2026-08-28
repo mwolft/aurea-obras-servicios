@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { getPublicUrl, siteUrl } from "@/lib/site";
+import { getPublicUrl } from "@/lib/site";
 
 import styles from "./page.module.css";
 
-const socialImageUrl = `${siteUrl}/brand/aurea-social.png`;
+const socialImageUrl = getPublicUrl("/icon.png");
 const socialDescription =
   "AUREA Obras y Servicios S.L. prepara soluciones para obras y reformas, jardinería y alquiler de herramientas.";
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     description: socialDescription,
     url: getPublicUrl(),
     type: "website",
-    images: [{ url: socialImageUrl, width: 1200, height: 630, alt: "AUREA Obras y Servicios S.L." }],
+    images: [{ url: socialImageUrl, width: 1536, height: 1024, alt: "Icono de AUREA" }],
   },
   twitter: {
     card: "summary_large_image",
