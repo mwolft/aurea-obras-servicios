@@ -46,16 +46,15 @@ export default function Home() {
       <main className={styles.main}>
         <section className={styles.hero} aria-labelledby="hero-title">
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>AUREA Obras y Servicios S.L.</p>
-            <h1 id="hero-title">Estamos construyendo algo sólido.</h1>
+            <p className={styles.eyebrow}>Obras · Servicios · Alquiler</p>
+            <h1 id="hero-title">Soluciones para cada proyecto.</h1>
             <p className={styles.intro}>
-              Obras y reformas, jardinería y alquiler de herramientas en una nueva web pensada para facilitar tus consultas y próximos proyectos.
+              Obras y reformas, jardinería y alquiler de herramientas para tus próximos proyectos.
             </p>
             <div className={styles.heroActions}>
               <Link className={styles.primaryAction} href="/servicios/jardineria">
                 Ver servicios de jardinería
               </Link>
-              <span className={styles.status}>Web en desarrollo</span>
             </div>
           </div>
 

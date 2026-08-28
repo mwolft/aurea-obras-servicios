@@ -177,7 +177,7 @@ export function SiteHeader() {
             src="/brand/aurea-icon.png"
             width={60}
           />
-          <span>AUREA Obras y Servicios S.L.</span>
+          <span>AUREA</span>
         </Link>
 
         <nav aria-label="Navegación principal" className={styles.desktopNavigation}>

@@ -11,15 +11,18 @@
       <div class="aurea-admin-topbar">
         <a class="aurea-admin-brand" href="{{ admin_view.admin.url }}">
           <img src="{{ url_for('static', filename='admin/aurea-icon.png') }}" alt="" aria-hidden="true">
-          <span>AUREA Administración</span>
+          <span class="aurea-admin-brand-copy">
+            <span class="aurea-admin-brand-name">AUREA</span>
+            <span class="aurea-admin-brand-area">Administración</span>
+          </span>
         </a>
 
         <div class="aurea-admin-session">
+          <svg aria-hidden="true" class="aurea-admin-user-icon" fill="none" focusable="false" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="3.5"></circle>
+            <path d="M4.5 20c0-3.3 3.4-5.5 7.5-5.5s7.5 2.2 7.5 5.5"></path>
+          </svg>
           <span class="aurea-admin-user">{{ admin_current_user.name or admin_current_user.email }}</span>
-          <form action="{{ url_for('admin_logout') }}" method="post">
-            {{ admin_logout_form.csrf_token }}
-            <button class="btn btn-outline-light btn-sm" type="submit">Cerrar sesión</button>
-          </form>
         </div>
       </div>
 
@@ -35,6 +38,10 @@
           <ul class="nav navbar-nav ml-lg-auto">
             {{ layout.menu_links() }}
           </ul>
+          <form action="{{ url_for('admin_logout') }}" class="aurea-admin-logout" method="post">
+            {{ admin_logout_form.csrf_token }}
+            <button class="btn btn-outline-light btn-sm" type="submit">Cerrar sesión</button>
+          </form>
         </div>
       </nav>
     </header>

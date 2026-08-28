@@ -219,6 +219,18 @@
     gap: 0.5rem;
   }
 
+  .accountLink {
+    padding: 0.5rem;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .accountLink svg {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
   .mobileMenu {
     display: block;
     padding-bottom: 1rem;
@@ -275,6 +287,11 @@
     width: 2.65rem;
     min-width: 2.65rem;
     min-height: 2.65rem;
+  }
+
+  .accountLink {
+    border: 0;
+    background: transparent;
   }
 }
 

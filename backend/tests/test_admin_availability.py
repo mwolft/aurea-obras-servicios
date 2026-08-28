@@ -155,7 +155,8 @@ class AdminAuthorizationTestCase(unittest.TestCase):
         content = response.get_data(as_text=True)
 
         for label in (
-            "AUREA Administración",
+            "AUREA",
+            "Administración",
             "Admin test",
             "Inicio",
             "Herramientas",
@@ -168,6 +169,11 @@ class AdminAuthorizationTestCase(unittest.TestCase):
         ):
             with self.subTest(label=label):
                 self.assertIn(label, content)
+
+        self.assertIn('class="aurea-admin-user-icon"', content)
+        self.assertIn('class="aurea-admin-logout"', content)
+        self.assertEqual(content.count('action="/admin/logout"'), 1)
+        self.assertIn('data-toggle="dropdown"', content)
 
     def test_user_admin_is_read_only_and_uses_controlled_access_changes(self):
         administrator = self.create_user("admin@example.com", is_admin=True, password="secure-password")
