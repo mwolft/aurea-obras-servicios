@@ -11,6 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 1rem;
   min-height: 4.25rem;
   padding: 0.5rem 1rem;
@@ -20,7 +21,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   color: #ffffff;
   text-decoration: none;
 }
@@ -41,11 +44,12 @@
 
 .aurea-admin-brand-copy {
   display: grid;
+  min-width: 0;
   line-height: 1;
 }
 
 .aurea-admin-brand-name {
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -58,14 +62,23 @@
   letter-spacing: 0.01em;
 }
 
+.aurea-admin-topbar-actions,
 .aurea-admin-session {
   display: flex;
   align-items: center;
+}
+
+.aurea-admin-topbar-actions {
+  flex: 0 1 auto;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.aurea-admin-session {
   justify-content: flex-end;
   gap: 0.75rem;
   min-width: 0;
-  max-width: min(24rem, calc(100% - 13rem));
-  padding-right: 7.75rem;
+  max-width: 20rem;
 }
 
 .aurea-admin-user-icon {
@@ -89,15 +102,17 @@
 }
 
 .aurea-admin-logout {
-  position: absolute;
-  top: 1.3rem;
-  right: 1rem;
   margin: 0;
 }
 
 .aurea-admin-logout .btn-outline-light {
   border-color: rgba(255, 255, 255, 0.62);
   font-weight: 600;
+}
+
+.aurea-admin-menu-toggle,
+.aurea-admin-mobile-logout {
+  display: none;
 }
 
 .aurea-admin-navigation {
@@ -147,8 +162,27 @@
   }
 
   .aurea-admin-session {
-    max-width: min(15rem, calc(100% - 10rem));
-    padding-right: 0;
+    max-width: min(12rem, calc(100vw - 13.5rem));
+  }
+
+  .aurea-admin-logout {
+    display: none;
+  }
+
+  .aurea-admin-menu-toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .aurea-admin-mobile-logout {
+    display: block;
+    width: calc(100% - 1.5rem);
+    margin: 0.5rem 0.75rem 0.25rem;
+    text-align: left;
   }
 
   .aurea-admin-navigation {
@@ -163,20 +197,11 @@
     padding: 0.65rem 0.75rem;
   }
 
-  .aurea-admin-logout {
-    position: static;
-    margin: 0.5rem 0.75rem 0.25rem;
-  }
-
-  .aurea-admin-logout .btn {
-    width: 100%;
-    text-align: left;
-  }
 }
 
 @media (max-width: 575.98px) {
   .aurea-admin-topbar {
-    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .aurea-admin-brand {
@@ -190,18 +215,34 @@
 
   .aurea-admin-session {
     gap: 0.45rem;
-    max-width: calc(100% - 9rem);
+    max-width: min(7.5rem, calc(100vw - 12.25rem));
   }
 
   .aurea-admin-user {
     max-width: 8rem;
   }
 
-  .aurea-admin-brand-name {
-    font-size: 0.98rem;
-  }
-
   .aurea-admin-brand-area {
     font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .aurea-admin-topbar {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .aurea-admin-brand img {
+    width: 2.875rem;
+    height: 2rem;
+  }
+
+  .aurea-admin-session {
+    max-width: min(4.5rem, calc(100vw - 12rem));
+  }
+
+  .aurea-admin-user {
+    max-width: 3rem;
   }
 }

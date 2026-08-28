@@ -172,6 +172,9 @@ class AdminAuthorizationTestCase(unittest.TestCase):
 
         self.assertIn('class="aurea-admin-user-icon"', content)
         self.assertIn('class="aurea-admin-logout"', content)
+        self.assertIn('class="aurea-admin-topbar-actions"', content)
+        self.assertIn('id="aurea-admin-logout-form"', content)
+        self.assertIn('form="aurea-admin-logout-form"', content)
         self.assertEqual(content.count('action="/admin/logout"'), 1)
         self.assertIn('data-toggle="dropdown"', content)
 
