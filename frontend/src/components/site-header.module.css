@@ -1,7 +1,7 @@
 .header {
   position: relative;
   z-index: 10;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 2px solid var(--color-accent);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
@@ -27,10 +27,6 @@
   gap: 0.6rem;
   min-width: 0;
   color: var(--color-primary);
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
   text-decoration: none;
 }
 
@@ -39,6 +35,29 @@
   width: 3.75rem;
   height: 2.5rem;
   object-fit: contain;
+}
+
+.brandCopy {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.brandName {
+  color: var(--color-primary);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.brandSubtitle {
+  color: var(--color-accent);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .desktopNavigation,
@@ -84,6 +103,18 @@
   background: transparent;
   cursor: pointer;
   font: inherit;
+}
+
+.desktopNavigation button {
+  padding-right: 0.35rem;
+  padding-left: 0.35rem;
+  border-color: transparent;
+  color: var(--color-text-muted);
+}
+
+.desktopNavigation button:hover:not(:disabled) {
+  color: var(--color-primary);
+  background: transparent;
 }
 
 .desktopNavigation button:disabled,
@@ -200,12 +231,20 @@
 
   .brand {
     gap: 0.5rem;
-    font-size: 0.9rem;
   }
 
   .brandIcon {
     width: 3.25rem;
     height: 2.167rem;
+  }
+
+  .brandName {
+    font-size: 1.15rem;
+  }
+
+  .brandSubtitle {
+    font-size: 0.57rem;
+    letter-spacing: 0.09em;
   }
 
   .menuButton {
@@ -268,9 +307,6 @@
   .brand {
     gap: 0.35rem;
     flex: 1 1 auto;
-    font-size: 0.78rem;
-    letter-spacing: -0.03em;
-    white-space: nowrap;
   }
 
   .brandIcon {
@@ -293,15 +329,25 @@
     border: 0;
     background: transparent;
   }
+
+  .brandName {
+    font-size: 1.05rem;
+  }
+
+  .brandSubtitle {
+    font-size: 0.52rem;
+    letter-spacing: 0.075em;
+  }
 }
 
 @media (max-width: 340px) {
-  .brand {
-    font-size: 0.7rem;
-  }
-
   .brandIcon {
     width: 2.7rem;
     height: 1.8rem;
+  }
+
+  .brandSubtitle {
+    font-size: 0.48rem;
+    letter-spacing: 0.06em;
   }
 }

@@ -76,6 +76,33 @@ class AdminAuthorizationTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/admin/login")
 
+    def test_admin_pages_reference_the_shared_favicon(self):
+        favicon_path = "/static/admin/aurea-icon.png"
+        theme_color_meta = '<meta name="theme-color" content="#102A43">'
+        favicon_response = self.client.get(favicon_path)
+        self.assertEqual(favicon_response.status_code, 200)
+        favicon_response.close()
+
+        login_response = self.client.get("/admin/login")
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(f'href="{favicon_path}" rel="icon" type="image/png"', login_response.get_data(as_text=True))
+        self.assertIn(theme_color_meta, login_response.get_data(as_text=True))
+
+        self.authenticate(is_admin=True)
+        for path in (
+            "/admin/",
+            "/admin/tool/",
+            "/admin/toolimage/",
+            "/admin/reservation/",
+            "/admin/user/",
+            "/admin/account/",
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(f'href="{favicon_path}" rel="icon" type="image/png"', response.get_data(as_text=True))
+                self.assertIn(theme_color_meta, response.get_data(as_text=True))
+
     def test_admin_login_authenticates_only_administrators_and_logout_clears_session(self):
         admin = User(
             name="Administrative User",

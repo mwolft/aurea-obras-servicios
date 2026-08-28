@@ -5,6 +5,12 @@
   <link href="{{ url_for('static', filename='admin/admin-header.css') }}" rel="stylesheet">
 {% endblock %}
 
+{% block head %}
+  {{ super() }}
+  <link href="{{ url_for('static', filename='admin/aurea-icon.png') }}" rel="icon" type="image/png">
+  <meta name="theme-color" content="#102A43">
+{% endblock %}
+
 {% block page_body %}
   <div class="container{% if theme.fluid %}-fluid{% endif %}">
     <header class="aurea-admin-header">

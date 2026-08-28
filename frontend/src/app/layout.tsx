@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "AUREA Obras y Servicios S.L.",
   description: "Obras, jardinería y alquiler de herramientas de AUREA Obras y Servicios S.L.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#102A43",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

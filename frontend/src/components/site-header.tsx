@@ -177,7 +177,10 @@ export function SiteHeader() {
             src="/brand/aurea-icon.png"
             width={60}
           />
-          <span>AUREA</span>
+          <span className={styles.brandCopy}>
+            <span className={styles.brandName}>AUREA</span>
+            <span className={styles.brandSubtitle}>Obras y servicios</span>
+          </span>
         </Link>
 
         <nav aria-label="Navegación principal" className={styles.desktopNavigation}>
