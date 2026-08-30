@@ -1,6 +1,15 @@
-.PHONY: dev backend frontend
+.PHONY: install dev backend frontend
+
+install:
+	@if [ ! -x backend/.venv/bin/python ]; then \
+		echo "Creando backend/.venv"; \
+		python3 -m venv backend/.venv; \
+	fi
+	@backend/.venv/bin/python -m pip install --upgrade -r backend/requirements.txt
+	@pnpm --dir frontend install --frozen-lockfile
 
 backend:
+	@test -x backend/.venv/bin/python || { echo "Falta backend/.venv. Ejecuta: make install"; exit 1; }
 	@cd backend && . .venv/bin/activate && exec flask --app run.py run --host=0.0.0.0 --port=5000
 
 frontend:
@@ -8,6 +17,7 @@ frontend:
 
 dev:
 	@set -e; \
+	test -x backend/.venv/bin/python || { echo "Falta backend/.venv. Ejecuta: make install"; exit 1; }; \
 	backend_pid=""; frontend_pid=""; \
 	cleanup() { \
 		[ -z "$$backend_pid" ] || kill "$$backend_pid" 2>/dev/null || true; \

@@ -16,20 +16,28 @@ docs/      Documentación del proyecto
 - Python 3.11 o posterior.
 - GNU Make (incluido en GitHub Codespaces y habitualmente disponible en Linux).
 
-## Primera instalación
+## Primera instalación o actualización de dependencias
 
-En GitHub Codespaces o Linux, prepara el entorno una sola vez desde la raíz del repositorio:
+En un Codespace nuevo, crea primero los archivos de configuración local y completa `backend/.env` con las variables necesarias. No incluyas secretos en Git:
 
 ```bash
 cp frontend/.env.example frontend/.env.local
 cp backend/.env.example backend/.env
-python3 -m venv backend/.venv
-backend/.venv/bin/python -m pip install -r backend/requirements.txt
-pnpm --dir frontend install
-(cd backend && . .venv/bin/activate && flask --app run.py db upgrade)
 ```
 
-Completa `backend/.env` con las variables locales necesarias. No incluyas secretos en Git.
+Después, y siempre que cambien dependencias o falte un paquete, ejecuta desde la raíz:
+
+```bash
+make install
+```
+
+Este comando crea `backend/.venv` si no existe, instala las dependencias Python de `backend/requirements.txt` dentro de ese entorno virtual e instala las dependencias bloqueadas del frontend con pnpm. No instala paquetes Python globalmente.
+
+En la primera instalación, aplica también las migraciones existentes:
+
+```bash
+(cd backend && . .venv/bin/activate && flask --app run.py db upgrade)
+```
 
 ## Arrancar desarrollo
 
