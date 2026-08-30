@@ -14,35 +14,50 @@ docs/      Documentación del proyecto
 
 - Node.js 20 o posterior y pnpm.
 - Python 3.11 o posterior.
+- GNU Make (incluido en GitHub Codespaces y habitualmente disponible en Linux).
 
-## Desarrollo local
+## Primera instalación
 
-### Frontend
-
-```bash
-cd frontend
-# Windows PowerShell
-Copy-Item .env.example .env.local
-pnpm install
-pnpm dev
-```
-
-Disponible en `http://localhost:3000`.
-
-### Backend
+En GitHub Codespaces o Linux, prepara el entorno una sola vez desde la raíz del repositorio:
 
 ```bash
-cd backend
-python -m venv .venv
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-Copy-Item .env.example .env
-pip install -r requirements.txt
-flask --app run.py db upgrade
-flask --app run.py run --debug
+cp frontend/.env.example frontend/.env.local
+cp backend/.env.example backend/.env
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r backend/requirements.txt
+pnpm --dir frontend install
+(cd backend && . .venv/bin/activate && flask --app run.py db upgrade)
 ```
 
-Disponible en `http://localhost:5000`. La comprobación de estado está en `GET /api/health`.
+Completa `backend/.env` con las variables locales necesarias. No incluyas secretos en Git.
+
+## Arrancar desarrollo
+
+Una vez hecha la primera instalación, el comando habitual es:
+
+### Todo
+
+```bash
+make dev
+```
+
+Inicia el frontend y el backend a la vez. Al detenerlo con `Ctrl+C`, el `Makefile` detiene ambos procesos.
+
+### Solo backend
+
+```bash
+make backend
+```
+
+### Solo frontend
+
+```bash
+make frontend
+```
+
+- Frontend: `http://localhost:3000`
+- Backend/API/Admin: `http://localhost:5000`
+- Administración: `http://localhost:5000/admin/`
 
 El backend carga las variables de `backend/.env` al ejecutarse mediante el comando `flask`.
 Usa `.env.example` como plantilla y no incluyas `.env` en Git. Las variables necesarias son:
