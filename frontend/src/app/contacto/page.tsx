@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ContactForm } from "./contact-form";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -15,79 +16,27 @@ export default function ContactPage() {
         <p className={styles.eyebrow}>Contacto</p>
         <h1 id="contact-title">Cuéntanos qué necesitas.</h1>
         <p>
-          Estamos preparando nuestros canales de contacto para poder atender cada consulta con
-          claridad y cercanía.
-        </p>
-      </section>
-
-      <section aria-labelledby="channels-title" className={styles.channels}>
-        <div>
-          <p className={styles.eyebrow}>Canales de contacto</p>
-          <h2 id="channels-title">Próximamente podrás encontrarnos aquí.</h2>
-        </div>
-        <p>
-          Incorporaremos los datos de teléfono, correo electrónico y área de atención cuando estén
-          confirmados.
+          Explícanos tu consulta para que podamos conocer mejor el trabajo que necesitas.
         </p>
       </section>
 
       <section aria-labelledby="form-title" className={styles.formSection}>
         <div className={styles.formHeading}>
           <p className={styles.eyebrow}>Formulario de contacto</p>
-          <h2 id="form-title">Prepara tu consulta.</h2>
+          <h2 id="form-title">Estamos listos para conocer tu consulta.</h2>
           <p>
-            Este formulario estará disponible próximamente. Por ahora puedes dejar preparada la
-            información que necesitaremos para atenderte.
+            Indica los datos básicos y cuéntanos qué necesitas. Usaremos esta información únicamente para responder a tu consulta.
           </p>
         </div>
 
-        <form aria-describedby="form-status" className={styles.form}>
-          <div className={styles.fieldGrid}>
-            <label>
-              Nombre
-              <input autoComplete="name" name="name" type="text" />
-            </label>
-            <label>
-              Email
-              <input autoComplete="email" name="email" type="email" />
-            </label>
-            <label>
-              Teléfono
-              <input autoComplete="tel" name="phone" type="tel" />
-            </label>
-            <label>
-              Asunto
-              <input name="subject" type="text" />
-            </label>
-          </div>
-
-          <label>
-            Mensaje
-            <textarea name="message" rows={6} />
-          </label>
-
-          <label className={styles.privacy}>
-            <input name="privacy" type="checkbox" />
-            <span>He leído y acepto la política de privacidad.</span>
-          </label>
-
-          <div className={styles.formFooter}>
-            <p id="form-status" role="status">
-              El envío de consultas todavía no está disponible. No se enviará ningún dato desde
-              este formulario.
-            </p>
-            <button disabled type="submit">Envío próximamente</button>
-          </div>
-        </form>
+        <ContactForm />
       </section>
 
       <section aria-labelledby="closing-title" className={styles.closing}>
         <p className={styles.eyebrow}>AUREA</p>
-        <h2 id="closing-title">Estamos terminando de preparar esta vía de contacto.</h2>
-        <p>Incorporaremos la información necesaria para que puedas escribirnos o llamarnos con facilidad.</p>
+        <h2 id="closing-title">Un punto de partida para tu próximo proyecto.</h2>
+        <p>Cuéntanos qué necesitas y comparte los datos que nos ayuden a entender tu consulta.</p>
       </section>
-
-      {/* TODO: incorporar teléfono, email y área de atención confirmados por Emilio. */}
     </main>
   );
 }

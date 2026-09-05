@@ -7,10 +7,10 @@ import styles from "./page.module.css";
 
 const socialImageUrl = getPublicUrl("/icon.png");
 const socialDescription =
-  "AUREA Obras y Servicios S.L. prepara soluciones para obras y reformas, jardinería y alquiler de herramientas.";
+  "AUREA Obras y Servicios S.L. reúne jardinería, fontanería, electricidad, obras y reformas, además de alquiler de herramientas.";
 
 export const metadata: Metadata = {
-  title: "AUREA Obras y Servicios S.L. | Obras, jardinería y alquiler de herramientas",
+  title: "AUREA Obras y Servicios S.L. | Servicios y alquiler de herramientas",
   description: socialDescription,
   alternates: { canonical: "/" },
   openGraph: {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
 };
 
-function WorksIcon() {
+function ServicesIcon() {
   return <svg aria-hidden="true" viewBox="0 0 48 48"><path d="M8 39h32M14 39V18l10-8 10 8v21M20 39V27h8v12M10 18h28" /></svg>;
 }
 
@@ -44,74 +44,108 @@ export default function Home() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <section className={styles.hero} aria-labelledby="hero-title">
+        <section aria-labelledby="hero-title" className={styles.hero}>
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>Obras · Servicios · Alquiler</p>
+            <p className={styles.eyebrow}>AUREA · SERVICIOS · ALQUILER</p>
             <h1 id="hero-title">Soluciones para cada proyecto.</h1>
             <p className={styles.intro}>
-              Obras y reformas, jardinería y alquiler de herramientas para tus próximos proyectos.
+              Jardinería, fontanería, electricidad y obras y reformas. También contamos con alquiler de herramientas para cuando las necesitas.
             </p>
             <div className={styles.heroActions}>
               <Link className={styles.primaryAction} href="/servicios/jardineria">
-                Ver servicios de jardinería
+                Conocer Jardinería
               </Link>
+              <Link className={styles.secondaryAction} href="/alquiler">Ver alquiler</Link>
             </div>
           </div>
 
-          <div className={styles.buildingScene} aria-hidden="true">
-            <div className={styles.sceneLabel}>En construcción</div>
-            <div className={styles.scaffold}>
-              <span className={styles.scaffoldTop} /><span className={styles.scaffoldLeft} />
-              <span className={styles.scaffoldRight} /><span className={styles.scaffoldMiddle} />
-              <span className={styles.scaffoldBase} /><span className={`${styles.block} ${styles.blockOne}`} />
-              <span className={`${styles.block} ${styles.blockTwo}`} /><span className={`${styles.block} ${styles.blockThree}`} />
-              <span className={`${styles.block} ${styles.blockFour}`} />
-            </div>
+          <div aria-hidden="true" className={styles.heroVisual}>
+            <span className={styles.visualLabel}>Servicios · Jardinería · Alquiler</span>
+            <div className={styles.heroMark}><GardenIcon /></div>
+            <span className={`${styles.heroLine} ${styles.heroLineOne}`} />
+            <span className={`${styles.heroLine} ${styles.heroLineTwo}`} />
+            <span className={`${styles.heroBlock} ${styles.heroBlockOne}`} />
+            <span className={`${styles.heroBlock} ${styles.heroBlockTwo}`} />
           </div>
         </section>
 
-        <section className={styles.services} aria-labelledby="services-title">
+        <section aria-labelledby="services-title" className={styles.services}>
           <div className={styles.sectionHeading}>
             <p className={styles.eyebrow}>Áreas de servicio</p>
-            <h2 id="services-title">Soluciones prácticas para poner manos a la obra.</h2>
+            <h2 id="services-title">Una empresa multiservicio para distintas necesidades.</h2>
           </div>
           <div className={styles.serviceGrid}>
-            <article className={styles.serviceCard}>
-              <div className={styles.icon}><WorksIcon /></div><h3>Obras y servicios</h3>
-              <p>Estamos preparando la información de esta área de trabajo.</p>
-            </article>
             <article className={`${styles.serviceCard} ${styles.gardenCard}`}>
-              <div className={styles.icon}><GardenIcon /></div><h3>Jardinería</h3>
-              <p>Una línea especialmente relevante de AUREA para el cuidado de espacios exteriores.</p>
+              <div className={styles.icon}><GardenIcon /></div>
+              <h3>Jardinería</h3>
+              <p>Un área destacada de AUREA para preparar y cuidar espacios exteriores.</p>
               <Link className={styles.cardLink} href="/servicios/jardineria">
                 Ver servicios de jardinería <span aria-hidden="true">→</span>
               </Link>
             </article>
-            <article className={`${styles.serviceCard} ${styles.toolsCard}`}>
-              <div className={styles.icon}><ToolsIcon /></div><h3>Alquiler de herramientas</h3>
-              <p>Consulta el catálogo de herramientas disponible para alquilar.</p>
-              <Link className={styles.cardLink} href="/alquiler">Ver catálogo <span aria-hidden="true">→</span></Link>
+            <article className={styles.serviceCard}>
+              <div className={styles.icon}><ServicesIcon /></div>
+              <h3>Fontanería</h3>
+              <p>Una de las áreas de servicio de AUREA.</p>
+            </article>
+            <article className={styles.serviceCard}>
+              <div className={styles.icon}><ServicesIcon /></div>
+              <h3>Electricidad</h3>
+              <p>Una de las áreas de servicio de AUREA.</p>
+            </article>
+            <article className={styles.serviceCard}>
+              <div className={styles.icon}><ServicesIcon /></div>
+              <h3>Obras y reformas</h3>
+              <p>Una de las áreas de servicio de AUREA.</p>
             </article>
           </div>
           <Link className={styles.servicesAction} href="/servicios">Ver todos los servicios</Link>
         </section>
 
-        <section className={styles.positioning} aria-labelledby="positioning-title">
+        <section aria-labelledby="gardening-title" className={styles.gardeningFeature}>
+          <div aria-hidden="true" className={styles.gardeningVisual}><GardenIcon /></div>
           <div>
-            <p className={styles.eyebrow}>Una forma de trabajar</p>
-            <h2 id="positioning-title">Cercanía, claridad y soluciones útiles.</h2>
+            <p className={styles.eyebrow}>Jardinería</p>
+            <h2 id="gardening-title">Cuidar, despejar y preparar los espacios exteriores.</h2>
+            <p>Desbroce de parcelas y maleza, jardines de urbanizaciones y mini excavaciones vinculadas a jardín.</p>
+            <Link className={styles.primaryAction} href="/servicios/jardineria">Ver servicios de jardinería</Link>
           </div>
-          <p>AUREA reúne obra, jardinería y alquiler para ofrecer un servicio práctico. La web irá incorporando nuevas formas de consultar y organizar cada necesidad.</p>
         </section>
 
-        <section className={styles.development} aria-labelledby="development-title">
-          <div className={styles.developmentMark} aria-hidden="true" />
+        <section aria-labelledby="winter-title" className={styles.editorial}>
+          <p className={styles.eyebrow}>Trabajo anticipado</p>
+          <blockquote>“Los fuegos se apagan en invierno”.</blockquote>
           <div>
-            <p className={styles.eyebrow}>Seguimos construyendo</p>
-            <h2 id="development-title">Estamos preparando nuevas secciones y el sistema completo de reservas.</h2>
-            <p>Algunas funcionalidades aún se están incorporando. Mientras tanto, ya puedes consultar el catálogo de herramientas.</p>
+            <h2 id="winter-title">Preparar los espacios antes de los meses de mayor riesgo.</h2>
+            <p>El trabajo realizado con antelación permite limpiar, desbrozar y preparar parcelas y zonas exteriores con tiempo.</p>
           </div>
-          <Link className={styles.secondaryAction} href="/alquiler">Ir al catálogo</Link>
+        </section>
+
+        <section aria-labelledby="multiservice-title" className={styles.multiservice}>
+          <div>
+            <p className={styles.eyebrow}>Más allá de Jardinería</p>
+            <h2 id="multiservice-title">AUREA reúne servicios para distintos proyectos.</h2>
+          </div>
+          <p>Fontanería, electricidad y obras y reformas completan una oferta multiservicio junto a Jardinería.</p>
+        </section>
+
+        <section aria-labelledby="rental-title" className={styles.rental}>
+          <div aria-hidden="true" className={styles.rentalIcon}><ToolsIcon /></div>
+          <div>
+            <p className={styles.eyebrow}>Alquiler</p>
+            <h2 id="rental-title">Herramientas para cuando quieres hacer tu propio proyecto.</h2>
+            <p>Si buscas que AUREA realice un trabajo, explora nuestros servicios. Si necesitas herramientas, consulta el catálogo de alquiler.</p>
+          </div>
+          <Link className={styles.secondaryAction} href="/alquiler">Ver herramientas en alquiler</Link>
+        </section>
+
+        <section aria-labelledby="contact-title" className={styles.contactCta}>
+          <div>
+            <p className={styles.eyebrow}>Contacto</p>
+            <h2 id="contact-title">Cuéntanos qué necesitas.</h2>
+            <p>Comparte tu proyecto con AUREA y te orientaremos hacia el área de servicio adecuada.</p>
+          </div>
+          <Link className={styles.primaryAction} href="/contacto">Ir a Contacto</Link>
         </section>
       </main>
     </div>

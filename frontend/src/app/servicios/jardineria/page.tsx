@@ -3,30 +3,28 @@ import Link from "next/link";
 
 import styles from "./page.module.css";
 
-// TODO: sustituir por contenido confirmado por Emilio.
-const provisionalGardeningServices = [
+const gardeningAreas = [
   {
-    title: "Mantenimiento de jardines",
-    description: "Una propuesta orientada al cuidado continuado de espacios exteriores.",
+    title: "Desbroce y maleza",
+    description:
+      "Trabajos de desbroce y control de maleza para mantener parcelas y zonas exteriores atendidas.",
   },
   {
-    title: "Cuidado de zonas verdes",
-    description: "Atención general para conservar y acompañar cada espacio según su necesidad.",
+    title: "Jardines de urbanizaciones",
+    description:
+      "Atención a jardines y espacios comunes de urbanizaciones dentro de la línea de jardinería de AUREA.",
   },
   {
-    title: "Espacios exteriores",
-    description: "Soluciones de jardinería que iremos detallando con la información definitiva.",
-  },
-  {
-    title: "Atención personalizada",
-    description: "Cada consulta parte de las características concretas del espacio a cuidar.",
+    title: "Mini excavaciones",
+    description:
+      "Trabajos auxiliares y movimientos puntuales donde el uso de maquinaria compacta resulta adecuado para el jardín.",
   },
 ];
 
 export const metadata: Metadata = {
   title: "Jardinería | AUREA Obras y Servicios S.L.",
   description:
-    "AUREA Obras y Servicios S.L. ofrece servicios de jardinería y prepara información detallada sobre esta línea de trabajo.",
+    "Jardinería en AUREA: desbroce y maleza, jardines de urbanizaciones y mini excavaciones vinculadas a espacios exteriores.",
   alternates: { canonical: "/servicios/jardineria" },
 };
 
@@ -45,11 +43,14 @@ export default function GardeningPage() {
         <section aria-labelledby="gardening-title" className={styles.hero}>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>Jardinería</p>
-            <h1 id="gardening-title">Espacios exteriores atendidos con cercanía.</h1>
+            <h1 id="gardening-title">Jardinería para terrenos, jardines y zonas exteriores.</h1>
             <p className={styles.intro}>
-              AUREA incorpora la jardinería como una línea importante de su trabajo. Estamos preparando la información completa para presentar cada servicio con claridad.
+              AUREA realiza trabajos de jardinería y mantenimiento de terrenos desde una perspectiva práctica, adaptada a las necesidades de cada espacio.
             </p>
-            <Link className={styles.primaryAction} href="/contacto">Solicitar información</Link>
+            <div className={styles.heroActions}>
+              <Link className={styles.primaryAction} href="/contacto">Cuéntanos qué necesitas</Link>
+              <Link className={styles.secondaryAction} href="/servicios">Ver todos los servicios</Link>
+            </div>
           </div>
 
           <div aria-hidden="true" className={styles.heroVisual}>
@@ -64,22 +65,22 @@ export default function GardeningPage() {
 
         <section aria-labelledby="presentation-title" className={styles.presentation}>
           <div>
-            <p className={styles.eyebrow}>Una línea de trabajo cercana</p>
-            <h2 id="presentation-title">Jardinería para cuidar cada espacio exterior.</h2>
+            <p className={styles.eyebrow}>Enfoque práctico</p>
+            <h2 id="presentation-title">Cada espacio necesita una actuación adecuada.</h2>
           </div>
           <p>
-            Abordamos trabajos de jardinería y mantenimiento de espacios exteriores desde una atención directa y adaptada a cada necesidad. Los detalles de la propuesta se incorporarán a medida que se concreten.
+            Valoramos el terreno, la vegetación y el tipo de trabajo para plantear una actuación ordenada y ajustada a la necesidad concreta.
           </p>
         </section>
 
         <section aria-labelledby="services-title" className={styles.services} id="servicios-jardineria">
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}>Servicios de jardinería</p>
-            <h2 id="services-title">Una base preparada para crecer con información concreta.</h2>
-            <p>Estamos terminando de definir el alcance de cada servicio junto a Emilio.</p>
+            <p className={styles.eyebrow}>Líneas de trabajo</p>
+            <h2 id="services-title">Jardinería para mantener y preparar espacios exteriores.</h2>
+            <p>Estas son las principales líneas de trabajo de AUREA dentro de Jardinería.</p>
           </div>
           <div className={styles.serviceGrid}>
-            {provisionalGardeningServices.map((service) => (
+            {gardeningAreas.map((service) => (
               <article className={styles.serviceCard} key={service.title}>
                 <div className={styles.serviceIcon}><GardenLineIcon /></div>
                 <h3>{service.title}</h3>
@@ -89,38 +90,50 @@ export default function GardeningPage() {
           </div>
         </section>
 
-        <section aria-labelledby="approach-title" className={styles.approach}>
+        <section aria-labelledby="winter-title" className={styles.winter}>
           <div>
-            <p className={styles.eyebrow}>Nuestro enfoque</p>
-            <h2 id="approach-title">Atención directa para cada necesidad.</h2>
+            <p className={styles.eyebrow}>Trabajar con antelación</p>
+            <h2 id="winter-title">Los fuegos se apagan en invierno.</h2>
           </div>
-          <ul>
-            <li>Atención cercana desde el primer contacto.</li>
-            <li>Trabajo adaptado a las características de cada espacio.</li>
-            <li>Coordinación directa para plantear cada consulta.</li>
-          </ul>
+          <div className={styles.winterCopy}>
+            <p>
+              Mantener el terreno, desbrozar y reducir la acumulación de vegetación con antelación ayuda a preparar los espacios antes de los meses de mayor riesgo.
+            </p>
+            <Link className={styles.winterAction} href="/contacto">Contactar con AUREA</Link>
+          </div>
         </section>
 
-        <section aria-labelledby="projects-title" className={styles.projects}>
+        <section aria-labelledby="approach-title" className={styles.approach}>
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}>Próximamente</p>
-            <h2 id="projects-title">Trabajos e imágenes que mostrarán la propuesta completa.</h2>
-            <p>Estamos preparando esta sección con información y fotografías reales.</p>
+            <p className={styles.eyebrow}>Cómo trabaja AUREA</p>
+            <h2 id="approach-title">Una actuación ordenada para cada necesidad.</h2>
+            <p>
+              El trabajo se plantea según las características del espacio y los medios adecuados para llevarlo a cabo.
+            </p>
           </div>
-          <div aria-hidden="true" className={styles.placeholderGrid}>
-            <div className={`${styles.placeholder} ${styles.placeholderTall}`} />
-            <div className={styles.placeholder} />
-            <div className={styles.placeholder} />
+          <div className={styles.approachList}>
+            <article>
+              <h3>Valorar el espacio</h3>
+              <p>Atender las características del terreno o jardín antes de plantear el trabajo.</p>
+            </article>
+            <article>
+              <h3>Elegir los medios adecuados</h3>
+              <p>Adaptar la actuación a las necesidades concretas de cada zona exterior.</p>
+            </article>
+            <article>
+              <h3>Trabajar de forma ordenada</h3>
+              <p>Coordinar el trabajo para abordar cada consulta de manera práctica.</p>
+            </article>
           </div>
         </section>
 
         <section aria-labelledby="final-title" className={styles.finalCta}>
           <div>
-            <p className={styles.eyebrow}>Jardinería AUREA</p>
-            <h2 id="final-title">Estamos preparando toda la información para ayudarte a valorar tu necesidad.</h2>
-            <p>Próximamente incorporaremos los detalles de esta línea de servicio.</p>
+            <p className={styles.eyebrow}>Contacto</p>
+            <h2 id="final-title">Cuéntanos qué necesitas para tu espacio exterior.</h2>
+            <p>Explícanos el trabajo que necesitas y podremos conocer mejor tu consulta.</p>
           </div>
-          <span className={styles.ctaStatus}>Contenido en preparación</span>
+          <Link className={styles.finalAction} href="/contacto">Contactar con AUREA</Link>
         </section>
       </main>
     </div>

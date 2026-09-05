@@ -20,10 +20,15 @@
   text-transform: uppercase;
 }
 
-.hero {
+.hero,
+.sectionHeading,
+.closing {
   display: grid;
   gap: var(--space-4);
-  max-width: 52rem;
+}
+
+.hero {
+  max-width: 55rem;
 }
 
 .hero h1,
@@ -36,7 +41,7 @@
 }
 
 .hero h1 {
-  max-width: 14ch;
+  max-width: 15ch;
   margin-top: var(--space-2);
   font-size: clamp(3rem, 7vw, 6rem);
 }
@@ -44,10 +49,54 @@
 .intro,
 .featuredCopy > p:not(.eyebrow),
 .sectionHeading > p,
-.closing > p:not(.eyebrow) {
+.closing > p:not(.eyebrow),
+.serviceCard p {
   color: var(--color-text-muted);
   font-size: 1.05rem;
   line-height: 1.7;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.primaryAction,
+.secondaryAction,
+.closingAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primaryAction {
+  color: var(--color-surface);
+  background: var(--color-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.primaryAction:hover {
+  background: var(--color-accent-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.secondaryAction {
+  border: 1px solid rgba(16, 42, 67, 0.25);
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.secondaryAction:hover {
+  border-color: var(--color-primary);
+  background: var(--color-background);
 }
 
 .featuredService {
@@ -70,30 +119,30 @@
   font-size: clamp(2.5rem, 5vw, 4.5rem);
 }
 
-.primaryAction {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  min-height: 3rem;
-  padding: 0.75rem 1rem;
-  margin-top: var(--space-4);
-  border-radius: var(--radius-sm);
-  color: var(--color-surface);
-  background: var(--color-accent);
-  box-shadow: var(--shadow-sm);
-  font-weight: 800;
-  text-decoration: none;
+.gardeningList {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0;
+  margin: 0;
+  color: var(--color-primary);
+  font-weight: 700;
+  list-style: none;
 }
 
-.primaryAction:hover {
-  background: var(--color-accent-dark);
-  box-shadow: var(--shadow-md);
+.gardeningList li {
+  display: flex;
+  gap: 0.65rem;
+  align-items: baseline;
+}
+
+.gardeningList li::before {
+  color: var(--color-accent);
+  content: "•";
 }
 
 .featuredVisual {
   position: relative;
-  min-height: 27rem;
+  min-height: 29rem;
   overflow: hidden;
   background: var(--color-brand-blue);
 }
@@ -188,15 +237,13 @@
   stroke-width: 2.2;
 }
 
-.futureServices {
+.serviceAreas {
   display: grid;
   gap: var(--space-8);
 }
 
 .sectionHeading {
-  display: grid;
-  gap: var(--space-3);
-  max-width: 46rem;
+  max-width: 48rem;
 }
 
 .sectionHeading h2,
@@ -204,21 +251,22 @@
   font-size: clamp(2rem, 4vw, 3.4rem);
 }
 
-.provisionalGrid {
+.areasGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
 }
 
-.provisionalCard {
+.serviceCard {
   display: grid;
   align-content: start;
   gap: var(--space-4);
-  min-height: 14rem;
+  min-height: 15rem;
   padding: clamp(1.5rem, 3vw, 2rem);
-  border: 1px dashed #bac4ce;
+  border: 1px solid rgba(16, 42, 67, 0.12);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .cardNumber {
@@ -228,20 +276,17 @@
   letter-spacing: 0.1em;
 }
 
-.provisionalCard h3 {
+.serviceCard h3 {
   color: var(--color-primary);
-  font-size: 1.35rem;
-  letter-spacing: -0.025em;
+  font-size: 1.45rem;
+  letter-spacing: -0.035em;
 }
 
-.provisionalCard p {
-  color: var(--color-text-muted);
-  line-height: 1.65;
+.serviceCard p {
+  font-size: 1rem;
 }
 
 .closing {
-  display: grid;
-  gap: var(--space-3);
   padding: clamp(2rem, 5vw, 4rem);
   border-radius: var(--radius-lg);
   background: var(--color-brand-blue-dark);
@@ -261,6 +306,16 @@
   color: #c8d5e3;
 }
 
+.closingAction {
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.closingAction:hover {
+  color: var(--color-surface);
+  background: var(--color-accent);
+}
+
 @media (max-width: 850px) {
   .featuredService {
     grid-template-columns: 1fr;
@@ -270,7 +325,7 @@
     min-height: 20rem;
   }
 
-  .provisionalGrid {
+  .areasGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -284,6 +339,10 @@
 
   .hero h1 {
     font-size: clamp(3rem, 15vw, 4.8rem);
+  }
+
+  .heroActions {
+    display: grid;
   }
 
   .featuredCopy,
@@ -301,15 +360,17 @@
     width: 3rem;
   }
 
-  .provisionalGrid {
+  .areasGrid {
     grid-template-columns: 1fr;
   }
 
-  .provisionalCard {
-    min-height: auto;
+  .primaryAction,
+  .secondaryAction,
+  .closingAction {
+    width: 100%;
   }
 
-  .primaryAction {
-    width: 100%;
+  .serviceCard {
+    min-height: auto;
   }
 }

@@ -1,5 +1,20 @@
 export type ApiHealthStatus = "ok" | "unavailable";
 
+export type ContactMessageRequest = {
+  name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+  privacyAccepted: boolean;
+  website: string;
+};
+
+export type SendContactMessageResult =
+  | { status: "success" }
+  | { status: "validation_error" }
+  | { status: "error" };
+
 export type CatalogImage = {
   url: string;
   position: number;
@@ -161,6 +176,43 @@ export async function getApiHealth(): Promise<ApiHealthStatus> {
   }
 
   return "unavailable";
+}
+
+export async function sendContactMessage(
+  message: ContactMessageRequest,
+): Promise<SendContactMessageResult> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    return { status: "error" };
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}/api/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(message),
+    });
+    const data: unknown = await response.json().catch(() => null);
+
+    if (
+      response.ok &&
+      data &&
+      typeof data === "object" &&
+      "success" in data &&
+      data.success === true
+    ) {
+      return { status: "success" };
+    }
+
+    if (response.status === 400) {
+      return { status: "validation_error" };
+    }
+  } catch {
+    // Contact requests may fail when the API cannot be reached.
+  }
+
+  return { status: "error" };
 }
 
 export async function getCatalogTools(): Promise<CatalogResult> {

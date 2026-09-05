@@ -3,17 +3,28 @@ import Link from "next/link";
 
 import styles from "./page.module.css";
 
-// TODO: sustituir estas áreas provisionales por los servicios confirmados por Emilio.
-const provisionalServices = [
-  "Próximo servicio",
-  "Nueva área de servicio",
-  "Información en preparación",
+const serviceAreas = [
+  {
+    name: "Fontanería",
+    description:
+      "Una de las áreas de trabajo que forman parte de la oferta multiservicio de AUREA.",
+  },
+  {
+    name: "Electricidad",
+    description:
+      "Servicios de electricidad integrados en la propuesta de trabajo de AUREA.",
+  },
+  {
+    name: "Obras / Reformas",
+    description:
+      "Trabajos de obras y reformas dentro de las áreas de servicio de AUREA.",
+  },
 ];
 
 export const metadata: Metadata = {
   title: "Servicios | AUREA Obras y Servicios S.L.",
   description:
-    "Conoce las áreas de servicio de AUREA Obras y Servicios S.L. Estamos ampliando la información de nuestra oferta comercial.",
+    "AUREA Obras y Servicios S.L. reúne jardinería, fontanería, electricidad y obras y reformas, junto a alquiler de herramientas.",
   alternates: { canonical: "/servicios" },
 };
 
@@ -31,10 +42,18 @@ export default function ServicesPage() {
       <main className={styles.main}>
         <section aria-labelledby="services-title" className={styles.hero}>
           <p className={styles.eyebrow}>Servicios</p>
-          <h1 id="services-title">Áreas de trabajo que iremos presentando con claridad.</h1>
+          <h1 id="services-title">Soluciones para trabajos, mantenimiento y actuaciones.</h1>
           <p className={styles.intro}>
-            AUREA Obras y Servicios S.L. está preparando la información de sus líneas de trabajo para que cada consulta encuentre un punto de partida sencillo y útil.
+            AUREA reúne distintos servicios para viviendas, terrenos e instalaciones. Cuéntanos qué necesitas y valoraremos la mejor forma de ayudarte.
           </p>
+          <div className={styles.heroActions}>
+            <Link className={styles.primaryAction} href="/contacto">
+              Cuéntanos qué necesitas
+            </Link>
+            <Link className={styles.secondaryAction} href="/servicios/jardineria">
+              Conocer Jardinería
+            </Link>
+          </div>
         </section>
 
         <section aria-labelledby="gardening-title" className={styles.featuredService}>
@@ -42,10 +61,15 @@ export default function ServicesPage() {
             <p className={styles.eyebrow}>Área destacada</p>
             <h2 id="gardening-title">Jardinería</h2>
             <p>
-              Una línea importante de AUREA, orientada a trabajos de jardinería y al cuidado de espacios exteriores. Ya puedes conocer la propuesta que estamos preparando.
+              Una línea protagonista de AUREA para el cuidado y la preparación de espacios exteriores, con atención a parcelas, zonas comunes y trabajos vinculados al jardín.
             </p>
+            <ul className={styles.gardeningList}>
+              <li>Desbroce de parcelas y maleza</li>
+              <li>Jardines de urbanizaciones</li>
+              <li>Mini excavaciones vinculadas a jardín</li>
+            </ul>
             <Link className={styles.primaryAction} href="/servicios/jardineria">
-              Ver jardinería
+              Ver servicios de jardinería
             </Link>
           </div>
           <div aria-hidden="true" className={styles.featuredVisual}>
@@ -60,31 +84,34 @@ export default function ServicesPage() {
           </div>
         </section>
 
-        <section aria-labelledby="future-services-title" className={styles.futureServices}>
+        <section aria-labelledby="service-areas-title" className={styles.serviceAreas}>
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}>En preparación</p>
-            <h2 id="future-services-title">Nuevas áreas de servicio, próximamente.</h2>
+            <p className={styles.eyebrow}>Áreas de AUREA</p>
+            <h2 id="service-areas-title">Una empresa multiservicio.</h2>
             <p>
-              Incorporaremos cada área cuando dispongamos de información confirmada y útil para explicarla correctamente.
+              Además de Jardinería, AUREA ofrece Fontanería, Electricidad y Obras / Reformas como parte de sus áreas de trabajo.
             </p>
           </div>
-          <div className={styles.provisionalGrid}>
-            {provisionalServices.map((service, index) => (
-              <article className={styles.provisionalCard} key={service}>
-                <span className={styles.cardNumber}>{String(index + 1).padStart(2, "0")}</span>
-                <h3>{service}</h3>
-                <p>Contenido comercial pendiente de incorporación.</p>
+          <div className={styles.areasGrid}>
+            {serviceAreas.map((service, index) => (
+              <article className={styles.serviceCard} key={service.name}>
+                <span className={styles.cardNumber}>{String(index + 2).padStart(2, "0")}</span>
+                <h3>{service.name}</h3>
+                <p>{service.description}</p>
               </article>
             ))}
           </div>
         </section>
 
         <section aria-labelledby="closing-title" className={styles.closing}>
-          <p className={styles.eyebrow}>AUREA</p>
-          <h2 id="closing-title">Estamos ampliando la información de nuestras áreas de trabajo.</h2>
+          <p className={styles.eyebrow}>Contacto</p>
+          <h2 id="closing-title">¿Necesitas alguno de estos servicios?</h2>
           <p>
-            Esta sección irá creciendo de forma progresiva, con contenidos concretos para ayudarte a conocer mejor cada propuesta.
+            Explícanos qué trabajo necesitas y podremos conocer mejor tu consulta.
           </p>
+          <Link className={styles.closingAction} href="/contacto">
+            Contactar con AUREA
+          </Link>
         </section>
       </main>
     </div>

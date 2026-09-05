@@ -41,6 +41,11 @@ def load_config() -> dict[str, str | bool | None]:
         "GOOGLE_CLIENT_SECRET": os.getenv("GOOGLE_CLIENT_SECRET"),
         "GOOGLE_REDIRECT_URI": os.getenv("GOOGLE_REDIRECT_URI"),
     }
+    contact_email_values = {
+        "RESEND_API_KEY": os.getenv("RESEND_API_KEY"),
+        "CONTACT_FROM_EMAIL": os.getenv("CONTACT_FROM_EMAIL"),
+        "CONTACT_TO_EMAIL": os.getenv("CONTACT_TO_EMAIL"),
+    }
 
     if app_env == "production":
         if not frontend_origin:
@@ -73,4 +78,5 @@ def load_config() -> dict[str, str | bool | None]:
         "BABEL_DEFAULT_LOCALE": "es",
         **google_values,
         **cloudinary_values,
+        **contact_email_values,
     }

@@ -32,7 +32,7 @@
 }
 
 .hero h1 {
-  max-width: 11ch;
+  max-width: 12ch;
   margin: var(--space-3) 0 var(--space-6);
   color: var(--color-primary);
   font-size: clamp(3.1rem, 7vw, 6.1rem);
@@ -43,30 +43,55 @@
 .intro,
 .sectionHeading > p,
 .presentation > p,
-.finalCta p:not(.eyebrow) {
+.winterCopy > p,
+.finalCta p:not(.eyebrow),
+.approachList p {
   color: var(--color-text-muted);
   font-size: 1.05rem;
   line-height: 1.7;
 }
 
-.primaryAction {
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+.primaryAction,
+.secondaryAction,
+.winterAction,
+.finalAction {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 3rem;
   padding: 0.75rem 1rem;
-  margin-top: var(--space-8);
   border-radius: var(--radius-sm);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primaryAction {
   color: var(--color-surface);
   background: var(--color-accent);
   box-shadow: var(--shadow-sm);
-  font-weight: 800;
-  text-decoration: none;
 }
 
 .primaryAction:hover {
   background: var(--color-accent-dark);
   box-shadow: var(--shadow-md);
+}
+
+.secondaryAction {
+  border: 1px solid rgba(16, 42, 67, 0.25);
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.secondaryAction:hover {
+  border-color: var(--color-primary);
+  background: var(--color-background);
 }
 
 .heroVisual {
@@ -163,7 +188,7 @@
 }
 
 .presentation,
-.approach {
+.winter {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
   gap: clamp(2rem, 7vw, 7rem);
@@ -179,7 +204,7 @@
 
 .presentation h2,
 .sectionHeading h2,
-.approach h2,
+.winter h2,
 .finalCta h2 {
   margin-top: var(--space-3);
   color: var(--color-primary);
@@ -189,7 +214,7 @@
 }
 
 .services,
-.projects {
+.approach {
   display: grid;
   gap: var(--space-8);
 }
@@ -200,13 +225,15 @@
   max-width: 47rem;
 }
 
-.serviceGrid {
+.serviceGrid,
+.approachList {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
 }
 
-.serviceCard {
+.serviceCard,
+.approachList article {
   display: grid;
   align-content: start;
   gap: var(--space-4);
@@ -218,7 +245,8 @@
   box-shadow: var(--shadow-sm);
 }
 
-.serviceCard h3 {
+.serviceCard h3,
+.approachList h3 {
   color: var(--color-primary);
   font-size: 1.3rem;
   letter-spacing: -0.025em;
@@ -248,85 +276,45 @@
   stroke-width: 2.2;
 }
 
-.approach {
+.winter {
   background: var(--color-brand-blue-dark);
 }
 
-.approach .eyebrow {
+.winter .eyebrow {
   color: #ff934d;
 }
 
-.approach h2 {
-  max-width: 17ch;
+.winter h2 {
+  max-width: 16ch;
   color: var(--color-surface);
 }
 
-.approach ul {
+.winterCopy {
   display: grid;
-  gap: var(--space-4);
-  padding: 0;
+  gap: var(--space-6);
+}
+
+.winterCopy > p {
   color: #c8d5e3;
-  list-style: none;
 }
 
-.approach li {
-  display: grid;
-  grid-template-columns: 0.55rem 1fr;
-  gap: var(--space-3);
-  align-items: start;
-  line-height: 1.6;
+.winterAction {
+  width: fit-content;
+  color: var(--color-primary);
+  background: var(--color-surface);
 }
 
-.approach li::before {
-  width: 0.55rem;
-  height: 0.55rem;
-  margin-top: 0.5rem;
-  border-radius: 50%;
+.winterAction:hover {
+  color: var(--color-surface);
   background: var(--color-accent);
-  content: "";
 }
 
-.placeholderGrid {
-  display: grid;
-  grid-template-columns: 1.25fr 1fr 1fr;
-  gap: var(--space-4);
-}
-
-.placeholder {
-  position: relative;
+.approachList article {
   min-height: 13rem;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: #e9ece8;
 }
 
-.placeholder::before,
-.placeholder::after {
-  position: absolute;
-  border-radius: 50%;
-  content: "";
-}
-
-.placeholder::before {
-  top: 18%;
-  left: 18%;
-  width: 42%;
-  aspect-ratio: 1;
-  background: rgba(255, 255, 255, 0.6);
-}
-
-.placeholder::after {
-  right: -14%;
-  bottom: -26%;
-  width: 75%;
-  aspect-ratio: 1;
-  border: 1.25rem solid rgba(8, 44, 89, 0.1);
-}
-
-.placeholderTall {
-  min-height: 18rem;
-  background: #dfe7df;
+.approachList p {
+  font-size: 1rem;
 }
 
 .finalCta {
@@ -349,26 +337,21 @@
   margin-top: var(--space-3);
 }
 
-.ctaStatus {
-  padding: 0.6rem 0.8rem;
-  border-radius: 999px;
-  color: var(--color-primary);
-  background: #fff0e6;
-  font-size: 0.85rem;
-  font-weight: 800;
-  white-space: nowrap;
+.finalAction {
+  color: var(--color-surface);
+  background: var(--color-accent);
+  box-shadow: var(--shadow-sm);
 }
 
-@media (max-width: 1000px) {
-  .serviceGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.finalAction:hover {
+  background: var(--color-accent-dark);
+  box-shadow: var(--shadow-md);
 }
 
 @media (max-width: 800px) {
   .hero,
   .presentation,
-  .approach,
+  .winter,
   .finalCta {
     grid-template-columns: 1fr;
   }
@@ -393,7 +376,13 @@
     font-size: clamp(3rem, 15vw, 4.8rem);
   }
 
-  .primaryAction {
+  .heroActions {
+    display: grid;
+  }
+
+  .primaryAction,
+  .secondaryAction,
+  .finalAction {
     width: 100%;
   }
 
@@ -408,26 +397,22 @@
   }
 
   .presentation,
-  .approach,
+  .winter,
   .finalCta {
     padding: 2rem 1.5rem;
   }
 
   .serviceGrid,
-  .placeholderGrid {
+  .approachList {
     grid-template-columns: 1fr;
   }
 
-  .serviceCard {
+  .serviceCard,
+  .approachList article {
     min-height: auto;
   }
 
-  .placeholder,
-  .placeholderTall {
-    min-height: 11rem;
-  }
-
-  .ctaStatus {
-    justify-self: start;
+  .winterAction {
+    width: 100%;
   }
 }
