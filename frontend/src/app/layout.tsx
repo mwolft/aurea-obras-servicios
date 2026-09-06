@@ -3,6 +3,7 @@ import { IBM_Plex_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AuthProvider } from "@/components/auth-provider";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { legalInfo } from "@/lib/legal";
 import { siteUrl } from "@/lib/site";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <SiteHeader />
             {children}
             <SiteFooter />
+            <ScrollToTop />
           </div>
         </AuthProvider>
       </body>

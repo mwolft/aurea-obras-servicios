@@ -1,0 +1,52 @@
+.button {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 1px solid rgba(16, 42, 67, 0.18);
+  border-radius: 999px;
+  color: var(--color-surface);
+  background: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.625rem);
+  transition: opacity 280ms ease, transform 280ms ease, background-color var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.button.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.button:hover {
+  background: var(--color-brand-blue);
+  box-shadow: 0 14px 28px rgba(6, 31, 63, 0.18);
+}
+
+.button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+@media (max-width: 700px) {
+  .button {
+    right: max(0.875rem, env(safe-area-inset-right));
+    bottom: max(0.875rem, env(safe-area-inset-bottom));
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
