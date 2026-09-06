@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import { sendContactMessage, type ContactMessageRequest } from "@/lib/api";
 
@@ -227,7 +228,10 @@ export function ContactForm() {
           required
           type="checkbox"
         />
-        <span>He leído y acepto el tratamiento de los datos enviados para responder a mi consulta.</span>
+        <span>
+          He leído y acepto el tratamiento de los datos enviados conforme a la{" "}
+          <Link href="/politica-de-privacidad">Política de privacidad</Link> para responder a mi consulta.
+        </span>
       </label>
       {errors.privacyAccepted ? (
         <p className={styles.fieldError} id="privacyAccepted-error">{errors.privacyAccepted}</p>

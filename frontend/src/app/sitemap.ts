@@ -6,7 +6,19 @@ import { getPublicUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-const staticPaths = ["/", "/servicios", "/servicios/jardineria", "/alquiler", "/contacto"];
+const staticPaths = [
+  "/",
+  "/servicios",
+  "/servicios/jardineria",
+  "/servicios/fontaneria",
+  "/servicios/electricidad",
+  "/servicios/obras-reformas",
+  "/alquiler",
+  "/contacto",
+  "/aviso-legal",
+  "/politica-de-privacidad",
+  "/politica-de-cookies",
+];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries = staticPaths.map((path) => ({ url: getPublicUrl(path) }));

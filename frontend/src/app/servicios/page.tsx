@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { legalInfo } from "@/lib/legal";
+
 import styles from "./page.module.css";
 
 const serviceAreas = [
@@ -8,23 +10,26 @@ const serviceAreas = [
     name: "Fontanería",
     description:
       "Una de las áreas de trabajo que forman parte de la oferta multiservicio de AUREA.",
+    href: "/servicios/fontaneria",
   },
   {
     name: "Electricidad",
     description:
       "Servicios de electricidad integrados en la propuesta de trabajo de AUREA.",
+    href: "/servicios/electricidad",
   },
   {
     name: "Obras / Reformas",
     description:
       "Trabajos de obras y reformas dentro de las áreas de servicio de AUREA.",
+    href: "/servicios/obras-reformas",
   },
 ];
 
 export const metadata: Metadata = {
-  title: "Servicios | AUREA Obras y Servicios S.L.",
+  title: `Servicios | ${legalInfo.companyName}`,
   description:
-    "AUREA Obras y Servicios S.L. reúne jardinería, fontanería, electricidad y obras y reformas, junto a alquiler de herramientas.",
+    `${legalInfo.companyName} reúne jardinería, fontanería, electricidad y obras y reformas, junto a alquiler de herramientas.`,
   alternates: { canonical: "/servicios" },
 };
 
@@ -98,6 +103,9 @@ export default function ServicesPage() {
                 <span className={styles.cardNumber}>{String(index + 2).padStart(2, "0")}</span>
                 <h3>{service.name}</h3>
                 <p>{service.description}</p>
+                <Link className={styles.cardLink} href={service.href}>
+                  Conocer {service.name}
+                </Link>
               </article>
             ))}
           </div>

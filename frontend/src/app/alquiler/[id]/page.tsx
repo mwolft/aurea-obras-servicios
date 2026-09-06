@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 import { getRentalCategory, getToolPublicPath } from "@/lib/category-slug";
 import { getCatalogTool, getCatalogTools } from "@/lib/api";
+import { legalInfo } from "@/lib/legal";
 
 import RentalCategoryContent from "./category-page";
 import categoryStyles from "./category-page.module.css";
@@ -28,8 +29,8 @@ export async function generateMetadata({ params }: RentalToolPageProps): Promise
   }
 
   return {
-    title: `${category.name} | Alquiler | AUREA Obras y Servicios S.L.`,
-    description: `Consulta las herramientas disponibles en la categoría ${category.name} de AUREA Obras y Servicios S.L.`,
+    title: `${category.name} | Alquiler | ${legalInfo.companyName}`,
+    description: `Consulta las herramientas disponibles en la categoría ${category.name} de ${legalInfo.companyName}.`,
     alternates: { canonical: `/alquiler/${category.slug}` },
   };
 }

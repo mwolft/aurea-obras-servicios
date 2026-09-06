@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { RentalToolDetails } from "@/components/rental-tool-details";
 import { getCategorySlug, getToolIdFromSlug, getToolPublicPath, getToolSlug } from "@/lib/category-slug";
 import { getCatalogTool } from "@/lib/api";
+import { legalInfo } from "@/lib/legal";
 
 import styles from "./page.module.css";
 
@@ -47,7 +48,7 @@ export async function generateMetadata({ params }: RentalToolPublicPageProps): P
     : `Consulta ${result.tool.name}, una herramienta de la categoría ${result.tool.category}.`;
 
   return {
-    title: `${result.tool.name} | Alquiler | AUREA Obras y Servicios S.L.`,
+    title: `${result.tool.name} | Alquiler | ${legalInfo.companyName}`,
     description,
     alternates: { canonical: getToolPublicPath(result.tool) },
   };

@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { legalInfo } from "@/lib/legal";
 import { getPublicUrl } from "@/lib/site";
 
 import styles from "./page.module.css";
 
 const socialImageUrl = getPublicUrl("/icon.png");
 const socialDescription =
-  "AUREA Obras y Servicios S.L. reúne jardinería, fontanería, electricidad, obras y reformas, además de alquiler de herramientas.";
+  `${legalInfo.companyName} reúne jardinería, fontanería, electricidad, obras y reformas, además de alquiler de herramientas.`;
 
 export const metadata: Metadata = {
-  title: "AUREA Obras y Servicios S.L. | Servicios y alquiler de herramientas",
+  title: `${legalInfo.companyName} | Servicios y alquiler de herramientas`,
   description: socialDescription,
   alternates: { canonical: "/" },
   openGraph: {
-    title: "AUREA Obras y Servicios S.L.",
+    title: legalInfo.companyName,
     description: socialDescription,
     url: getPublicUrl(),
     type: "website",
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AUREA Obras y Servicios S.L.",
+    title: legalInfo.companyName,
     description: socialDescription,
     images: [socialImageUrl],
   },

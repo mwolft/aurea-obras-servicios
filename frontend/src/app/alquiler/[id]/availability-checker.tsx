@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import {
   createToolReservation,
@@ -373,7 +374,9 @@ export default function AvailabilityChecker({
 
           <label className={styles.checkbox}>
             <input checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} type="checkbox" />
-            Acepto la política de privacidad.
+            <span>
+              Acepto la <Link href="/politica-de-privacidad">Política de privacidad</Link>.
+            </span>
           </label>
           {formErrors.privacy && <p className={styles.fieldError}>{formErrors.privacy}</p>}
 

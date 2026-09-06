@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 
+import { legalInfo } from "@/lib/legal";
+
 import { AccountContent } from "./account-content";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Mi cuenta | AUREA Obras y Servicios S.L.",
-  description: "Área de cliente de AUREA Obras y Servicios S.L.",
+  title: `Mi cuenta | ${legalInfo.companyName}`,
+  description: `Área de cliente de ${legalInfo.companyName}.`,
   robots: { index: false, follow: false },
 };
 

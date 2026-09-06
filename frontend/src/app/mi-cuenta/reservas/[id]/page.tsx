@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 
+import { legalInfo } from "@/lib/legal";
+
 import { ReservationDetailContent } from "./reservation-detail-content";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Detalle de reserva | AUREA Obras y Servicios S.L.",
-  description: "Consulta privada de una reserva de AUREA Obras y Servicios S.L.",
+  title: `Detalle de reserva | ${legalInfo.companyName}`,
+  description: `Consulta privada de una reserva de ${legalInfo.companyName}.`,
   robots: { index: false, follow: false },
 };
 

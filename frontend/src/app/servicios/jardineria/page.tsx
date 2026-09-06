@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { legalInfo } from "@/lib/legal";
+
 import styles from "./page.module.css";
 
 const gardeningAreas = [
@@ -22,7 +24,7 @@ const gardeningAreas = [
 ];
 
 export const metadata: Metadata = {
-  title: "Jardinería | AUREA Obras y Servicios S.L.",
+  title: `Jardinería | ${legalInfo.companyName}`,
   description:
     "Jardinería en AUREA: desbroce y maleza, jardines de urbanizaciones y mini excavaciones vinculadas a espacios exteriores.",
   alternates: { canonical: "/servicios/jardineria" },

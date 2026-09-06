@@ -35,7 +35,7 @@ class ContactApiTestCase(unittest.TestCase):
         values.update(overrides)
         return values
 
-    @patch("app.services.contact_email.requests.post")
+    @patch("app.services.email.contact.requests.post")
     def test_valid_payload_requests_email_delivery(self, post):
         response = self.client.post("/api/contact", json=self.payload())
 
@@ -53,8 +53,13 @@ class ContactApiTestCase(unittest.TestCase):
         self.assertIn("Nombre: Aurea Contact", request_kwargs["json"]["text"])
         self.assertIn("Teléfono: 600 000 000", request_kwargs["json"]["text"])
         self.assertIn("Mensaje:\nNecesito información para una parcela.", request_kwargs["json"]["text"])
+        self.assertIn("AUREA", request_kwargs["json"]["html"])
+        self.assertIn("#102A43", request_kwargs["json"]["html"])
+        self.assertIn("#FF6200", request_kwargs["json"]["html"])
+        self.assertIn("Nuevo contacto desde la web", request_kwargs["json"]["html"])
+        self.assertIn("Mensaje", request_kwargs["json"]["html"])
 
-    @patch("app.services.contact_email.requests.post")
+    @patch("app.services.email.contact.requests.post")
     def test_optional_fields_are_omitted_from_email_when_blank(self, post):
         response = self.client.post("/api/contact", json=self.payload(phone="", subject=""))
 
@@ -63,6 +68,25 @@ class ContactApiTestCase(unittest.TestCase):
         self.assertEqual(request_json["subject"], "Nuevo contacto desde la web de AUREA")
         self.assertNotIn("Teléfono:", request_json["text"])
         self.assertNotIn("Asunto:", request_json["text"])
+        self.assertNotIn("Teléfono", request_json["html"])
+        self.assertNotIn("Asunto", request_json["html"])
+
+    @patch("app.services.email.contact.requests.post")
+    def test_dynamic_contact_values_are_escaped_and_multiline_message_is_safe(self, post):
+        response = self.client.post(
+            "/api/contact",
+            json=self.payload(
+                name="Aurea <script>",
+                message="Consulta con <b>contenido</b>.\nSegunda línea.",
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        html = post.call_args.kwargs["json"]["html"]
+        self.assertIn("Aurea &lt;script&gt;", html)
+        self.assertIn("&lt;b&gt;contenido&lt;/b&gt;.<br>Segunda línea.", html)
+        self.assertNotIn("Aurea <script>", html)
+        self.assertNotIn("<b>contenido</b>", html)
 
     def test_missing_name_is_rejected(self):
         response = self.client.post("/api/contact", json=self.payload(name=""))
@@ -90,7 +114,7 @@ class ContactApiTestCase(unittest.TestCase):
         self.assertEqual(self.client.post("/api/contact", json=self.payload(phone=7)).status_code, 400)
         self.assertEqual(self.client.post("/api/contact", json=self.payload(website=[])).status_code, 400)
 
-    @patch("app.services.contact_email.requests.post")
+    @patch("app.services.email.contact.requests.post")
     def test_honeypot_returns_generic_success_without_sending_email(self, post):
         response = self.client.post("/api/contact", json=self.payload(website="https://spam.example"))
 
@@ -98,7 +122,7 @@ class ContactApiTestCase(unittest.TestCase):
         self.assertEqual(response.get_json(), {"success": True, "message": "Mensaje enviado correctamente."})
         post.assert_not_called()
 
-    @patch("app.services.contact_email.requests.post", side_effect=requests.Timeout)
+    @patch("app.services.email.contact.requests.post", side_effect=requests.Timeout)
     def test_resend_timeout_returns_generic_provider_error(self, post):
         response = self.client.post("/api/contact", json=self.payload())
 
@@ -106,7 +130,7 @@ class ContactApiTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()["success"], False)
         post.assert_called_once()
 
-    @patch("app.services.contact_email.requests.post")
+    @patch("app.services.email.contact.requests.post")
     def test_resend_http_error_returns_generic_provider_error(self, post):
         resend_response = Mock()
         resend_response.raise_for_status.side_effect = requests.HTTPError("provider error")
@@ -117,7 +141,7 @@ class ContactApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 502)
         self.assertEqual(response.get_json()["success"], False)
 
-    @patch("app.services.contact_email.requests.post")
+    @patch("app.services.email.contact.requests.post")
     def test_missing_configuration_returns_generic_error_without_sending_email(self, post):
         self.app.config["RESEND_API_KEY"] = None
 
@@ -127,7 +151,7 @@ class ContactApiTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()["success"], False)
         post.assert_not_called()
 
-    @patch("app.services.contact_email.requests.post")
+    @patch("app.services.email.contact.requests.post")
     def test_responses_do_not_expose_secret_configuration(self, post):
         response = self.client.post("/api/contact", json=self.payload())
 

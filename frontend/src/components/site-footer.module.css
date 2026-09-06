@@ -41,6 +41,12 @@
   font-size: 0.9rem;
 }
 
+.navigationGroups {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-3);
+}
+
 .navigation a {
   text-decoration: none;
 }
@@ -60,5 +66,9 @@
 
   .navigation {
     justify-content: flex-start;
+  }
+
+  .navigationGroups {
+    justify-items: start;
   }
 }

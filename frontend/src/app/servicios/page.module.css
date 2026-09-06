@@ -286,6 +286,19 @@
   font-size: 1rem;
 }
 
+.cardLink {
+  width: fit-content;
+  color: var(--color-primary);
+  font-weight: 800;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3rem;
+}
+
+.cardLink:hover {
+  color: var(--color-accent-dark);
+}
+
 .closing {
   padding: clamp(2rem, 5vw, 4rem);
   border-radius: var(--radius-lg);

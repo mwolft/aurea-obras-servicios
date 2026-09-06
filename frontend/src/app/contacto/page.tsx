@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 
+import { legalInfo } from "@/lib/legal";
+
 import { ContactForm } from "./contact-form";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Contacto | AUREA Obras y Servicios S.L.",
-  description: "Contacta con AUREA Obras y Servicios S.L. para plantear tu necesidad de forma sencilla.",
+  title: `Contacto | ${legalInfo.companyName}`,
+  description: `Contacta con ${legalInfo.companyName} para plantear tu necesidad de forma sencilla.`,
   alternates: { canonical: "/contacto" },
 };
 

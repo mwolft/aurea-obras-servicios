@@ -4,14 +4,15 @@ import Link from "next/link";
 import { RentalToolCard } from "@/components/rental-tool-card";
 import { getRentalCategories } from "@/lib/category-slug";
 import { getCatalogTools } from "@/lib/api";
+import { legalInfo } from "@/lib/legal";
 
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Alquiler de herramientas | AUREA Obras y Servicios S.L.",
-  description: "Consulta el catálogo público de herramientas de alquiler de AUREA Obras y Servicios S.L.",
+  title: `Alquiler de herramientas | ${legalInfo.companyName}`,
+  description: `Consulta el catálogo público de herramientas de alquiler de ${legalInfo.companyName}.`,
   alternates: { canonical: "/alquiler" },
 };
 

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 
 import { LoginPanel } from "@/components/login-panel";
+import { legalInfo } from "@/lib/legal";
 
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "Iniciar sesión | AUREA Obras y Servicios S.L.",
+  title: `Iniciar sesión | ${legalInfo.companyName}`,
   description: "Accede o crea una cuenta para gestionar tus solicitudes de alquiler en AUREA.",
   robots: { index: false, follow: false },
 };
