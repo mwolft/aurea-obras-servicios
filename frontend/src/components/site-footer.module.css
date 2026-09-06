@@ -5,7 +5,7 @@
 
 .content {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 1.15fr);
   gap: var(--space-8);
   width: min(100% - 3rem, var(--container-width));
   margin: 0 auto;
@@ -25,16 +25,9 @@
   letter-spacing: -0.015em;
 }
 
-.description {
-  max-width: 30rem;
-  margin-top: 0.35rem;
-  color: #c9d6e5;
-}
-
 .navigation {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
   gap: var(--space-4);
   color: #dce6f1;
   font-size: 0.9rem;
@@ -53,6 +46,37 @@
   margin-bottom: var(--space-2);
   color: var(--color-surface);
   font-size: 0.9rem;
+}
+
+.locationSection,
+.navigationSection {
+  display: grid;
+  gap: var(--space-2);
+  color: #c9d6e5;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.locationSection {
+  margin-top: var(--space-6);
+}
+
+.locationSection h2,
+.navigationSection h2 {
+  margin-bottom: var(--space-2);
+  color: var(--color-surface);
+  font-size: 0.9rem;
+}
+
+.locationSection a {
+  width: fit-content;
+  color: #dce6f1;
+  text-decoration-color: rgba(255, 98, 0, 0.8);
+  text-underline-offset: 0.25rem;
+}
+
+.locationSection a:hover {
+  color: var(--color-accent);
 }
 
 .footerSection a {
@@ -74,8 +98,7 @@
 
 .navigationGroups {
   display: grid;
-  justify-items: end;
-  gap: var(--space-3);
+  gap: var(--space-6);
 }
 
 .navigation a {
@@ -104,13 +127,7 @@
     padding: 2rem 0;
   }
 
-  .navigation {
-    justify-content: flex-start;
-  }
-
-  .navigationGroups {
-    justify-items: start;
-  }
+  .navigationGroups { gap: var(--space-6); }
 }
 
 @media (min-width: 701px) and (max-width: 1050px) {
@@ -118,11 +135,5 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .navigationGroups {
-    justify-items: start;
-  }
-
-  .navigation {
-    justify-content: flex-start;
-  }
+  .navigationGroups { gap: var(--space-6); }
 }
