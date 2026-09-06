@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { businessProfile } from "@/lib/business-profile";
 
 import { useAuth } from "./auth-provider";
+import { LocationIcon, PhoneIcon } from "./icons";
 import styles from "./site-header.module.css";
 
 type NavigationActionsProps = {
@@ -170,8 +171,14 @@ export function SiteHeader() {
     <>
       <div className={styles.contactBar}>
         <div className={styles.contactBarContent}>
-          <a href={businessProfile.phoneHref}>{businessProfile.phone}</a>
-          <span>{businessProfile.location.city}</span>
+          <a className={styles.contactBarPhone} href={businessProfile.phoneHref}>
+            <PhoneIcon className={styles.contactBarIcon} />
+            <span>{businessProfile.phone}</span>
+          </a>
+          <span className={styles.contactBarLocation}>
+            <LocationIcon className={styles.contactBarIcon} />
+            <span>{businessProfile.location.city}</span>
+          </span>
         </div>
       </div>
       <header className={styles.header} ref={headerRef}>
@@ -223,9 +230,13 @@ export function SiteHeader() {
       <div className={styles.mobileMenu} hidden={!isMenuOpen} id="mobile-navigation">
         <nav aria-label="Navegación móvil" className={styles.mobileNavigation}>
           <a className={styles.mobileCall} href={businessProfile.phoneHref} onClick={closeMenu}>
-            Llamar · {businessProfile.phone}
+            <PhoneIcon className={styles.mobileContactIcon} />
+            <span>Llamar · {businessProfile.phone}</span>
           </a>
-          <p className={styles.mobileLocation}>{businessProfile.location.city}</p>
+          <p className={styles.mobileLocation}>
+            <LocationIcon className={styles.mobileContactIcon} />
+            <span>{businessProfile.location.city}</span>
+          </p>
           <NavigationLinks closeMenu={closeMenu} />
           <NavigationActions
             closeMenu={closeMenu}

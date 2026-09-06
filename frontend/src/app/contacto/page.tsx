@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { legalInfo } from "@/lib/legal";
 import { businessProfile } from "@/lib/business-profile";
+import { LocationIcon, PhoneIcon } from "@/components/icons";
 
 import { ContactForm } from "./contact-form";
 import styles from "./page.module.css";
@@ -30,12 +31,12 @@ export default function ContactPage() {
         </div>
         <div className={styles.directContactGrid}>
           <article className={styles.contactCard}>
-            <h3>Teléfono</h3>
+            <h3 className={styles.contactCardTitle}><PhoneIcon />Teléfono</h3>
             <a href={businessProfile.phoneHref}>{businessProfile.phone}</a>
             <p>Si prefieres explicarnos tu consulta por teléfono, estamos al otro lado.</p>
           </article>
           <article className={styles.contactCard}>
-            <h3>Ubicación</h3>
+            <h3 className={styles.contactCardTitle}><LocationIcon />Ubicación</h3>
             <p>{businessProfile.location.city}</p>
             <p>{businessProfile.location.lineOne}<br />{businessProfile.location.lineTwo}</p>
             <a href={businessProfile.location.mapsUrl} rel="noreferrer" target="_blank">Abrir en Google Maps</a>

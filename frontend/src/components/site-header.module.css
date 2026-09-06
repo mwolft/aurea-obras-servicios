@@ -5,28 +5,40 @@
 
 .contactBarContent {
   display: flex;
-  justify-content: flex-end;
-  gap: var(--space-4);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.5rem, 3vw, 2rem);
   width: min(100% - 3rem, var(--container-width));
   min-height: 2rem;
   margin: 0 auto;
   font-size: 0.78rem;
 }
 
-.contactBarContent a {
+.contactBarPhone,
+.contactBarLocation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.contactBarPhone {
   color: var(--color-surface);
   font-weight: 700;
   text-decoration: none;
 }
 
-.contactBarContent a:hover {
+.contactBarPhone:hover {
   color: var(--color-accent);
 }
 
-.contactBarContent span {
-  display: inline-flex;
-  align-items: center;
+.contactBarLocation {
   color: #c9d6e5;
+}
+
+.contactBarIcon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
 }
 
 .header {
@@ -345,6 +357,8 @@
 
   .mobileCall {
     display: flex !important;
+    align-items: center;
+    gap: 0.45rem;
     justify-content: center;
     border-radius: var(--radius-sm);
     color: var(--color-surface) !important;
@@ -353,10 +367,18 @@
   }
 
   .mobileLocation {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     padding: 0.25rem 0.75rem 0.5rem;
     color: var(--color-text-muted);
     font-size: 0.82rem;
+  }
+
+  .mobileContactIcon {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
   }
 }
 

@@ -87,6 +87,18 @@
   font-size: 1rem;
 }
 
+.contactCardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.contactCardTitle svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+}
+
 .contactCard > a:first-of-type {
   width: fit-content;
   font-size: 1.15rem;

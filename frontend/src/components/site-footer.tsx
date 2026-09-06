@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { businessProfile } from "@/lib/business-profile";
 import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
+import { LocationIcon, PhoneIcon } from "@/components/icons";
 
 import styles from "./site-footer.module.css";
 
@@ -14,7 +15,10 @@ export function SiteFooter() {
           <p className={styles.name}>{businessProfile.name}</p>
           <section aria-labelledby="footer-location" className={styles.locationSection}>
             <h2 id="footer-location">Ubicación</h2>
-            <p>{businessProfile.location.city}</p>
+            <p className={styles.locationCity}>
+              <LocationIcon className={styles.infoIcon} />
+              <span>{businessProfile.location.city}</span>
+            </p>
             <p>{businessProfile.location.lineOne}<br />{businessProfile.location.lineTwo}</p>
             <a href={businessProfile.location.mapsUrl} rel="noreferrer" target="_blank">Abrir en Google Maps</a>
           </section>
@@ -22,7 +26,10 @@ export function SiteFooter() {
 
         <section aria-labelledby="footer-contact" className={styles.footerSection}>
           <h2 id="footer-contact">Contacto</h2>
-          <a className={styles.contactLink} href={businessProfile.phoneHref}>{businessProfile.phone}</a>
+          <a className={styles.contactLink} href={businessProfile.phoneHref}>
+            <PhoneIcon className={styles.infoIcon} />
+            <span>{businessProfile.phone}</span>
+          </a>
           <Link href="/contacto">Formulario de contacto</Link>
         </section>
 

@@ -79,6 +79,19 @@
   color: var(--color-accent);
 }
 
+.locationCity,
+.contactLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.infoIcon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
 .footerSection a {
   width: fit-content;
   color: #dce6f1;
