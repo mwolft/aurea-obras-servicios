@@ -51,8 +51,18 @@
   text-decoration: none;
 }
 
-.navigation a:hover {
+.navigation a:hover,
+.cookiePreferencesButton:hover {
   color: var(--color-accent);
+}
+
+.cookiePreferencesButton {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
 }
 
 @media (max-width: 700px) {

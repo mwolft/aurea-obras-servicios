@@ -3,6 +3,8 @@ import { IBM_Plex_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AuthProvider } from "@/components/auth-provider";
+import { CookieConsent } from "@/components/cookie-consent";
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
 import { legalInfo } from "@/lib/legal";
@@ -37,6 +39,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             {children}
             <SiteFooter />
             <ScrollToTop />
+            <CookieConsent />
+            <GoogleAnalytics />
           </div>
         </AuthProvider>
       </body>

@@ -75,6 +75,7 @@ export default function PrivacyPolicyPage() {
             <li>Neon, para la base de datos.</li>
             <li>Resend, para el envío de mensajes del formulario de contacto.</li>
             <li>Google, cuando se utiliza el inicio de sesión con Google.</li>
+            <li>Google Analytics, para la medición estadística de la web cuando se acepta la categoría de Analítica.</li>
             <li>Cloudinary, para el almacenamiento y entrega de imágenes del catálogo.</li>
           </ul>
         </section>

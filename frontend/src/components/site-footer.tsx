@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
 import { legalInfo } from "@/lib/legal";
 
 import styles from "./site-footer.module.css";
@@ -27,6 +28,7 @@ export function SiteFooter() {
             <Link href="/aviso-legal">Aviso legal</Link>
             <Link href="/politica-de-privacidad">Política de privacidad</Link>
             <Link href="/politica-de-cookies">Política de cookies</Link>
+            <CookiePreferencesButton className={styles.cookiePreferencesButton} />
           </nav>
         </div>
       </div>

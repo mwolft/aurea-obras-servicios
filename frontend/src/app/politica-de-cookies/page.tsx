@@ -31,7 +31,7 @@ export default function CookiePolicyPage() {
         <section aria-labelledby="cookies-in-use">
           <h2 id="cookies-in-use">Cookies que utiliza AUREA</h2>
           <p>
-            Actualmente, AUREA utiliza una cookie estrictamente necesaria para el funcionamiento de la autenticación de usuarios y del área de administración. No se utilizan cookies analíticas ni publicitarias.
+            AUREA utiliza una cookie estrictamente necesaria para el funcionamiento de la autenticación de usuarios y del área de administración. También utiliza Google Analytics 4 para obtener información estadística sobre el uso de la web, únicamente cuando aceptas la categoría de Analítica.
           </p>
 
           <article className={styles.cookieCard}>
@@ -61,10 +61,10 @@ export default function CookiePolicyPage() {
           </article>
         </section>
 
-        <section aria-labelledby="why-no-banner">
-          <h2 id="why-no-banner">Cookies necesarias</h2>
+        <section aria-labelledby="necessary-cookies">
+          <h2 id="necessary-cookies">Cookies necesarias</h2>
           <p>
-            Esta cookie permite que las personas autenticadas mantengan su sesión y accedan a las funciones que requieren identificación. Por su carácter técnico, permanece activa mientras sea necesaria para prestar esas funciones.
+            Esta cookie permite que las personas autenticadas mantengan su sesión y accedan a las funciones que requieren identificación. Por su carácter técnico, permanece siempre activa mientras sea necesaria para prestar esas funciones.
           </p>
         </section>
 
@@ -76,9 +76,12 @@ export default function CookiePolicyPage() {
         </section>
 
         <section aria-labelledby="future-technologies">
-          <h2 id="future-technologies">Tecnologías opcionales en el futuro</h2>
+          <h2 id="future-technologies">Analítica y tecnologías opcionales</h2>
           <p>
-            Si AUREA incorpora en el futuro tecnologías analíticas, publicitarias u otras cookies opcionales, se habilitará el mecanismo de consentimiento correspondiente antes de activarlas.
+            Google Analytics 4 se utiliza para conocer de forma agregada cómo se navega por la web y mejorar sus contenidos. Solo se activa si aceptas la categoría de Analítica. AUREA no utiliza actualmente tecnologías publicitarias ni de marketing.
+          </p>
+          <p>
+            No se detallan aquí nombres ni duraciones concretas de cookies analíticas porque pueden variar según la configuración y evolución de Google Analytics. Puedes cambiar tu elección en cualquier momento mediante el control «Configurar cookies» disponible en el pie de página.
           </p>
         </section>
 
