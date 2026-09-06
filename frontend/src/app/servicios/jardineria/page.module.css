@@ -7,9 +7,6 @@
 .main {
   display: grid;
   gap: clamp(4.5rem, 10vw, 8rem);
-  width: min(100% - 3rem, var(--container-width));
-  padding: clamp(4rem, 8vw, 7rem) 0;
-  margin: 0 auto;
 }
 
 .eyebrow {
@@ -368,8 +365,6 @@
 @media (max-width: 700px) {
   .main {
     gap: 4.5rem;
-    width: min(100% - 2rem, var(--container-width));
-    padding: 3.5rem 0;
   }
 
   .hero h1 {

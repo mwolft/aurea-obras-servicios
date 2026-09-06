@@ -1,6 +1,6 @@
 .page { flex: 1; color: var(--color-text); background: var(--color-background); }
 
-.main { display: grid; gap: clamp(4.5rem, 10vw, 8rem); width: min(100% - 3rem, var(--container-width)); padding: clamp(4rem, 8vw, 7rem) 0; margin: 0 auto; }
+.main { display: grid; gap: clamp(4.5rem, 10vw, 8rem); }
 .eyebrow { color: var(--color-accent-dark); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
 
 .hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(22rem, 0.9fr); gap: clamp(3rem, 7vw, 7rem); align-items: center; }
@@ -69,4 +69,4 @@
 .contactCta { grid-template-columns: minmax(0,1fr) auto; border-color: rgba(255,98,0,.35); }
 
 @media (max-width: 900px) { .hero, .gardeningFeature, .editorial, .multiservice { grid-template-columns: 1fr; } .heroVisual { min-height: 22rem; } .editorial blockquote { max-width: 18ch; } .rental { grid-template-columns: auto minmax(0,1fr); } .rental .secondaryAction { grid-column: 2; justify-self: start; } }
-@media (max-width: 700px) { .main { gap: 4.5rem; width: min(100% - 2rem, var(--container-width)); padding: 3.5rem 0; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .heroVisual { min-height: 19rem; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .gardeningFeature, .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .gardeningVisual { min-height: 11rem; } .contactCta .primaryAction { justify-self: start; } }
+@media (max-width: 700px) { .main { gap: 4.5rem; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .heroVisual { min-height: 19rem; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .gardeningFeature, .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .gardeningVisual { min-height: 11rem; } .contactCta .primaryAction { justify-self: start; } }

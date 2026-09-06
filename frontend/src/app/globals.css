@@ -15,6 +15,7 @@
   --shadow-sm: 0 1px 2px rgba(6, 31, 63, 0.08);
   --shadow-md: 0 12px 30px rgba(6, 31, 63, 0.12);
   --container-width: 72rem;
+  --main-padding-block: clamp(2.5rem, 4vw, 3.5rem);
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
@@ -53,7 +54,7 @@ body {
 
 main {
   width: min(100% - 3rem, var(--container-width));
-  padding: 4rem 0;
+  padding: var(--main-padding-block) 0;
   margin: 0 auto;
 }
 
@@ -101,6 +102,6 @@ textarea {
 @media (max-width: 700px) {
   main {
     width: min(100% - 2rem, var(--container-width));
-    padding: var(--space-12) 0;
+    padding: 2.5rem 0;
   }
 }
