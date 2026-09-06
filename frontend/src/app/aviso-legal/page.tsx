@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import styles from "../legal-page.module.css";
+import { businessProfile } from "@/lib/business-profile";
 import { legalInfo } from "@/lib/legal";
 
 export const metadata: Metadata = {
@@ -25,10 +26,9 @@ export default function LegalNoticePage() {
           <article className={styles.legalCard}>
             <dl>
               <div><dt>Razón social</dt><dd>{legalInfo.companyName}</dd></div>
-              <div><dt>CIF</dt><dd>{legalInfo.taxId}</dd></div>
+              <div><dt>NIF provisional</dt><dd>{legalInfo.taxId}</dd></div>
               <div><dt>Domicilio</dt><dd>{legalInfo.address}</dd></div>
-              <div><dt>Email</dt><dd><a href={`mailto:${legalInfo.legalEmail}`}>{legalInfo.legalEmail}</a></dd></div>
-              <div><dt>Teléfono</dt><dd><a href={`tel:${legalInfo.phone.replaceAll(" ", "")}`}>{legalInfo.phone}</a></dd></div>
+              <div><dt>Teléfono de contacto</dt><dd><a href={businessProfile.phoneHref}>{businessProfile.phone}</a></dd></div>
             </dl>
           </article>
         </section>

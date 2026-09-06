@@ -38,6 +38,69 @@
   line-height: 1.7;
 }
 
+.directContact {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: var(--space-12);
+  align-items: start;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.directContact > div:first-child {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.directContact h2 {
+  color: var(--color-primary);
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.directContactGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.contactCard {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-height: 100%;
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  background: #edf3fa;
+}
+
+.contactCard h3,
+.contactCard a {
+  color: var(--color-primary);
+}
+
+.contactCard h3 {
+  font-size: 1rem;
+}
+
+.contactCard > a:first-of-type {
+  width: fit-content;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.25rem;
+}
+
+.contactCard p {
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
 .formSection {
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
@@ -218,15 +281,25 @@
     grid-template-columns: 1fr;
     gap: var(--space-6);
   }
+
+  .directContact {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
 }
 
 @media (max-width: 560px) {
   .form,
-  .closing {
+  .closing,
+  .directContact {
     padding: 1.5rem;
   }
 
   .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .directContactGrid {
     grid-template-columns: 1fr;
   }
 

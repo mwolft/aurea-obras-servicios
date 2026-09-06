@@ -1,13 +1,8 @@
-// DATOS PROVISIONALES DE DESARROLLO.
-// SUSTITUIR Y VALIDAR ANTES DE PRODUCCIÓN.
-// Mantener los datos identificativos y de contacto legal centralizados aquí.
-const provisionalCompanyName = "AUREA Obras y Servicios S.L.";
-
 export const legalInfo = {
-  companyName: provisionalCompanyName,
-  taxId: "B-12345678",
-  address: "Calle Ejemplo, 1, 13001 Ciudad Real, España",
-  legalEmail: "legal@aureaobrasyservicios.com",
-  phone: "926 000 000",
-  controller: provisionalCompanyName,
+  companyName: "AUREA OBRAS Y SERVICIOS SL (EN CONSTITUCIÓN)",
+  taxId: "B93940567",
+  address: "Calle Virgen del Pilar, nº 12, 13194 Retuerta del Bullaque (Ciudad Real)",
+  controller: "AUREA OBRAS Y SERVICIOS SL (EN CONSTITUCIÓN)",
 } as const;
+
+// TODO: confirmar un email específico para comunicaciones legales antes de publicarlo.

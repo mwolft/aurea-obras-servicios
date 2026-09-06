@@ -1,7 +1,7 @@
 import Link from "next/link";
 
+import { businessProfile } from "@/lib/business-profile";
 import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
-import { legalInfo } from "@/lib/legal";
 
 import styles from "./site-footer.module.css";
 
@@ -9,13 +9,26 @@ export function SiteFooter() {
   return (
     <footer className={styles.footer}>
       <div className={styles.content}>
-        <div>
+        <div className={styles.brandBlock}>
           <span aria-hidden="true" className={styles.accent} />
-          <p className={styles.name}>{legalInfo.companyName}</p>
+          <p className={styles.name}>{businessProfile.name}</p>
           <p className={styles.description}>
             Obras, reformas, jardinería y alquiler de herramientas.
           </p>
         </div>
+
+        <section aria-labelledby="footer-contact" className={styles.footerSection}>
+          <h2 id="footer-contact">Contacto</h2>
+          <a className={styles.contactLink} href={businessProfile.phoneHref}>{businessProfile.phone}</a>
+          <Link href="/contacto">Formulario de contacto</Link>
+        </section>
+
+        <section aria-labelledby="footer-location" className={styles.footerSection}>
+          <h2 id="footer-location">Ubicación</h2>
+          <p>{businessProfile.location.city}</p>
+          <p>{businessProfile.location.lineOne}<br />{businessProfile.location.lineTwo}</p>
+          <a href={businessProfile.location.mapsUrl} rel="noreferrer" target="_blank">Abrir en Google Maps</a>
+        </section>
 
         <div className={styles.navigationGroups}>
           <nav aria-label="Navegación principal del pie de página" className={styles.navigation}>

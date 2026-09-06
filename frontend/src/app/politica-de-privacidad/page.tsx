@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import styles from "../legal-page.module.css";
+import { businessProfile } from "@/lib/business-profile";
 import { legalInfo } from "@/lib/legal";
 
 export const metadata: Metadata = {
@@ -27,9 +28,9 @@ export default function PrivacyPolicyPage() {
           <article className={styles.legalCard}>
             <dl>
               <div><dt>Responsable</dt><dd>{legalInfo.controller}</dd></div>
-              <div><dt>CIF</dt><dd>{legalInfo.taxId}</dd></div>
+              <div><dt>NIF provisional</dt><dd>{legalInfo.taxId}</dd></div>
               <div><dt>Domicilio</dt><dd>{legalInfo.address}</dd></div>
-              <div><dt>Contacto</dt><dd><a href={`mailto:${legalInfo.legalEmail}`}>{legalInfo.legalEmail}</a></dd></div>
+              <div><dt>Contacto</dt><dd><a href={businessProfile.phoneHref}>{businessProfile.phone}</a></dd></div>
             </dl>
           </article>
         </section>
@@ -87,7 +88,7 @@ export default function PrivacyPolicyPage() {
 
         <section aria-labelledby="privacy-rights">
           <h2 id="privacy-rights">Tus derechos</h2>
-          <p>Puedes solicitar acceso, rectificación, supresión, oposición, limitación del tratamiento y portabilidad cuando proceda. Para ello, puedes escribir a <a href={`mailto:${legalInfo.legalEmail}`}>{legalInfo.legalEmail}</a>.</p>
+          <p>Puedes solicitar acceso, rectificación, supresión, oposición, limitación del tratamiento y portabilidad cuando proceda. Para ello, puedes contactar a través del teléfono <a href={businessProfile.phoneHref}>{businessProfile.phone}</a>.</p>
         </section>
 
         <section aria-labelledby="privacy-security">

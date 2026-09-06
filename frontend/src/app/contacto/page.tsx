@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { legalInfo } from "@/lib/legal";
+import { businessProfile } from "@/lib/business-profile";
 
 import { ContactForm } from "./contact-form";
 import styles from "./page.module.css";
@@ -20,6 +21,26 @@ export default function ContactPage() {
         <p>
           Explícanos tu consulta para que podamos conocer mejor el trabajo que necesitas.
         </p>
+      </section>
+
+      <section aria-labelledby="direct-contact-title" className={styles.directContact}>
+        <div>
+          <p className={styles.eyebrow}>Contacto directo</p>
+          <h2 id="direct-contact-title">También puedes llamarnos.</h2>
+        </div>
+        <div className={styles.directContactGrid}>
+          <article className={styles.contactCard}>
+            <h3>Teléfono</h3>
+            <a href={businessProfile.phoneHref}>{businessProfile.phone}</a>
+            <p>Si prefieres explicarnos tu consulta por teléfono, estamos al otro lado.</p>
+          </article>
+          <article className={styles.contactCard}>
+            <h3>Ubicación</h3>
+            <p>{businessProfile.location.city}</p>
+            <p>{businessProfile.location.lineOne}<br />{businessProfile.location.lineTwo}</p>
+            <a href={businessProfile.location.mapsUrl} rel="noreferrer" target="_blank">Abrir en Google Maps</a>
+          </article>
+        </div>
       </section>
 
       <section aria-labelledby="form-title" className={styles.formSection}>

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { businessProfile } from "@/lib/business-profile";
+
 import { useAuth } from "./auth-provider";
 import styles from "./site-header.module.css";
 
@@ -165,7 +167,14 @@ export function SiteHeader() {
   };
 
   return (
-    <header className={styles.header} ref={headerRef}>
+    <>
+      <div className={styles.contactBar}>
+        <div className={styles.contactBarContent}>
+          <a href={businessProfile.phoneHref}>{businessProfile.phone}</a>
+          <span>{businessProfile.location.city}</span>
+        </div>
+      </div>
+      <header className={styles.header} ref={headerRef}>
       <div className={styles.content}>
         <Link className={styles.brand} href="/" onClick={closeMenu}>
           <Image
@@ -213,6 +222,10 @@ export function SiteHeader() {
 
       <div className={styles.mobileMenu} hidden={!isMenuOpen} id="mobile-navigation">
         <nav aria-label="Navegación móvil" className={styles.mobileNavigation}>
+          <a className={styles.mobileCall} href={businessProfile.phoneHref} onClick={closeMenu}>
+            Llamar · {businessProfile.phone}
+          </a>
+          <p className={styles.mobileLocation}>{businessProfile.location.city}</p>
           <NavigationLinks closeMenu={closeMenu} />
           <NavigationActions
             closeMenu={closeMenu}
@@ -227,6 +240,7 @@ export function SiteHeader() {
           No se ha podido cerrar la sesión. Inténtalo de nuevo.
         </p>
       ) : null}
-    </header>
+      </header>
+    </>
   );
 }
