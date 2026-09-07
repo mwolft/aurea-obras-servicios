@@ -24,9 +24,6 @@ export function SiteFooter() {
                 <br />
                 {businessProfile.location.lineTwo}
               </p>
-              <a href={businessProfile.location.mapsUrl} rel="noreferrer" target="_blank">
-                Abrir en Google Maps
-              </a>
             </div>
           </div>
 
@@ -39,13 +36,21 @@ export function SiteFooter() {
             <Link href="/contacto">Formulario de contacto</Link>
           </section>
 
-          <section aria-labelledby="footer-navigation" className={styles.navigationSection}>
-            <h2 id="footer-navigation">Navegación</h2>
-            <nav aria-label="Navegación principal del pie de página" className={styles.navigation}>
-              <Link href="/">Inicio</Link>
-              <Link href="/servicios">Servicios</Link>
-              <Link href="/alquiler">Alquiler</Link>
-              <Link href="/contacto">Contacto</Link>
+          <section aria-labelledby="footer-services" className={styles.footerSection}>
+            <h2 id="footer-services">Servicios</h2>
+            <nav aria-label="Servicios de AUREA" className={styles.navigation}>
+              <Link href="/servicios/jardineria">Jardinería</Link>
+              <Link href="/servicios/fontaneria">Fontanería</Link>
+              <Link href="/servicios/electricidad">Electricidad</Link>
+              <Link href="/servicios/obras-reformas">Obras y reformas</Link>
+            </nav>
+          </section>
+
+          <section aria-labelledby="footer-rental" className={styles.footerSection}>
+            <h2 id="footer-rental">Alquiler</h2>
+            <nav aria-label="Alquiler de AUREA" className={styles.navigation}>
+              <Link href="/alquiler">Alquiler de maquinaria</Link>
+              <Link href="/alquiler">Alquiler de herramientas</Link>
             </nav>
           </section>
         </div>

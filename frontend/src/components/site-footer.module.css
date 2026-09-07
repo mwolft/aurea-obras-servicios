@@ -13,7 +13,7 @@
 
 .primaryRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.8fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 0.8fr));
   gap: var(--space-8);
   align-items: start;
 }
@@ -32,9 +32,8 @@
 }
 
 .navigation {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
   color: #dce6f1;
   font-size: 0.9rem;
 }
@@ -54,8 +53,7 @@
   font-size: 0.9rem;
 }
 
-.locationDetails,
-.navigationSection {
+.locationDetails {
   display: grid;
   gap: var(--space-2);
   color: #c9d6e5;
@@ -65,23 +63,6 @@
 
 .locationDetails {
   margin-top: var(--space-6);
-}
-
-.navigationSection h2 {
-  margin-bottom: var(--space-2);
-  color: var(--color-surface);
-  font-size: 0.9rem;
-}
-
-.locationDetails a {
-  width: fit-content;
-  color: #dce6f1;
-  font-weight: 400;
-  text-decoration: none;
-}
-
-.locationDetails a:hover {
-  color: var(--color-accent);
 }
 
 .locationCity,
@@ -167,9 +148,5 @@
 @media (min-width: 701px) and (max-width: 1050px) {
   .primaryRow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .navigationSection {
-    grid-column: 1 / -1;
   }
 }
