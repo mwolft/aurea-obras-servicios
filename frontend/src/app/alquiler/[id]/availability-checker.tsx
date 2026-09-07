@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 
 import styles from "./availability-checker.module.css";
+import RentalDateRangePicker from "./rental-date-range-picker";
 
 type AvailabilityStatus =
   | { kind: "pending" }
@@ -262,34 +263,16 @@ export default function AvailabilityChecker({
       <p>Selecciona las fechas para comprobar si esta herramienta puede alquilarse.</p>
 
       <form className={styles.form} noValidate onSubmit={handleAvailabilitySubmit}>
-        <label>
-          Fecha de inicio
-          <input
-            min={today}
-            name="start_date"
-            onChange={(event) => {
-              setStartDate(event.target.value);
-              resetAfterDateChange();
-            }}
-            required
-            type="date"
-            value={startDate}
-          />
-        </label>
-        <label>
-          Fecha de devolución
-          <input
-            min={startDate || today}
-            name="end_date"
-            onChange={(event) => {
-              setEndDate(event.target.value);
-              resetAfterDateChange();
-            }}
-            required
-            type="date"
-            value={endDate}
-          />
-        </label>
+        <RentalDateRangePicker
+          endDate={endDate}
+          minDate={today}
+          onChange={(nextStartDate, nextEndDate) => {
+            setStartDate(nextStartDate);
+            setEndDate(nextEndDate);
+            resetAfterDateChange();
+          }}
+          startDate={startDate}
+        />
         <button disabled={availabilityStatus.kind === "loading"} type="submit">
           {availabilityStatus.kind === "loading" ? "Consultando…" : "Consultar disponibilidad"}
         </button>
