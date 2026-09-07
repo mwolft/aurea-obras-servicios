@@ -43,6 +43,15 @@
 @media (max-width: 700px) {
   .picker { grid-column: auto; }
   .fields { grid-template-columns: 1fr; }
-  .popover { right: 0; width: auto; max-width: none; }
-  .dayButton { width: min(2.3rem, 9vw); height: min(2.3rem, 9vw); }
+  .popover { top: calc(100% + var(--space-2)); right: 0; width: auto; max-width: none; padding: var(--space-3); }
+  .selectionStatus { min-height: 0; padding-right: 2.25rem; margin-bottom: var(--space-2); font-size: 0.78rem; line-height: 1.35; }
+  .monthCaption { min-height: 2.25rem; padding: 0 2.5rem; font-size: 0.94rem; }
+  .navigation { top: 0; right: 0; left: 0; }
+  .navigationButton { width: 2rem; height: 2rem; }
+  .weekday { height: 1.7rem; }
+  .week, .day { height: 2.25rem; }
+  .dayButton { width: min(2.1rem, 8.5vw); height: min(2.1rem, 8.5vw); font-size: 0.92rem; }
+  .closeButton { position: absolute; z-index: 1; top: 0.45rem; right: 0.45rem; display: inline-flex; align-items: center; justify-content: center; width: 2rem; min-height: 2rem; height: 2rem; padding: 0; margin: 0; border: 0; border-radius: 999px; color: var(--color-primary); background: transparent; font-size: 0; }
+  .closeButton::after { content: "×"; font-size: 1.45rem; font-weight: 400; line-height: 1; }
+  .closeButton:hover { color: var(--color-surface); background: var(--color-primary); }
 }
