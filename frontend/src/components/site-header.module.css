@@ -179,6 +179,25 @@
   font-weight: 700;
 }
 
+.desktopNavigation .rentalNavLink,
+.desktopNavigation .rentalNavLink[aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-surface);
+  background: var(--color-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.desktopNavigation .rentalNavLink:hover,
+.desktopNavigation .rentalNavLink[aria-current="page"]:hover {
+  color: var(--color-surface);
+  background: var(--color-accent-dark);
+}
+
 .loading {
   color: var(--color-text-muted);
   font-size: 0.8rem;
@@ -369,6 +388,23 @@
     color: var(--color-surface) !important;
     background: var(--color-primary);
     font-weight: 700;
+  }
+
+  .mobileNavigation .rentalNavLink,
+  .mobileNavigation .rentalNavLink[aria-current="page"] {
+    justify-content: center;
+    margin: 0.25rem 0;
+    border-radius: var(--radius-sm);
+    color: var(--color-surface) !important;
+    background: var(--color-accent);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .mobileNavigation .rentalNavLink:hover,
+  .mobileNavigation .rentalNavLink[aria-current="page"]:hover {
+    color: var(--color-surface) !important;
+    background: var(--color-accent-dark);
   }
 
   .mobileEmail {

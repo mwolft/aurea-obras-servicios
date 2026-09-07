@@ -30,10 +30,11 @@ function NavigationLinks({ closeMenu }: Pick<NavigationActionsProps, "closeMenu"
       </Link>
       <Link
         aria-current={isActive("/alquiler") ? "page" : undefined}
+        className={styles.rentalNavLink}
         href="/alquiler"
         onClick={closeMenu}
       >
-        Alquiler
+        Maquinaria y herramientas
       </Link>
       <Link
         aria-current={isActive("/servicios") ? "page" : undefined}
