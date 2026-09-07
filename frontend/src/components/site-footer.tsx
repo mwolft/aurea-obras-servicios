@@ -1,10 +1,14 @@
 import Link from "next/link";
 
 import { businessProfile } from "@/lib/business-profile";
+import { getCategorySlug } from "@/lib/category-slug";
 import { CookiePreferencesButton } from "@/components/cookie-preferences-button";
 import { LocationIcon, PhoneIcon } from "@/components/icons";
 
 import styles from "./site-footer.module.css";
+
+const machineryRentalPath = `/alquiler/${getCategorySlug("Maquinaria")}`;
+const toolsRentalPath = `/alquiler/${getCategorySlug("Herramientas")}`;
 
 export function SiteFooter() {
   return (
@@ -49,8 +53,8 @@ export function SiteFooter() {
           <section aria-labelledby="footer-rental" className={styles.footerSection}>
             <h2 id="footer-rental">Alquiler</h2>
             <nav aria-label="Alquiler de AUREA" className={styles.rentalNavigation}>
-              <Link href="/alquiler">Alquiler de maquinaria</Link>
-              <Link href="/alquiler">Alquiler de herramientas</Link>
+              <Link href={machineryRentalPath}>Alquiler de maquinaria</Link>
+              <Link href={toolsRentalPath}>Alquiler de herramientas</Link>
             </nav>
           </section>
         </div>
