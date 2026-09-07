@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { businessProfile } from "@/lib/business-profile";
 
 import { useAuth } from "./auth-provider";
-import { LocationIcon, PhoneIcon } from "./icons";
+import { EmailIcon, LocationIcon, PhoneIcon } from "./icons";
 import styles from "./site-header.module.css";
 
 type NavigationActionsProps = {
@@ -171,14 +171,20 @@ export function SiteHeader() {
     <>
       <div className={styles.contactBar}>
         <div className={styles.contactBarContent}>
-          <a className={styles.contactBarPhone} href={businessProfile.phoneHref}>
-            <PhoneIcon className={styles.contactBarIcon} />
-            <span>{businessProfile.phone}</span>
-          </a>
           <span className={styles.contactBarLocation}>
             <LocationIcon className={styles.contactBarIcon} />
             <span>{businessProfile.location.city}</span>
           </span>
+          <div className={styles.contactBarActions}>
+            <a className={styles.contactBarLink} href={businessProfile.phoneHref}>
+              <PhoneIcon className={styles.contactBarIcon} />
+              <span>{businessProfile.phone}</span>
+            </a>
+            <a className={styles.contactBarLink} href={businessProfile.emailHref}>
+              <EmailIcon className={styles.contactBarIcon} />
+              <span>{businessProfile.email}</span>
+            </a>
+          </div>
         </div>
       </div>
       <header className={styles.header} ref={headerRef}>

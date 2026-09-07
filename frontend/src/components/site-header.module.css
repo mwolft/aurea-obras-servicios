@@ -6,28 +6,32 @@
 .contactBarContent {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: clamp(1.5rem, 3vw, 2rem);
+  justify-content: space-between;
   width: min(100% - 3rem, var(--container-width));
   min-height: 2rem;
   margin: 0 auto;
   font-size: 0.78rem;
+  font-weight: 400;
 }
 
-.contactBarPhone,
-.contactBarLocation {
+.contactBarLocation,
+.contactBarActions,
+.contactBarLink {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
 }
 
-.contactBarPhone {
-  color: var(--color-surface);
-  font-weight: 700;
+.contactBarActions {
+  gap: clamp(1.5rem, 2.5vw, 2rem);
+}
+
+.contactBarLink {
+  color: #dce6f1;
   text-decoration: none;
 }
 
-.contactBarPhone:hover {
+.contactBarLink:hover {
   color: var(--color-accent);
 }
 

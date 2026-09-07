@@ -36,3 +36,12 @@ export function LocationIcon(props: IconProps) {
     </BaseIcon>
   );
 }
+
+export function EmailIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect height="15" rx="2" width="19" x="2.5" y="4.5" />
+      <path d="m4 6 8 6 8-6" />
+    </BaseIcon>
+  );
+}
