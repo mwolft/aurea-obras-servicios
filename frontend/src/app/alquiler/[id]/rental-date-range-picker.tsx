@@ -1,7 +1,7 @@
 "use client";
 
-import { DayPicker, type DateRange } from "@daypicker/react";
-import { es } from "@daypicker/react/locale";
+import { DayPicker, type DateRange } from "react-day-picker";
+import { es } from "react-day-picker/locale";
 import { useEffect, useId, useRef, useState } from "react";
 
 import styles from "./rental-date-range-picker.module.css";
