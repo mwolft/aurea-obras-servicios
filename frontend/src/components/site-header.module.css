@@ -179,23 +179,48 @@
   font-weight: 700;
 }
 
-.desktopNavigation .rentalNavLink,
-.desktopNavigation .rentalNavLink[aria-current="page"] {
+.rentalNavGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.desktopNavigation .machineryNavLink,
+.desktopNavigation .machineryNavLink[aria-current="page"],
+.desktopNavigation .toolsNavLink,
+.desktopNavigation .toolsNavLink[aria-current="page"] {
   display: inline-flex;
   align-items: center;
   min-height: 2.5rem;
   padding: 0.45rem 0.7rem;
   border-radius: var(--radius-sm);
-  color: var(--color-surface);
-  background: var(--color-accent);
   font-weight: 700;
   text-decoration: none;
 }
 
-.desktopNavigation .rentalNavLink:hover,
-.desktopNavigation .rentalNavLink[aria-current="page"]:hover {
+.desktopNavigation .machineryNavLink,
+.desktopNavigation .machineryNavLink[aria-current="page"] {
+  color: var(--color-surface);
+  background: var(--color-accent);
+}
+
+.desktopNavigation .machineryNavLink:hover,
+.desktopNavigation .machineryNavLink[aria-current="page"]:hover {
   color: var(--color-surface);
   background: var(--color-accent-dark);
+}
+
+.desktopNavigation .toolsNavLink,
+.desktopNavigation .toolsNavLink[aria-current="page"] {
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  background: transparent;
+}
+
+.desktopNavigation .toolsNavLink:hover,
+.desktopNavigation .toolsNavLink[aria-current="page"]:hover {
+  color: var(--color-surface);
+  background: var(--color-accent);
 }
 
 .loading {
@@ -390,21 +415,46 @@
     font-weight: 700;
   }
 
-  .mobileNavigation .rentalNavLink,
-  .mobileNavigation .rentalNavLink[aria-current="page"] {
-    justify-content: center;
+  .rentalNavGroup {
+    display: grid;
+    gap: 0.25rem;
+    width: 100%;
     margin: 0.25rem 0;
+  }
+
+  .mobileNavigation .machineryNavLink,
+  .mobileNavigation .machineryNavLink[aria-current="page"],
+  .mobileNavigation .toolsNavLink,
+  .mobileNavigation .toolsNavLink[aria-current="page"] {
+    justify-content: center;
     border-radius: var(--radius-sm);
-    color: var(--color-surface) !important;
-    background: var(--color-accent);
     font-weight: 700;
     text-decoration: none;
   }
 
-  .mobileNavigation .rentalNavLink:hover,
-  .mobileNavigation .rentalNavLink[aria-current="page"]:hover {
+  .mobileNavigation .machineryNavLink,
+  .mobileNavigation .machineryNavLink[aria-current="page"] {
+    color: var(--color-surface) !important;
+    background: var(--color-accent);
+  }
+
+  .mobileNavigation .machineryNavLink:hover,
+  .mobileNavigation .machineryNavLink[aria-current="page"]:hover {
     color: var(--color-surface) !important;
     background: var(--color-accent-dark);
+  }
+
+  .mobileNavigation .toolsNavLink,
+  .mobileNavigation .toolsNavLink[aria-current="page"] {
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent) !important;
+    background: transparent;
+  }
+
+  .mobileNavigation .toolsNavLink:hover,
+  .mobileNavigation .toolsNavLink[aria-current="page"]:hover {
+    color: var(--color-surface) !important;
+    background: var(--color-accent);
   }
 
   .mobileEmail {

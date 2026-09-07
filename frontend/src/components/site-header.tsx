@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { businessProfile } from "@/lib/business-profile";
+import { getCategorySlug } from "@/lib/category-slug";
 
 import { useAuth } from "./auth-provider";
 import { EmailIcon, LocationIcon, PhoneIcon } from "./icons";
@@ -17,25 +18,40 @@ type NavigationActionsProps = {
   onLogout: () => void;
 };
 
+const machineryRentalPath = `/alquiler/${getCategorySlug("Maquinaria")}`;
+const toolsRentalPath = `/alquiler/${getCategorySlug("Herramientas")}`;
+
 function NavigationLinks({ closeMenu }: Pick<NavigationActionsProps, "closeMenu">) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+  const isRentalCategoryActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
       <Link aria-current={isActive("/") ? "page" : undefined} href="/" onClick={closeMenu}>
         Inicio
       </Link>
-      <Link
-        aria-current={isActive("/alquiler") ? "page" : undefined}
-        className={styles.rentalNavLink}
-        href="/alquiler"
-        onClick={closeMenu}
-      >
-        Maquinaria y herramientas
-      </Link>
+      <div className={styles.rentalNavGroup}>
+        <Link
+          aria-current={isRentalCategoryActive(machineryRentalPath) ? "page" : undefined}
+          className={styles.machineryNavLink}
+          href={machineryRentalPath}
+          onClick={closeMenu}
+        >
+          Maquinaria
+        </Link>
+        <Link
+          aria-current={isRentalCategoryActive(toolsRentalPath) ? "page" : undefined}
+          className={styles.toolsNavLink}
+          href={toolsRentalPath}
+          onClick={closeMenu}
+        >
+          Herramientas
+        </Link>
+      </div>
       <Link
         aria-current={isActive("/servicios") ? "page" : undefined}
         href="/servicios"
