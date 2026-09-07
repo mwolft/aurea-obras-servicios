@@ -48,7 +48,7 @@ export default function Home() {
         <section aria-labelledby="hero-title" className={styles.hero}>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>AUREA · ALQUILER · SERVICIOS</p>
-            <h1 id="hero-title">Herramientas de alquiler para cada proyecto.</h1>
+            <h1 id="hero-title">Maquinaria y herramientas de alquiler.</h1>
             <p className={styles.intro}>
               Consulta el catálogo de herramientas de AUREA y comprueba su disponibilidad para las fechas que necesitas. También contamos con servicios de jardinería, fontanería, electricidad y obras y reformas.
             </p>
