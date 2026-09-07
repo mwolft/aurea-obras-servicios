@@ -239,6 +239,10 @@ export function SiteHeader() {
             <PhoneIcon className={styles.mobileContactIcon} />
             <span>Llamar · {businessProfile.phone}</span>
           </a>
+          <a className={styles.mobileEmail} href={businessProfile.emailHref} onClick={closeMenu}>
+            <EmailIcon className={styles.mobileContactIcon} />
+            <span>Escribir por email</span>
+          </a>
           <p className={styles.mobileLocation}>
             <LocationIcon className={styles.mobileContactIcon} />
             <span>{businessProfile.location.city}</span>
