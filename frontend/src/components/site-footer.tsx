@@ -38,7 +38,7 @@ export function SiteFooter() {
 
           <section aria-labelledby="footer-services" className={styles.footerSection}>
             <h2 id="footer-services">Servicios</h2>
-            <nav aria-label="Servicios de AUREA" className={styles.navigation}>
+            <nav aria-label="Servicios de AUREA" className={styles.servicesNavigation}>
               <Link href="/servicios/jardineria">Jardinería</Link>
               <Link href="/servicios/fontaneria">Fontanería</Link>
               <Link href="/servicios/electricidad">Electricidad</Link>
@@ -48,7 +48,7 @@ export function SiteFooter() {
 
           <section aria-labelledby="footer-rental" className={styles.footerSection}>
             <h2 id="footer-rental">Alquiler</h2>
-            <nav aria-label="Alquiler de AUREA" className={styles.navigation}>
+            <nav aria-label="Alquiler de AUREA" className={styles.rentalNavigation}>
               <Link href="/alquiler">Alquiler de maquinaria</Link>
               <Link href="/alquiler">Alquiler de herramientas</Link>
             </nav>

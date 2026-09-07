@@ -31,11 +31,16 @@
   letter-spacing: -0.015em;
 }
 
-.navigation {
+.servicesNavigation,
+.rentalNavigation {
   display: grid;
   gap: var(--space-2);
   color: #dce6f1;
   font-size: 0.9rem;
+}
+
+.rentalNavigation a {
+  white-space: nowrap;
 }
 
 .footerSection {
@@ -94,11 +99,13 @@
   font-weight: 400;
 }
 
-.navigation a {
+.servicesNavigation a,
+.rentalNavigation a {
   text-decoration: none;
 }
 
-.navigation a:hover,
+.servicesNavigation a:hover,
+.rentalNavigation a:hover,
 .legalNavigation a:hover,
 .cookiePreferencesButton:hover {
   color: var(--color-accent);
