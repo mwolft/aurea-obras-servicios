@@ -8,10 +8,10 @@ import styles from "./page.module.css";
 
 const socialImageUrl = getPublicUrl("/icon.png");
 const socialDescription =
-  `${legalInfo.companyName} reúne jardinería, fontanería, electricidad, obras y reformas, además de alquiler de herramientas.`;
+  `Consulta el alquiler de herramientas de ${legalInfo.companyName}. También contamos con servicios de jardinería, fontanería, electricidad y obras y reformas.`;
 
 export const metadata: Metadata = {
-  title: `${legalInfo.companyName} | Servicios y alquiler de herramientas`,
+  title: `${legalInfo.companyName} | Alquiler de herramientas y servicios`,
   description: socialDescription,
   alternates: { canonical: "/" },
   openGraph: {
@@ -47,27 +47,37 @@ export default function Home() {
       <main className={styles.main}>
         <section aria-labelledby="hero-title" className={styles.hero}>
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>AUREA · SERVICIOS · ALQUILER</p>
-            <h1 id="hero-title">Soluciones para cada proyecto.</h1>
+            <p className={styles.eyebrow}>AUREA · ALQUILER · SERVICIOS</p>
+            <h1 id="hero-title">Herramientas de alquiler para cada proyecto.</h1>
             <p className={styles.intro}>
-              Jardinería, fontanería, electricidad y obras y reformas. También contamos con alquiler de herramientas para cuando las necesitas.
+              Consulta el catálogo de herramientas de AUREA y comprueba su disponibilidad para las fechas que necesitas. También contamos con servicios de jardinería, fontanería, electricidad y obras y reformas.
             </p>
             <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/servicios/jardineria">
-                Conocer Jardinería
+              <Link className={styles.primaryAction} href="/alquiler">
+                Ver herramientas en alquiler
               </Link>
-              <Link className={styles.secondaryAction} href="/alquiler">Ver alquiler</Link>
+              <Link className={styles.secondaryAction} href="/servicios">Conocer nuestros servicios</Link>
             </div>
           </div>
 
           <div aria-hidden="true" className={styles.heroVisual}>
-            <span className={styles.visualLabel}>Servicios · Jardinería · Alquiler</span>
-            <div className={styles.heroMark}><GardenIcon /></div>
+            <span className={styles.visualLabel}>Alquiler de herramientas</span>
+            <div className={styles.heroMark}><ToolsIcon /></div>
             <span className={`${styles.heroLine} ${styles.heroLineOne}`} />
             <span className={`${styles.heroLine} ${styles.heroLineTwo}`} />
             <span className={`${styles.heroBlock} ${styles.heroBlockOne}`} />
             <span className={`${styles.heroBlock} ${styles.heroBlockTwo}`} />
           </div>
+        </section>
+
+        <section aria-labelledby="rental-title" className={styles.rental}>
+          <div aria-hidden="true" className={styles.rentalIcon}><ToolsIcon /></div>
+          <div>
+            <p className={styles.eyebrow}>Alquiler</p>
+            <h2 id="rental-title">Herramientas para cuando quieres hacer tu propio proyecto.</h2>
+            <p>Si necesitas herramientas, consulta el catálogo de alquiler. Si buscas que AUREA realice un trabajo, explora nuestros servicios.</p>
+          </div>
+          <Link className={styles.secondaryAction} href="/alquiler">Ver herramientas en alquiler</Link>
         </section>
 
         <section aria-labelledby="services-title" className={styles.services}>
@@ -128,16 +138,6 @@ export default function Home() {
             <h2 id="multiservice-title">AUREA reúne servicios para distintos proyectos.</h2>
           </div>
           <p>Fontanería, electricidad y obras y reformas completan una oferta multiservicio junto a Jardinería.</p>
-        </section>
-
-        <section aria-labelledby="rental-title" className={styles.rental}>
-          <div aria-hidden="true" className={styles.rentalIcon}><ToolsIcon /></div>
-          <div>
-            <p className={styles.eyebrow}>Alquiler</p>
-            <h2 id="rental-title">Herramientas para cuando quieres hacer tu propio proyecto.</h2>
-            <p>Si buscas que AUREA realice un trabajo, explora nuestros servicios. Si necesitas herramientas, consulta el catálogo de alquiler.</p>
-          </div>
-          <Link className={styles.secondaryAction} href="/alquiler">Ver herramientas en alquiler</Link>
         </section>
 
         <section aria-labelledby="contact-title" className={styles.contactCta}>

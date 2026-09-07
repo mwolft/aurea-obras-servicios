@@ -29,18 +29,18 @@ function NavigationLinks({ closeMenu }: Pick<NavigationActionsProps, "closeMenu"
         Inicio
       </Link>
       <Link
-        aria-current={isActive("/servicios") ? "page" : undefined}
-        href="/servicios"
-        onClick={closeMenu}
-      >
-        Servicios
-      </Link>
-      <Link
         aria-current={isActive("/alquiler") ? "page" : undefined}
         href="/alquiler"
         onClick={closeMenu}
       >
         Alquiler
+      </Link>
+      <Link
+        aria-current={isActive("/servicios") ? "page" : undefined}
+        href="/servicios"
+        onClick={closeMenu}
+      >
+        Servicios
       </Link>
       <Link
         aria-current={isActive("/contacto") ? "page" : undefined}
