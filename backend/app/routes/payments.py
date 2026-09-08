@@ -8,6 +8,7 @@ from app.services.authentication import get_authenticated_user_id
 from app.services.stripe_checkout import (
     ReservationPaymentExpiredError,
     ReservationPaymentNotFoundError,
+    ReservationPaymentProcessingError,
     ReservationPaymentStateError,
     StripeCheckoutError,
     StripeConfigurationError,
@@ -53,6 +54,8 @@ def start_stripe_payment(reservation_id: int):
         return jsonify({"error": "Reservation not found."}), 404
     except ReservationPaymentExpiredError:
         return jsonify({"error": "La ventana de pago ha caducado."}), 409
+    except ReservationPaymentProcessingError:
+        return jsonify({"error": "Hay un pago en curso o pendiente de revisión. Espera antes de elegir otro método."}), 409
     except ReservationPaymentStateError:
         return jsonify({"error": "La reserva no se puede pagar en este estado."}), 409
     except StripeConfigurationError:
@@ -136,6 +139,8 @@ def start_paypal_payment(reservation_id: int):
         return jsonify({"error": "Reservation not found."}), 404
     except ReservationPaymentExpiredError:
         return jsonify({"error": "La ventana de pago ha caducado."}), 409
+    except ReservationPaymentProcessingError:
+        return jsonify({"error": "Hay un pago en curso o pendiente de revisión. Espera antes de elegir otro método."}), 409
     except ReservationPaymentStateError:
         return jsonify({"error": "La reserva no se puede pagar en este estado."}), 409
     except PayPalConfigurationError:

@@ -10,15 +10,20 @@ os.environ["PAYPAL_CLIENT_ID"] = "paypal-client-id"
 os.environ["PAYPAL_CLIENT_SECRET"] = "paypal-client-secret"
 os.environ["PAYPAL_WEBHOOK_ID"] = "paypal-webhook-id"
 os.environ["PAYPAL_ENVIRONMENT"] = "sandbox"
+os.environ["STRIPE_SECRET_KEY"] = "sk_test_payment_switching"
+os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_payment_switching"
 
 from app import create_app
 from app.extensions import db
 from app.models import Payment, Reservation, Tool
 from app.services.payment_domain import (
     PAYMENT_PROVIDER_PAYPAL,
+    PAYMENT_PROVIDER_STRIPE,
     PAYMENT_STATUS_PAID,
     PAYMENT_STATUS_PENDING,
+    PAYMENT_STATUS_PROCESSING,
     PAYMENT_STATUS_REQUIRES_REVIEW,
+    PAYMENT_STATUS_SUPERSEDED,
     PAYMENT_WINDOW,
     RESERVATION_STATUS_CANCELLED,
     RESERVATION_STATUS_CONFIRMED,
@@ -67,6 +72,23 @@ class PayPalPaymentApiTestCase(unittest.TestCase):
             "external_payment_id": "PAYPAL-ORDER-1", "status": PAYMENT_STATUS_PENDING,
             "amount": Decimal(reservation.total_amount), "currency": "EUR",
             "idempotency_key": "paypal-payment-idempotency-key", "expires_at": reservation.payment_expires_at,
+        }
+        values.update(overrides)
+        payment = Payment(**values)
+        db.session.add(payment)
+        db.session.commit()
+        return payment
+
+    def create_stripe_payment(self, reservation, **overrides):
+        values = {
+            "reservation_id": reservation.id,
+            "provider": PAYMENT_PROVIDER_STRIPE,
+            "external_payment_id": "cs_test_abandoned",
+            "status": PAYMENT_STATUS_PENDING,
+            "amount": Decimal(reservation.total_amount),
+            "currency": "eur",
+            "idempotency_key": "stripe-payment-idempotency-key",
+            "expires_at": reservation.payment_expires_at,
         }
         values.update(overrides)
         payment = Payment(**values)
@@ -130,6 +152,103 @@ class PayPalPaymentApiTestCase(unittest.TestCase):
         self.assertEqual(Payment.query.count(), 1)
         self.assertEqual(post.call_count, 1)
 
+    def test_abandoned_paypal_attempt_can_be_replaced_by_stripe_and_late_capture_is_reviewed(self):
+        tool = self.create_tool()
+        reservation = self.create_reservation(tool)
+        abandoned_paypal = self.create_payment(reservation)
+        checkout = MagicMock(
+            id="cs_test_replacement",
+            url="https://checkout.stripe.test/c/pay/cs_test_replacement",
+        )
+
+        with patch("app.services.stripe_checkout.stripe.checkout.Session.create", return_value=checkout):
+            response = self.client.post(f"/api/reservations/{reservation.id}/payments/stripe")
+
+        self.assertEqual(response.status_code, 200)
+        db.session.expire_all()
+        self.assertEqual(db.session.get(Payment, abandoned_paypal.id).status, PAYMENT_STATUS_SUPERSEDED)
+        stripe_payment = Payment.query.filter_by(provider=PAYMENT_PROVIDER_STRIPE).one()
+        self.assertEqual(stripe_payment.status, PAYMENT_STATUS_PENDING)
+
+        with patch("app.services.paypal_checkout.requests.post") as capture_post:
+            superseded_capture = self.client.post(
+                f"/api/payments/paypal/orders/{abandoned_paypal.external_payment_id}/capture"
+            )
+        self.assertEqual(superseded_capture.status_code, 409)
+        capture_post.assert_not_called()
+
+        stripe_event = {
+            "id": "evt_stripe_replacement",
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                "id": stripe_payment.external_payment_id,
+                "payment_status": "paid",
+                "amount_total": 3000,
+                "currency": "eur",
+                "client_reference_id": str(stripe_payment.id),
+                "metadata": {"payment_id": str(stripe_payment.id)},
+            }},
+        }
+        with patch("app.routes.payments.construct_stripe_event", return_value=stripe_event):
+            confirmed = self.client.post("/api/payments/stripe/webhook", data=b"{}", headers={"Stripe-Signature": "test"})
+        self.assertEqual(confirmed.get_json()["status"], "confirmed")
+        self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
+
+        with patch("app.routes.payments.verify_paypal_webhook", return_value=True):
+            late = self.client.post("/api/payments/paypal/webhook", json=self.event(abandoned_paypal, event_id="WH-PAYPAL-LATE-SUPERSEDED"))
+        self.assertEqual(late.get_json()["status"], "requires_review")
+        self.assertEqual(db.session.get(Payment, abandoned_paypal.id).status, PAYMENT_STATUS_REQUIRES_REVIEW)
+        self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
+
+    def test_abandoned_stripe_attempt_can_be_replaced_by_paypal_and_late_checkout_is_reviewed(self):
+        tool = self.create_tool()
+        reservation = self.create_reservation(tool)
+        abandoned_stripe = self.create_stripe_payment(reservation)
+        token_response = MagicMock(); token_response.json.return_value = {"access_token": "token"}; token_response.raise_for_status.return_value = None
+        order_response = MagicMock(); order_response.json.return_value = self.order("PAYPAL-ORDER-REPLACEMENT"); order_response.raise_for_status.return_value = None
+
+        with patch("app.services.paypal_checkout.requests.post", side_effect=[token_response, order_response]):
+            response = self.client.post(f"/api/reservations/{reservation.id}/payments/paypal")
+
+        self.assertEqual(response.status_code, 200)
+        db.session.expire_all()
+        self.assertEqual(db.session.get(Payment, abandoned_stripe.id).status, PAYMENT_STATUS_SUPERSEDED)
+        paypal_payment = Payment.query.filter_by(provider=PAYMENT_PROVIDER_PAYPAL).one()
+
+        with patch("app.routes.payments.verify_paypal_webhook", return_value=True):
+            confirmed = self.client.post("/api/payments/paypal/webhook", json=self.event(paypal_payment, event_id="WH-PAYPAL-REPLACEMENT"))
+        self.assertEqual(confirmed.get_json()["status"], "confirmed")
+
+        stripe_event = {
+            "id": "evt_stripe_late_superseded",
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                "id": abandoned_stripe.external_payment_id,
+                "payment_status": "paid",
+                "amount_total": 3000,
+                "currency": "eur",
+                "client_reference_id": str(abandoned_stripe.id),
+                "metadata": {"payment_id": str(abandoned_stripe.id)},
+            }},
+        }
+        with patch("app.routes.payments.construct_stripe_event", return_value=stripe_event):
+            late = self.client.post("/api/payments/stripe/webhook", data=b"{}", headers={"Stripe-Signature": "test"})
+        self.assertEqual(late.get_json()["status"], "requires_review")
+        self.assertEqual(db.session.get(Payment, abandoned_stripe.id).status, PAYMENT_STATUS_REQUIRES_REVIEW)
+        self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
+
+    def test_processing_attempt_blocks_another_provider_with_a_specific_state(self):
+        tool = self.create_tool()
+        reservation = self.create_reservation(tool)
+        self.create_payment(reservation, status=PAYMENT_STATUS_PROCESSING)
+
+        with patch("app.services.stripe_checkout.stripe.checkout.Session.create") as create_checkout:
+            response = self.client.post(f"/api/reservations/{reservation.id}/payments/stripe")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("pago en curso", response.get_json()["error"])
+        create_checkout.assert_not_called()
+
     def test_invalid_webhook_is_rejected_before_processing(self):
         with patch("app.routes.payments.verify_paypal_webhook", return_value=False), patch("app.routes.payments.process_paypal_event") as process:
             response = self.client.post("/api/payments/paypal/webhook", json={"id": "event"})
@@ -168,7 +287,7 @@ class PayPalPaymentApiTestCase(unittest.TestCase):
             response = self.client.post(f"/api/payments/paypal/orders/{payment.external_payment_id}/capture")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_PENDING_PAYMENT)
-        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_PENDING)
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_PROCESSING)
 
     def test_browser_status_exposes_safe_summary_and_requires_review_without_confirmation(self):
         tool = self.create_tool()

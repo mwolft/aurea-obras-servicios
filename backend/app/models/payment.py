@@ -8,7 +8,9 @@ from app.services.payment_domain import (
     PAYMENT_STATUS_FAILED,
     PAYMENT_STATUS_PAID,
     PAYMENT_STATUS_PENDING,
+    PAYMENT_STATUS_PROCESSING,
     PAYMENT_STATUS_REQUIRES_REVIEW,
+    PAYMENT_STATUS_SUPERSEDED,
     PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
     PAYMENT_PURPOSE_RENTAL_CHARGE,
     PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
@@ -33,7 +35,7 @@ class Payment(db.Model):
             "purpose IN ('rental_charge', 'deposit_authorization')", name="ck_payments_purpose"
         ),
         CheckConstraint(
-            "status IN ('pending', 'paid', 'failed', 'expired', 'requires_review', "
+            "status IN ('pending', 'processing', 'paid', 'failed', 'expired', 'requires_review', 'superseded', "
             "'pending_authorization', 'authorized', 'released', 'captured_partially', "
             "'captured', 'authorization_failed', 'authorization_expired')",
             name="ck_payments_status",
@@ -104,10 +106,12 @@ __all__ = [
     "PAYMENT_PROVIDER_STRIPE",
     "PAYMENT_PROVIDER_PAYPAL",
     "PAYMENT_STATUS_PENDING",
+    "PAYMENT_STATUS_PROCESSING",
     "PAYMENT_STATUS_PAID",
     "PAYMENT_STATUS_FAILED",
     "PAYMENT_STATUS_EXPIRED",
     "PAYMENT_STATUS_REQUIRES_REVIEW",
+    "PAYMENT_STATUS_SUPERSEDED",
     "PAYMENT_PURPOSE_RENTAL_CHARGE",
     "PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION",
     "PAYMENT_STATUS_PENDING_AUTHORIZATION",

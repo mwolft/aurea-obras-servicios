@@ -21,17 +21,21 @@ from app.models import Payment, Reservation, Tool
 from app.services.availability import is_pending_payment_expired, utc_now
 from app.services.payment_domain import (
     PAYMENT_PROVIDER_PAYPAL,
+    PaymentAttemptConflictError,
     PAYMENT_PURPOSE_RENTAL_CHARGE,
     PAYMENT_STATUS_PAID,
     PAYMENT_STATUS_PENDING,
+    PAYMENT_STATUS_PROCESSING,
     PAYMENT_STATUS_REQUIRES_REVIEW,
     RESERVATION_STATUS_CONFIRMED,
     RESERVATION_STATUS_PENDING_PAYMENT,
+    prepare_rental_payment_attempt,
     serialize_payment_return_reservation,
 )
 from app.services.stripe_checkout import (
     ReservationPaymentExpiredError,
     ReservationPaymentNotFoundError,
+    ReservationPaymentProcessingError,
     ReservationPaymentStateError,
 )
 from app.services.email.rental import queue_financial_alert, queue_reservation_confirmed
@@ -199,25 +203,13 @@ def start_or_recover_paypal_order(
         if reservation is None or (reservation.user_id is not None and reservation.user_id != user_id):
             raise ReservationPaymentNotFoundError
         _assert_reservation_can_start_payment(reservation, current_time)
-        other_pending = payment_session.execute(
-            select(Payment.id).where(
-                Payment.reservation_id == reservation.id,
-                Payment.provider != PAYMENT_PROVIDER_PAYPAL,
-                Payment.purpose == PAYMENT_PURPOSE_RENTAL_CHARGE,
-                Payment.status == PAYMENT_STATUS_PENDING,
-            ).with_for_update()
-        ).scalar_one_or_none()
-        if other_pending is not None:
-            raise ReservationPaymentStateError("Another payment method is already active.")
+        try:
+            payment = prepare_rental_payment_attempt(
+                payment_session, reservation.id, PAYMENT_PROVIDER_PAYPAL
+            )
+        except PaymentAttemptConflictError as error:
+            raise ReservationPaymentProcessingError from error
         tool = payment_session.get(Tool, reservation.tool_id)
-        payment = payment_session.execute(
-            select(Payment).where(
-                Payment.reservation_id == reservation.id,
-                Payment.provider == PAYMENT_PROVIDER_PAYPAL,
-                Payment.purpose == PAYMENT_PURPOSE_RENTAL_CHARGE,
-                Payment.status == PAYMENT_STATUS_PENDING,
-            ).with_for_update()
-        ).scalar_one_or_none()
         if payment is None:
             payment = Payment(
                 reservation_id=reservation.id,
@@ -255,6 +247,7 @@ def capture_paypal_order(external_payment_id: str, user_id: int | None) -> str:
             response.raise_for_status()
         except requests.RequestException as error:
             raise PayPalCheckoutError("PayPal could not capture the Order.") from error
+        payment.status = PAYMENT_STATUS_PROCESSING
     return "capture_requested"
 
 
@@ -360,6 +353,10 @@ def process_paypal_event(
         reservation = payment_session.execute(
             select(Reservation).where(Reservation.id == payment.reservation_id).with_for_update()
         ).scalar_one()
+        if payment.status != PAYMENT_STATUS_PENDING and payment.status != PAYMENT_STATUS_PROCESSING:
+            logger.warning("PayPal capture completed after its attempt was superseded or blocked.")
+            _mark_for_review(payment_session, payment, event_id, outbox_ids)
+            return "requires_review"
         try:
             amount_matches = Decimal(str(amount.get("value"))) == Decimal(payment.amount)
         except Exception:

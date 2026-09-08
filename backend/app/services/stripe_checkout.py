@@ -21,6 +21,7 @@ from app.models import Payment, Reservation, Tool
 from app.services.availability import is_pending_payment_expired, utc_now
 from app.services.payment_domain import (
     PAYMENT_PROVIDER_STRIPE,
+    PaymentAttemptConflictError,
     PAYMENT_PURPOSE_RENTAL_CHARGE,
     PAYMENT_STATUS_PAID,
     PAYMENT_STATUS_PENDING,
@@ -28,6 +29,7 @@ from app.services.payment_domain import (
     PAYMENT_WINDOW,
     RESERVATION_STATUS_CONFIRMED,
     RESERVATION_STATUS_PENDING_PAYMENT,
+    prepare_rental_payment_attempt,
     serialize_payment_return_reservation,
 )
 from app.services.email.rental import queue_financial_alert, queue_reservation_confirmed
@@ -60,6 +62,10 @@ class ReservationPaymentStateError(RuntimeError):
 
 class ReservationPaymentExpiredError(ReservationPaymentStateError):
     """Raised when the payment hold has elapsed."""
+
+
+class ReservationPaymentProcessingError(ReservationPaymentStateError):
+    """Raised when another attempt cannot safely be replaced yet."""
 
 
 def _stripe_secret_key() -> str:
@@ -202,31 +208,15 @@ def start_or_recover_stripe_checkout(
             raise ReservationPaymentNotFoundError
 
         _assert_reservation_can_start_payment(reservation, current_time)
-        other_pending_payment = payment_session.execute(
-            select(Payment.id)
-            .where(
-                Payment.reservation_id == reservation.id,
-                Payment.provider != PAYMENT_PROVIDER_STRIPE,
-                Payment.purpose == PAYMENT_PURPOSE_RENTAL_CHARGE,
-                Payment.status == PAYMENT_STATUS_PENDING,
+        try:
+            payment = prepare_rental_payment_attempt(
+                payment_session, reservation.id, PAYMENT_PROVIDER_STRIPE
             )
-            .with_for_update()
-        ).scalar_one_or_none()
-        if other_pending_payment is not None:
-            raise ReservationPaymentStateError("Another payment method is already active.")
+        except PaymentAttemptConflictError as error:
+            raise ReservationPaymentProcessingError from error
         tool = payment_session.execute(
             select(Tool).where(Tool.id == reservation.tool_id)
         ).scalar_one()
-        payment = payment_session.execute(
-            select(Payment)
-            .where(
-                Payment.reservation_id == reservation.id,
-                Payment.provider == PAYMENT_PROVIDER_STRIPE,
-                Payment.purpose == PAYMENT_PURPOSE_RENTAL_CHARGE,
-                Payment.status == PAYMENT_STATUS_PENDING,
-            )
-            .with_for_update()
-        ).scalar_one_or_none()
 
         if payment is None:
             # The deadline begins when a hosted checkout is actually issued,
@@ -366,6 +356,10 @@ def process_stripe_event(
             )
             .scalar_one()
         )
+        if payment.status != PAYMENT_STATUS_PENDING:
+            logger.warning("Stripe payment completed after its attempt was superseded or blocked.")
+            _mark_payment_for_review(payment_session, payment, event_id, outbox_ids)
+            return "requires_review"
         amount_total = _object_value(session_object, "amount_total")
         currency = _object_value(session_object, "currency")
         expected_amount = _amount_in_cents(Decimal(payment.amount))
