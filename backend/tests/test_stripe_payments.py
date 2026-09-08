@@ -133,6 +133,10 @@ class StripePaymentApiTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()["checkout_url"], checkout.url)
         self.assertEqual(create_session.call_args.kwargs["line_items"][0]["price_data"]["unit_amount"], 4275)
         self.assertEqual(create_session.call_args.kwargs["line_items"][0]["price_data"]["currency"], "eur")
+        self.assertEqual(
+            create_session.call_args.kwargs["success_url"],
+            "http://localhost:3000/reserva/confirmada?provider=stripe&session_id={CHECKOUT_SESSION_ID}",
+        )
         self.assertNotIn("deposit", str(create_session.call_args.kwargs))
         payment = Payment.query.one()
         self.assertEqual(payment.amount, Decimal("42.75"))
@@ -254,9 +258,41 @@ class StripePaymentApiTestCase(unittest.TestCase):
         response = self.client.get(f"/api/payments/stripe/sessions/{payment.external_payment_id}")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["payment_status"], PAYMENT_STATUS_PENDING)
-        self.assertEqual(response.get_json()["reservation_status"], RESERVATION_STATUS_PENDING_PAYMENT)
+        payload = response.get_json()
+        self.assertEqual(payload["payment_status"], PAYMENT_STATUS_PENDING)
+        self.assertEqual(payload["reservation_status"], RESERVATION_STATUS_PENDING_PAYMENT)
+        self.assertEqual(
+            payload["reservation"],
+            {
+                "id": reservation.id,
+                "tool": {"id": tool.id, "name": tool.name},
+                "start_date": "2026-09-20",
+                "end_date": "2026-09-22",
+                "status": RESERVATION_STATUS_PENDING_PAYMENT,
+                "fulfillment_method": "pickup",
+                "delivery_address": None,
+                "total_amount": "30.00",
+                "deposit_amount": None,
+            },
+        )
+        self.assertNotIn("external_payment_id", payload["reservation"])
         self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_PENDING_PAYMENT)
+
+    def test_confirmed_browser_status_exposes_a_safe_reservation_summary(self):
+        tool = self.create_tool()
+        reservation = self.create_reservation(tool)
+        payment = self.create_payment(reservation, status=PAYMENT_STATUS_PAID)
+        reservation.status = RESERVATION_STATUS_CONFIRMED
+        db.session.commit()
+
+        response = self.client.get(f"/api/payments/stripe/sessions/{payment.external_payment_id}")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["payment_status"], PAYMENT_STATUS_PAID)
+        self.assertEqual(payload["reservation_status"], RESERVATION_STATUS_CONFIRMED)
+        self.assertEqual(payload["reservation"]["id"], reservation.id)
+        self.assertEqual(payload["reservation"]["tool"]["name"], tool.name)
 
     def test_owned_reservation_cannot_be_paid_from_another_session(self):
         tool = self.create_tool()

@@ -12,6 +12,7 @@ import { siteUrl } from "@/lib/site";
 import { SiteHeader } from "@/components/site-header";
 
 import "./globals.css";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],

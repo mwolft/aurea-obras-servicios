@@ -4,10 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import {
-  capturePayPalOrder,
   createToolReservation,
-  getStripeCheckoutStatus,
-  getPayPalOrderStatus,
   getToolAvailability,
   startStripeCheckout,
   startPayPalOrder,
@@ -35,15 +32,6 @@ type PaymentStartStatus =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "error"; message: string };
-
-type CheckoutReturnStatus =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "confirmed" }
-  | { kind: "pending" }
-  | { kind: "expired" }
-  | { kind: "cancelled" }
-  | { kind: "error" };
 
 type FormErrors = Partial<
   Record<"customerName" | "customerEmail" | "customerPhone" | "deliveryAddress" | "terms" | "privacy", string>
@@ -85,7 +73,6 @@ export default function AvailabilityChecker({
   const [availabilityStatus, setAvailabilityStatus] = useState<AvailabilityStatus>({ kind: "pending" });
   const [reservationStatus, setReservationStatus] = useState<ReservationStatus>({ kind: "idle" });
   const [paymentStartStatus, setPaymentStartStatus] = useState<PaymentStartStatus>({ kind: "idle" });
-  const [checkoutReturnStatus, setCheckoutReturnStatus] = useState<CheckoutReturnStatus>({ kind: "idle" });
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -106,64 +93,6 @@ export default function AvailabilityChecker({
       messageRef.current?.focus();
     }
   }, [reservationStatus]);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const paymentResult = searchParams.get("payment");
-    const sessionId = searchParams.get("session_id");
-    // PayPal appends its Order ID as `token` to the configured return URL.
-    const orderId = searchParams.get("order_id") ?? searchParams.get("token");
-    const isStripeReturn = sessionId && (paymentResult === "success" || paymentResult === "cancelled");
-    const isPayPalReturn = orderId && (paymentResult === "paypal_success" || paymentResult === "paypal_cancelled");
-    if (!isStripeReturn && !isPayPalReturn) {
-      return;
-    }
-
-    let isActive = true;
-    async function loadCheckoutReturn() {
-      setCheckoutReturnStatus({ kind: "loading" });
-      let payment;
-      if (isPayPalReturn) {
-        const paypalOrderId = orderId!;
-        if (paymentResult === "paypal_success") {
-          const capture = await capturePayPalOrder(paypalOrderId);
-          if (capture.status !== "success") {
-            if (isActive) setCheckoutReturnStatus({ kind: capture.status === "conflict" ? "expired" : "error" });
-            return;
-          }
-        }
-        const result = await getPayPalOrderStatus(paypalOrderId);
-        if (!isActive) return;
-        if (result.status !== "success") {
-          setCheckoutReturnStatus({ kind: "error" });
-          return;
-        }
-        payment = result.order;
-      } else {
-        const result = await getStripeCheckoutStatus(sessionId!);
-        if (!isActive) return;
-        if (result.status !== "success") {
-          setCheckoutReturnStatus({ kind: "error" });
-          return;
-        }
-        payment = result.checkout;
-      }
-      if (payment.reservation_status === "confirmed" && payment.payment_status === "paid") {
-        setCheckoutReturnStatus({ kind: "confirmed" });
-        return;
-      }
-      if (payment.payment_expired || payment.payment_status === "expired") {
-        setCheckoutReturnStatus({ kind: "expired" });
-        return;
-      }
-      setCheckoutReturnStatus({ kind: paymentResult === "cancelled" || paymentResult === "paypal_cancelled" ? "cancelled" : "pending" });
-    }
-
-    void loadCheckoutReturn();
-    return () => {
-      isActive = false;
-    };
-  }, []);
 
   function resetAfterDateChange() {
     setAvailabilityStatus({ kind: "pending" });
@@ -336,25 +265,6 @@ export default function AvailabilityChecker({
       kind: "error",
       message: result.status === "not_found" ? "No encontramos esta reserva para iniciar el pago." : "No se ha podido iniciar el pago. Inténtalo de nuevo.",
     });
-  }
-
-  if (checkoutReturnStatus.kind !== "idle") {
-    const returnMessage = {
-      loading: "Estamos comprobando el estado del pago…",
-      confirmed: "Pago confirmado. Tu reserva queda confirmada.",
-      pending: "Tu pago se ha iniciado. Estamos esperando la confirmación segura del proveedor de pago.",
-      expired: "La ventana de pago ha caducado y la reserva no se ha confirmado.",
-      cancelled: "Has cancelado el pago. La reserva seguirá pendiente mientras la ventana de pago continúe vigente.",
-      error: "No hemos podido comprobar el estado del pago. Actualiza la página dentro de unos instantes.",
-      idle: "",
-    }[checkoutReturnStatus.kind];
-
-    return (
-      <section aria-live="polite" className={styles.section} tabIndex={-1} ref={messageRef}>
-        <h2>{checkoutReturnStatus.kind === "confirmed" ? "Reserva confirmada" : "Estado del pago"}</h2>
-        <p className={styles.notice}>{returnMessage}</p>
-      </section>
-    );
   }
 
   if (reservationStatus.kind === "success") {

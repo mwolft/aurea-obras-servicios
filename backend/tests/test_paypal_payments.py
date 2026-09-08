@@ -101,6 +101,10 @@ class PayPalPaymentApiTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()["approval_url"], self.order()["links"][0]["href"])
         payload = post.call_args_list[1].kwargs["json"]
         self.assertEqual(payload["purchase_units"][0]["amount"], {"currency_code": "EUR", "value": "42.75"})
+        self.assertEqual(
+            payload["payment_source"]["paypal"]["experience_context"]["return_url"],
+            "http://localhost:3000/reserva/confirmada?provider=paypal",
+        )
         self.assertNotIn("deposit", str(payload).lower())
         payment = Payment.query.one()
         self.assertEqual(payment.amount, Decimal("42.75"))
@@ -165,3 +169,18 @@ class PayPalPaymentApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_PENDING_PAYMENT)
         self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_PENDING)
+
+    def test_browser_status_exposes_safe_summary_and_requires_review_without_confirmation(self):
+        tool = self.create_tool()
+        reservation = self.create_reservation(tool)
+        payment = self.create_payment(reservation, status=PAYMENT_STATUS_REQUIRES_REVIEW)
+
+        response = self.client.get(f"/api/payments/paypal/orders/{payment.external_payment_id}")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["payment_status"], PAYMENT_STATUS_REQUIRES_REVIEW)
+        self.assertEqual(payload["reservation_status"], RESERVATION_STATUS_PENDING_PAYMENT)
+        self.assertEqual(payload["reservation"]["id"], reservation.id)
+        self.assertEqual(payload["reservation"]["tool"]["name"], tool.name)
+        self.assertNotIn("external_payment_id", payload["reservation"])

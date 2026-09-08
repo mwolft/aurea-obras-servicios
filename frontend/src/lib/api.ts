@@ -115,6 +115,19 @@ export type StripeCheckoutStatus = {
   payment_status: "pending" | "paid" | "failed" | "expired" | "requires_review";
   reservation_status: "pending_review" | "pending_payment" | "confirmed" | "in_progress" | "returned_pending_closure" | "completed" | "cancelled" | "expired";
   payment_expired: boolean;
+  reservation: PaymentReturnReservation;
+};
+
+export type PaymentReturnReservation = {
+  id: number;
+  tool: { id: number; name: string };
+  start_date: string;
+  end_date: string;
+  status: "pending_review" | "pending_payment" | "confirmed" | "in_progress" | "returned_pending_closure" | "completed" | "cancelled" | "expired";
+  fulfillment_method: "pickup" | "delivery" | null;
+  delivery_address: string | null;
+  total_amount: string | null;
+  deposit_amount: string | null;
 };
 
 export type StartStripeCheckoutResult =

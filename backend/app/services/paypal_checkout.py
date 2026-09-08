@@ -27,6 +27,7 @@ from app.services.payment_domain import (
     PAYMENT_STATUS_REQUIRES_REVIEW,
     RESERVATION_STATUS_CONFIRMED,
     RESERVATION_STATUS_PENDING_PAYMENT,
+    serialize_payment_return_reservation,
 )
 from app.services.stripe_checkout import (
     ReservationPaymentExpiredError,
@@ -116,10 +117,10 @@ def _assert_reservation_can_start_payment(reservation: Reservation, now: datetim
 
 def _return_urls(reservation: Reservation) -> tuple[str, str]:
     origin = current_app.config["FRONTEND_ORIGIN"].rstrip("/")
-    base = f"{origin}/alquiler/{reservation.tool_id}"
+    tool_url = f"{origin}/alquiler/{reservation.tool_id}"
     return (
-        f"{base}?payment=paypal_success",
-        f"{base}?payment=paypal_cancelled",
+        f"{origin}/reserva/confirmada?provider=paypal",
+        f"{tool_url}?payment=paypal_cancelled",
     )
 
 
@@ -282,6 +283,7 @@ def get_paypal_order_status(external_payment_id: str, user_id: int | None) -> di
         "payment_status": payment.status,
         "reservation_status": reservation.status,
         "payment_expired": is_pending_payment_expired(reservation),
+        "reservation": serialize_payment_return_reservation(reservation),
     }
 
 

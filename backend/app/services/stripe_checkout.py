@@ -28,6 +28,7 @@ from app.services.payment_domain import (
     PAYMENT_WINDOW,
     RESERVATION_STATUS_CONFIRMED,
     RESERVATION_STATUS_PENDING_PAYMENT,
+    serialize_payment_return_reservation,
 )
 from app.services.email.rental import queue_financial_alert, queue_reservation_confirmed
 
@@ -101,10 +102,13 @@ def _metadata_value(value: Any, key: str) -> str | None:
 
 def _checkout_urls(reservation: Reservation, session_deadline: datetime) -> dict[str, str | int]:
     frontend_origin = current_app.config["FRONTEND_ORIGIN"].rstrip("/")
-    base_url = f"{frontend_origin}/alquiler/{reservation.tool_id}"
+    tool_url = f"{frontend_origin}/alquiler/{reservation.tool_id}"
     return {
-        "success_url": f"{base_url}?payment=success&session_id={{CHECKOUT_SESSION_ID}}",
-        "cancel_url": f"{base_url}?payment=cancelled&session_id={{CHECKOUT_SESSION_ID}}",
+        "success_url": (
+            f"{frontend_origin}/reserva/confirmada?provider=stripe"
+            "&session_id={CHECKOUT_SESSION_ID}"
+        ),
+        "cancel_url": f"{tool_url}?payment=cancelled&session_id={{CHECKOUT_SESSION_ID}}",
         "expires_at": int(_as_utc(session_deadline).timestamp()),
     }
 
@@ -277,6 +281,7 @@ def get_stripe_checkout_status(external_payment_id: str) -> dict[str, object] | 
         "payment_status": payment_record.status,
         "reservation_status": reservation.status,
         "payment_expired": is_pending_payment_expired(reservation),
+        "reservation": serialize_payment_return_reservation(reservation),
     }
 
 

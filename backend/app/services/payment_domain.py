@@ -7,6 +7,8 @@ lifecycle separately.
 """
 
 from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Any
 
 
 PAYMENT_WINDOW_MINUTES = 30
@@ -44,3 +46,32 @@ PAYMENT_STATUS_AUTHORIZATION_EXPIRED = "authorization_expired"
 def payment_window_expires_at(now: datetime) -> datetime:
     """Return the common availability and Stripe Checkout deadline."""
     return now + PAYMENT_WINDOW
+
+
+def serialize_payment_return_reservation(reservation: Any) -> dict[str, object]:
+    """Return only the reservation information needed after a hosted checkout.
+
+    This payload deliberately contains no provider references, internal notes,
+    or customer contact details. The payment-status endpoints remain the source
+    of truth for the return screen; a URL parameter alone never confirms a
+    reservation.
+    """
+
+    def amount(value: Decimal | None) -> str | None:
+        return format(value, "f") if value is not None else None
+
+    return {
+        "id": reservation.id,
+        "tool": {"id": reservation.tool.id, "name": reservation.tool.name},
+        "start_date": reservation.start_date.isoformat(),
+        "end_date": reservation.end_date.isoformat(),
+        "status": reservation.status,
+        "fulfillment_method": reservation.fulfillment_method,
+        "delivery_address": (
+            reservation.delivery_address
+            if reservation.fulfillment_method == "delivery"
+            else None
+        ),
+        "total_amount": amount(reservation.total_amount),
+        "deposit_amount": amount(reservation.deposit_amount_snapshot),
+    }
