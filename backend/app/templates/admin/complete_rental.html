@@ -1,0 +1,14 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container-fluid">
+  <h3>Cerrar alquiler de reserva #{{ reservation.id }}</h3>
+  <p><strong>{{ reservation.tool.name }}</strong> ya figura como devuelta.</p>
+  <p class="text-muted">El cierre solo se completará si la fianza no es necesaria o ya está resuelta.</p>
+  <form method="post">
+    {{ csrf_form.csrf_token }}
+    <button class="btn btn-primary" type="submit">Cerrar alquiler</button>
+    <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

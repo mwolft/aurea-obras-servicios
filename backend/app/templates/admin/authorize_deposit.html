@@ -1,0 +1,13 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<h3>Autorizar fianza de reserva #{{ reservation.id }}</h3>
+<p><strong>Herramienta:</strong> {{ reservation.tool.name }}<br>
+<strong>Cliente:</strong> {{ reservation.customer_name }}<br>
+<strong>Fianza contractual:</strong> {{ "%.2f"|format(reservation.deposit_amount_snapshot) }} €</p>
+<p>Se abrirá un Checkout seguro de Stripe para autorizar la tarjeta. No se realizará ningún cobro ahora.</p>
+<form method="post" class="form-horizontal">
+  {{ csrf_form.csrf_token }}
+  <button class="btn btn-primary" type="submit">Crear enlace seguro de fianza</button>
+  <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Volver</a>
+</form>
+{% endblock %}

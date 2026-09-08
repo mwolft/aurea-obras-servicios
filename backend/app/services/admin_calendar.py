@@ -3,12 +3,13 @@
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.extensions import db
 from app.models import Reservation, ToolBlock
 from app.services.availability import inclusive_date_range_conditions, reservation_status_label
+from app.services.payment_domain import RESERVATION_STATUS_IN_PROGRESS
 
 
 @dataclass(frozen=True)
@@ -45,7 +46,12 @@ def get_agenda_events(
     reservations_query = (
         select(Reservation)
         .options(joinedload(Reservation.tool))
-        .where(*inclusive_date_range_conditions(Reservation, start_date, end_date))
+        .where(
+            or_(
+                Reservation.status == RESERVATION_STATUS_IN_PROGRESS,
+                and_(*inclusive_date_range_conditions(Reservation, start_date, end_date)),
+            )
+        )
     )
     blocks_query = (
         select(ToolBlock)

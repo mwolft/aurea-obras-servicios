@@ -123,7 +123,7 @@ class ReservationApiTestCase(unittest.TestCase):
         if payment_expires_at.tzinfo is None:
             payment_expires_at = payment_expires_at.replace(tzinfo=timezone.utc)
         self.assertAlmostEqual(
-            (payment_expires_at - datetime.now(timezone.utc)).total_seconds(), 15 * 60, delta=5
+            (payment_expires_at - datetime.now(timezone.utc)).total_seconds(), 30 * 60, delta=5
         )
 
     def test_delivery_requires_address(self):
@@ -201,7 +201,7 @@ class ReservationApiTestCase(unittest.TestCase):
         payment_expires_at = reservation.payment_expires_at
         if payment_expires_at.tzinfo is None:
             payment_expires_at = payment_expires_at.replace(tzinfo=timezone.utc)
-        self.assertEqual(payment_expires_at, review_time + timedelta(minutes=15))
+        self.assertEqual(payment_expires_at, review_time + timedelta(minutes=30))
 
     def test_snapshots_do_not_change_when_tool_prices_change(self):
         tool = self.create_tool()

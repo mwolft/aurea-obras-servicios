@@ -117,6 +117,57 @@ class ToolBlockTestCase(unittest.TestCase):
             query_string={"start_date": start_date, "end_date": end_date},
         )
 
+    def unavailable_ranges_request(self, tool, start_date, end_date):
+        return self.client.get(
+            f"/api/tools/{tool.id}/unavailable-ranges",
+            query_string={"start_date": start_date, "end_date": end_date},
+        )
+
+    def test_public_unavailable_ranges_include_reservations_and_blocks_without_private_data(self):
+        tool = self.create_tool()
+        self.create_reservation(tool, date(2026, 8, 4), date(2026, 8, 6))
+        self.create_block(tool, date(2026, 8, 10), date(2026, 8, 13), "Avería interna")
+        with self.client.session_transaction() as session:
+            session.clear()
+
+        response = self.unavailable_ranges_request(tool, "2026-08-05", "2026-08-11")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "tool_id": tool.id,
+                "start_date": "2026-08-05",
+                "end_date": "2026-08-11",
+                "active_rental": False,
+                "unavailable_ranges": [
+                    {"start_date": "2026-08-05", "end_date": "2026-08-06"},
+                    {"start_date": "2026-08-10", "end_date": "2026-08-11"},
+                ],
+            },
+        )
+        response_text = response.get_data(as_text=True)
+        self.assertNotIn("Avería interna", response_text)
+        self.assertNotIn("customer@example.com", response_text)
+
+    def test_unavailable_ranges_exclude_non_blocking_reservations_and_ranges_outside_period(self):
+        tool = self.create_tool()
+        self.create_reservation(tool, date(2026, 8, 5), date(2026, 8, 7), status="cancelled")
+        self.create_block(tool, date(2026, 9, 2), date(2026, 9, 4))
+
+        response = self.unavailable_ranges_request(tool, "2026-08-01", "2026-08-31")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["unavailable_ranges"], [])
+
+    def test_unavailable_ranges_reject_periods_longer_than_one_month(self):
+        tool = self.create_tool()
+
+        response = self.unavailable_ranges_request(tool, "2026-08-01", "2026-09-02")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn("unavailable_ranges", response.get_json())
+
     def test_tool_block_blocks_all_inclusive_overlap_cases(self):
         tool = self.create_tool()
         self.create_block(tool, date(2026, 8, 10), date(2026, 8, 12))

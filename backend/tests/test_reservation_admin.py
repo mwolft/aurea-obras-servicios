@@ -102,7 +102,7 @@ class ReservationAdminTestCase(unittest.TestCase):
             "fulfillment_method": "pickup",
         }
         if status == "pending_payment":
-            values["payment_expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=15)
+            values["payment_expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=30)
         values.update(overrides)
         reservation = Reservation(**values)
         db.session.add(reservation)
@@ -178,7 +178,7 @@ class ReservationAdminTestCase(unittest.TestCase):
             payment_expires_at = payment_expires_at.replace(tzinfo=timezone.utc)
         self.assertAlmostEqual(
             (payment_expires_at - datetime.now(timezone.utc)).total_seconds(),
-            timedelta(minutes=15).total_seconds(),
+            timedelta(minutes=30).total_seconds(),
             delta=5,
         )
 
@@ -234,7 +234,9 @@ class ReservationAdminTestCase(unittest.TestCase):
             response = self.post_admin(f"/admin/reservation/cancel/{reservation_id}")
 
         self.assertEqual(response.status_code, 302)
-        cancellation_service.assert_called_once_with(reservation_id)
+        cancellation_service.assert_called_once()
+        self.assertEqual(cancellation_service.call_args.args, (reservation_id,))
+        self.assertIn("outbox_ids", cancellation_service.call_args.kwargs)
         reservation = db.session.get(Reservation, reservation_id)
         self.assertEqual(reservation.status, "cancelled")
         self.assertTrue(
@@ -257,6 +259,37 @@ class ReservationAdminTestCase(unittest.TestCase):
         self.assertEqual(confirmed_response.status_code, 302)
         self.assertEqual(db.session.get(Reservation, pending_payment_id).status, "cancelled")
         self.assertEqual(db.session.get(Reservation, confirmed_id).status, "cancelled")
+
+    def test_admin_can_complete_the_operational_flow_for_a_zero_deposit_reservation(self):
+        reservation_id = self.create_cancellable_reservation(
+            "confirmed",
+            deposit_amount_snapshot=Decimal("0.00"),
+        )
+        db.session.remove()
+
+        response = self.client.get("/admin/reservation/")
+        self.assertIn(f"/admin/reservation/mark-delivered/{reservation_id}".encode(), response.data)
+
+        response = self.post_admin(
+            f"/admin/reservation/mark-delivered/{reservation_id}",
+            data={"delivery_notes": "Entrega de prueba"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "in_progress")
+
+        response = self.post_admin(
+            f"/admin/reservation/mark-returned/{reservation_id}",
+            data={"return_notes": "Devuelta correctamente", "return_incident_notes": ""},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            db.session.get(Reservation, reservation_id).status,
+            "returned_pending_closure",
+        )
+
+        response = self.post_admin(f"/admin/reservation/complete-rental/{reservation_id}")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "completed")
 
     def test_cancelled_or_expired_reservation_cannot_be_cancelled_again(self):
         cancelled_id = self.create_cancellable_reservation("cancelled")

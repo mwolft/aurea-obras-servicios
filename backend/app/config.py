@@ -46,6 +46,16 @@ def load_config() -> dict[str, str | bool | None]:
         "CONTACT_FROM_EMAIL": os.getenv("CONTACT_FROM_EMAIL"),
         "CONTACT_TO_EMAIL": os.getenv("CONTACT_TO_EMAIL"),
     }
+    stripe_values = {
+        "STRIPE_SECRET_KEY": os.getenv("STRIPE_SECRET_KEY"),
+        "STRIPE_WEBHOOK_SECRET": os.getenv("STRIPE_WEBHOOK_SECRET"),
+    }
+    paypal_values = {
+        "PAYPAL_CLIENT_ID": os.getenv("PAYPAL_CLIENT_ID"),
+        "PAYPAL_CLIENT_SECRET": os.getenv("PAYPAL_CLIENT_SECRET"),
+        "PAYPAL_WEBHOOK_ID": os.getenv("PAYPAL_WEBHOOK_ID"),
+        "PAYPAL_ENVIRONMENT": os.getenv("PAYPAL_ENVIRONMENT", "sandbox"),
+    }
 
     if app_env == "production":
         if not frontend_origin:
@@ -79,4 +89,6 @@ def load_config() -> dict[str, str | bool | None]:
         **google_values,
         **cloudinary_values,
         **contact_email_values,
+        **stripe_values,
+        **paypal_values,
     }

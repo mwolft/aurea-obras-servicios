@@ -73,6 +73,21 @@
   background: #e3f3ea;
 }
 
+.statuscompleted {
+  color: #155d3e;
+  background: #e3f3ea;
+}
+
+.statusin_progress {
+  color: #0d4f73;
+  background: #e4f2fa;
+}
+
+.statusreturned_pending_closure {
+  color: #6a4b00;
+  background: #fff1cf;
+}
+
 .statuscancelled,
 .statusexpired,
 .statusExpired {

@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -7,6 +7,14 @@ from sqlalchemy.orm import Session
 from app.extensions import db
 from app.models import Reservation, Tool
 from app.services.availability import has_blocking_reservation, has_tool_block, utc_now
+from app.services.payment_domain import (
+    PAYMENT_WINDOW,
+    RESERVATION_STATUS_CANCELLED,
+    RESERVATION_STATUS_CONFIRMED,
+    RESERVATION_STATUS_PENDING_PAYMENT,
+    RESERVATION_STATUS_PENDING_REVIEW,
+)
+from app.services.email.rental import queue_reservation_cancelled
 from app.services.quotes import QuoteCalculationError, ReservationQuote, calculate_quote
 
 
@@ -39,6 +47,10 @@ def apply_quote(reservation: Reservation, quote: ReservationQuote) -> None:
     reservation.rental_amount = quote.rental_amount
     reservation.delivery_amount = quote.delivery_amount
     reservation.total_amount = quote.total_amount
+    # The deposit is contractual at reservation creation, independently from a
+    # later delivery quote. Never refresh it from the current Tool afterwards.
+    if reservation.deposit_amount_snapshot is None:
+        reservation.deposit_amount_snapshot = quote.deposit_amount
 
 
 def create_reservation(
@@ -105,15 +117,16 @@ def create_reservation(
             privacy_accepted=privacy_accepted,
             fulfillment_method=fulfillment_method,
             user_id=user_id,
+            deposit_amount_snapshot=tool.deposit_amount,
         )
 
         if fulfillment_method == "pickup":
             quote = calculate_quote(tool, start_date, end_date, fulfillment_method)
             apply_quote(reservation, quote)
-            reservation.status = "pending_payment"
-            reservation.payment_expires_at = current_time + timedelta(minutes=15)
+            reservation.status = RESERVATION_STATUS_PENDING_PAYMENT
+            reservation.payment_expires_at = current_time + PAYMENT_WINDOW
         elif fulfillment_method == "delivery":
-            reservation.status = "pending_review"
+            reservation.status = RESERVATION_STATUS_PENDING_REVIEW
             reservation.delivery_address = delivery_address
             reservation.payment_expires_at = None
         else:
@@ -148,7 +161,7 @@ def review_delivery_reservation(
 
         if (
             reservation is None
-            or reservation.status != "pending_review"
+            or reservation.status != RESERVATION_STATUS_PENDING_REVIEW
             or reservation.fulfillment_method != "delivery"
         ):
             raise ReservationReviewError
@@ -175,9 +188,9 @@ def review_delivery_reservation(
             raise ReservationReviewError from error
 
         apply_quote(reservation, quote)
-        reservation.status = "pending_payment"
+        reservation.status = RESERVATION_STATUS_PENDING_PAYMENT
         current_time = utc_now() if now is None else now
-        reservation.payment_expires_at = current_time + timedelta(minutes=15)
+        reservation.payment_expires_at = current_time + PAYMENT_WINDOW
         reservation_session.flush()
 
     return reservation
@@ -186,6 +199,7 @@ def review_delivery_reservation(
 def cancel_reservation(
     reservation_id: int,
     session: Session | None = None,
+    outbox_ids: list[int] | None = None,
 ) -> Reservation:
     """Cancel an operational reservation through a serialized state transition.
 
@@ -205,13 +219,16 @@ def cancel_reservation(
         )
 
         if reservation is None or reservation.status not in {
-            "pending_review",
-            "pending_payment",
-            "confirmed",
+            RESERVATION_STATUS_PENDING_REVIEW,
+            RESERVATION_STATUS_PENDING_PAYMENT,
+            RESERVATION_STATUS_CONFIRMED,
         }:
             raise ReservationCancellationError
 
-        reservation.status = "cancelled"
+        reservation.status = RESERVATION_STATUS_CANCELLED
+        email = queue_reservation_cancelled(reservation_session, reservation)
+        if outbox_ids is not None and email is not None:
+            outbox_ids.append(email.id)
         reservation_session.flush()
 
     return reservation

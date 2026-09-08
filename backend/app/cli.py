@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash
 from app.extensions import db
 from app.models import User
 from app.services.authentication import MINIMUM_PASSWORD_LENGTH, is_valid_password, normalize_email
+from app.services.email.outbox import retry_failed_outbox_email
 
 
 def _normalized_email(value: str) -> str:
@@ -65,3 +66,17 @@ def init_cli(app: Flask) -> None:
         user.password_hash = generate_password_hash(password)
         db.session.commit()
         click.echo("Contraseña actualizada.")
+
+    @app.cli.command("retry-transactional-email")
+    @click.argument("email_id", type=int)
+    def retry_transactional_email(email_id: int) -> None:
+        """Retry one failed rental email without touching its reservation."""
+
+        try:
+            delivered = retry_failed_outbox_email(email_id)
+        except (LookupError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
+        if delivered:
+            click.echo("Email transaccional enviado correctamente.")
+        else:
+            click.echo("El email ya estaba enviado; no se ha reenviado.")

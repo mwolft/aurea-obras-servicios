@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.extensions import db
 from app.models import Reservation, Tool
 from app.services.availability import utc_now
+from app.services.rental_lifecycle import is_reservation_overdue
 
 
 UPCOMING_ACTIVITY_DAYS = 30
@@ -21,6 +22,9 @@ class DashboardMetrics:
     upcoming_returns: int
     available_tools: int
     published_tools: int
+    active_rentals: int
+    overdue_rentals: int
+    returned_pending_closure: int
 
 
 @dataclass(frozen=True)
@@ -62,10 +66,14 @@ def get_dashboard_summary(
     upcoming_deliveries = _count_upcoming_operations(
         dashboard_session, Reservation.start_date, current_date, horizon_date
     )
-    upcoming_returns = _count_upcoming_operations(
-        dashboard_session, Reservation.end_date, current_date, horizon_date
-    )
+    upcoming_returns = _count_upcoming_returns(dashboard_session, current_date, horizon_date)
     available_tools, published_tools = _count_available_tools(dashboard_session)
+    active_rentals, overdue_rentals = _get_active_rental_counts(dashboard_session, current_time)
+    returned_pending_closure = dashboard_session.execute(
+        select(func.count(Reservation.id)).where(
+            Reservation.status == "returned_pending_closure"
+        )
+    ).scalar_one()
 
     return DashboardSummary(
         metrics=DashboardMetrics(
@@ -74,6 +82,9 @@ def get_dashboard_summary(
             upcoming_returns=upcoming_returns,
             available_tools=available_tools,
             published_tools=published_tools,
+            active_rentals=active_rentals,
+            overdue_rentals=overdue_rentals,
+            returned_pending_closure=returned_pending_closure,
         ),
         upcoming_activity=tuple(
             _get_upcoming_activity(dashboard_session, current_date, horizon_date, activity_limit)
@@ -115,6 +126,24 @@ def _count_upcoming_operations(session: Session, operation_date, start_date: dat
     ).scalar_one()
 
 
+def _count_upcoming_returns(session: Session, start_date: date, end_date: date) -> int:
+    return session.execute(
+        select(func.count(Reservation.id)).where(
+            Reservation.status.in_(("confirmed", "in_progress")),
+            Reservation.end_date.between(start_date, end_date),
+        )
+    ).scalar_one()
+
+
+def _get_active_rental_counts(session: Session, current_time) -> tuple[int, int]:
+    active_rentals = session.execute(
+        select(Reservation).where(Reservation.status == "in_progress")
+    ).scalars().all()
+    return len(active_rentals), sum(
+        1 for reservation in active_rentals if is_reservation_overdue(reservation, current_time)
+    )
+
+
 def _count_available_tools(session: Session) -> tuple[int, int]:
     published_tools = session.execute(
         select(func.count(Tool.id)).where(Tool.is_published.is_(True))
@@ -137,7 +166,7 @@ def _get_upcoming_activity(
         select(Reservation)
         .options(joinedload(Reservation.tool))
         .where(
-            Reservation.status == "confirmed",
+            Reservation.status.in_(("confirmed", "in_progress")),
             or_(
                 Reservation.start_date.between(start_date, end_date),
                 Reservation.end_date.between(start_date, end_date),
@@ -147,7 +176,10 @@ def _get_upcoming_activity(
 
     activity: list[DashboardActivity] = []
     for reservation in reservations:
-        if start_date <= reservation.start_date <= end_date:
+        if (
+            reservation.status == "confirmed"
+            and start_date <= reservation.start_date <= end_date
+        ):
             activity.append(
                 DashboardActivity(
                     date=reservation.start_date,

@@ -11,7 +11,7 @@ import styles from "./page.module.css";
 
 type ReservationsState = { kind: "loading" } | { kind: "success"; reservations: AccountReservation[] } | { kind: "error" };
 
-const statusLabels: Record<AccountReservation["status"], string> = { pending_review: "Pendiente de revisión", pending_payment: "Pendiente de pago", confirmed: "Confirmada", cancelled: "Cancelada", expired: "Caducada" };
+const statusLabels: Record<AccountReservation["status"], string> = { pending_review: "Pendiente de revisión", pending_payment: "Pendiente de pago", confirmed: "Reserva confirmada", in_progress: "En alquiler", returned_pending_closure: "Devuelta", completed: "Finalizada", cancelled: "Cancelada", expired: "Caducada" };
 
 function formatDate(value: string) { return new Intl.DateTimeFormat("es-ES", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)); }
 function formatAmount(value: string | null) { return value === null ? null : new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number(value)); }

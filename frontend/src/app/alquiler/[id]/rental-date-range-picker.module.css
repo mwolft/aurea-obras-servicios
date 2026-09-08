@@ -31,6 +31,8 @@
 .outside { color: var(--color-text-muted); opacity: 0.45; }
 .disabledDay { color: var(--color-text-muted); opacity: 0.4; }
 .disabledDay .dayButton { cursor: not-allowed; }
+.unavailableDay .dayButton { position: relative; color: var(--color-text-muted); opacity: 0.65; }
+.unavailableDay .dayButton::after { content: ""; position: absolute; width: 1.7rem; height: 1px; transform: rotate(-35deg); background: currentColor; }
 .rangeStart, .rangeEnd { background: linear-gradient(90deg, transparent 50%, #fff0e6 50%); }
 .rangeEnd { background: linear-gradient(90deg, #fff0e6 50%, transparent 50%); }
 .rangeStart .dayButton, .rangeEnd .dayButton { color: var(--color-surface); background: var(--color-accent); font-weight: 800; }

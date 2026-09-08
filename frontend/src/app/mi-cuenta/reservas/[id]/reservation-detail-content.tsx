@@ -21,7 +21,10 @@ type DetailState =
 const statusLabels: Record<AccountReservationDetail["status"], string> = {
   pending_review: "Pendiente de revisión",
   pending_payment: "Pendiente de pago",
-  confirmed: "Confirmada",
+  confirmed: "Reserva confirmada",
+  in_progress: "En alquiler",
+  returned_pending_closure: "Devuelta",
+  completed: "Finalizada",
   cancelled: "Cancelada",
   expired: "Caducada",
 };
@@ -196,6 +199,15 @@ function ReservationDetail({ reservation }: { reservation: AccountReservationDet
         )}
         {reservation.status === "confirmed" && (
           <p className={styles.confirmedNotice}>Tu reserva está confirmada.</p>
+        )}
+        {reservation.status === "in_progress" && (
+          <p className={styles.confirmedNotice}>La herramienta está actualmente en alquiler.</p>
+        )}
+        {reservation.status === "returned_pending_closure" && (
+          <p className={styles.confirmedNotice}>La herramienta ha sido devuelta.</p>
+        )}
+        {reservation.status === "completed" && (
+          <p className={styles.confirmedNotice}>Este alquiler está finalizado.</p>
         )}
       </section>
 

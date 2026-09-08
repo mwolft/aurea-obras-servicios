@@ -1,0 +1,8 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<h3>Enlace de autorización de fianza</h3>
+<p>Entrega este enlace al cliente en el momento de recogida o entrega. La reserva no cambia de estado al autorizar la fianza.</p>
+<p><a class="btn btn-primary" href="{{ checkout_url }}" rel="noopener" target="_blank">Abrir Checkout seguro de Stripe</a>
+<a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Volver a la reserva</a></p>
+<p><small>El enlace es temporal y la autorización se confirmará mediante webhook seguro de Stripe.</small></p>
+{% endblock %}

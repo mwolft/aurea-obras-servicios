@@ -30,6 +30,16 @@
       <strong>{{ dashboard.metrics.upcoming_returns }}</strong>
       <small>devoluciones (30 días)</small>
     </a>
+    <a class="aurea-dashboard-metric" href="{{ url_for('reservation.index_view') }}">
+      <span>En alquiler</span>
+      <strong>{{ dashboard.metrics.active_rentals }}</strong>
+      <small>{% if dashboard.metrics.overdue_rentals %}{{ dashboard.metrics.overdue_rentals }} con retraso{% else %}sin retrasos{% endif %}</small>
+    </a>
+    <a class="aurea-dashboard-metric" href="{{ url_for('reservation.index_view') }}">
+      <span>Devueltas</span>
+      <strong>{{ dashboard.metrics.returned_pending_closure }}</strong>
+      <small>pendientes de cierre</small>
+    </a>
     <a class="aurea-dashboard-metric" href="{{ url_for('tool.index_view') }}">
       <span>Herramientas</span>
       <strong>{{ dashboard.metrics.available_tools }} / {{ dashboard.metrics.published_tools }}</strong>
@@ -64,8 +74,16 @@
 
     <section aria-labelledby="attention-title" class="aurea-dashboard-panel aurea-dashboard-attention">
       <h2 id="attention-title">Requieren atención</h2>
-      {% if dashboard.pending_delivery_reviews %}
-        <p class="aurea-dashboard-attention-count">{{ dashboard.pending_delivery_reviews }} {{ 'reserva pendiente de revisión de transporte' if dashboard.pending_delivery_reviews == 1 else 'reservas pendientes de revisión de transporte' }}.</p>
+      {% if dashboard.pending_delivery_reviews or dashboard.metrics.overdue_rentals or dashboard.metrics.returned_pending_closure %}
+        {% if dashboard.pending_delivery_reviews %}
+          <p class="aurea-dashboard-attention-count">{{ dashboard.pending_delivery_reviews }} {{ 'reserva pendiente de revisión de transporte' if dashboard.pending_delivery_reviews == 1 else 'reservas pendientes de revisión de transporte' }}.</p>
+        {% endif %}
+        {% if dashboard.metrics.overdue_rentals %}
+          <p class="aurea-dashboard-attention-count">{{ dashboard.metrics.overdue_rentals }} {{ 'alquiler con retraso' if dashboard.metrics.overdue_rentals == 1 else 'alquileres con retraso' }}.</p>
+        {% endif %}
+        {% if dashboard.metrics.returned_pending_closure %}
+          <p class="aurea-dashboard-attention-count">{{ dashboard.metrics.returned_pending_closure }} {{ 'devolución pendiente de cierre' if dashboard.metrics.returned_pending_closure == 1 else 'devoluciones pendientes de cierre' }}.</p>
+        {% endif %}
         <a class="btn btn-primary btn-sm" href="{{ url_for('reservation.index_view') }}">Ver reservas</a>
       {% else %}
         <p class="aurea-dashboard-clear">✓ No hay gestiones pendientes.</p>

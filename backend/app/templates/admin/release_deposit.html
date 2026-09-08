@@ -1,0 +1,10 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<h3>Liberar fianza de reserva #{{ reservation.id }}</h3>
+<p>Esta acción solicita a Stripe la liberación de la autorización. No se podrá capturar posteriormente con esta misma autorización.</p>
+<form method="post" class="form-horizontal">
+  {{ csrf_form.csrf_token }}
+  <button class="btn btn-warning" type="submit">Confirmar liberación</button>
+  <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Cancelar</a>
+</form>
+{% endblock %}

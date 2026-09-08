@@ -9,6 +9,7 @@ from app.routes.health import health_bp
 from app.routes.auth import auth_bp
 from app.routes.account import account_bp
 from app.routes.contact import contact_bp
+from app.routes.payments import payments_bp
 from app.routes.tools import tools_bp
 
 
@@ -26,6 +27,7 @@ def create_app() -> Flask:
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(account_bp, url_prefix="/api/account")
     app.register_blueprint(contact_bp, url_prefix="/api")
+    app.register_blueprint(payments_bp, url_prefix="/api")
     app.register_blueprint(tools_bp, url_prefix="/api/tools")
 
     @app.after_request

@@ -1,6 +1,6 @@
 import logging
 from calendar import monthrange
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
@@ -15,7 +15,7 @@ from wtforms.validators import InputRequired
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
-from app.models import Reservation, Tool, ToolBlock, ToolImage, User
+from app.models import Payment, Reservation, Tool, ToolBlock, ToolImage, User
 from app.services.authentication import (
     authenticate_with_password,
     get_current_user,
@@ -40,6 +40,42 @@ from app.services.tool_blocks import (
     create_tool_block,
     delete_tool_block,
     update_tool_block,
+)
+from app.services.rental_lifecycle import (
+    OPERATIONAL_TIMEZONE,
+    RentalLifecycleError,
+    ReservationOperationalNotFoundError,
+    calculate_overdue_days,
+    complete_reservation_rental,
+    is_reservation_overdue,
+    mark_reservation_delivered,
+    mark_reservation_returned,
+)
+from app.services.deposit_authorizations import (
+    DepositAuthorizationError,
+    DepositAuthorizationNotFoundError,
+    capture_deposit_authorization,
+    release_deposit_authorization,
+    start_or_recover_deposit_checkout,
+)
+from app.services.email.outbox import deliver_outbox_emails
+from app.services.stripe_checkout import (
+    ReservationPaymentNotFoundError,
+    ReservationPaymentStateError,
+    StripeCheckoutError,
+    StripeConfigurationError,
+)
+from app.services.payment_domain import (
+    PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+    PAYMENT_STATUS_AUTHORIZED,
+    PAYMENT_STATUS_CAPTURED,
+    PAYMENT_STATUS_CAPTURED_PARTIALLY,
+    PAYMENT_STATUS_PENDING_AUTHORIZATION,
+    PAYMENT_STATUS_RELEASED,
+    RESERVATION_STATUS_CONFIRMED,
+    RESERVATION_STATUS_COMPLETED,
+    RESERVATION_STATUS_IN_PROGRESS,
+    RESERVATION_STATUS_RETURNED_PENDING_CLOSURE,
 )
 
 
@@ -451,8 +487,15 @@ class ReservationAdmin(SecureModelView):
         "customer_phone",
         "fulfillment_method",
         "status",
+        "delivered_at",
+        "overdue_days",
+        "returned_at",
         "total_amount",
         "payment_expires_at",
+        "deposit_amount_snapshot",
+        "deposit_status",
+        "deposit_action",
+        "rental_action",
         "created_at",
         "review_delivery_action",
         "cancel_action",
@@ -469,6 +512,12 @@ class ReservationAdmin(SecureModelView):
         "end_date": "Fecha devolución",
         "fulfillment_method": "Modalidad",
         "status": "Estado",
+        "delivered_at": "Entrega real",
+        "returned_at": "Devolución real",
+        "overdue_days": "Retraso",
+        "delivery_notes": "Notas de entrega",
+        "return_notes": "Notas de devolución",
+        "return_incident_notes": "Incidencia de devolución",
         "payment_expires_at": "Límite de pago",
         "charged_days": "Días cobrados",
         "daily_price_snapshot": "Precio diario aplicado",
@@ -478,6 +527,10 @@ class ReservationAdmin(SecureModelView):
         "delivery_amount": "Transporte",
         "total_amount": "Total a pagar",
         "tool_deposit_amount": "Fianza configurada actualmente en la herramienta",
+        "deposit_amount_snapshot": "Fianza contractual",
+        "deposit_status": "Estado de fianza",
+        "deposit_action": "Gestión de fianza",
+        "rental_action": "Operativa de alquiler",
         "review_delivery_action": "Revisar transporte",
         "cancel_action": "Cancelar reserva",
     }
@@ -492,6 +545,12 @@ class ReservationAdmin(SecureModelView):
         "fulfillment_method",
         "delivery_address",
         "status",
+        "delivered_at",
+        "delivery_notes",
+        "returned_at",
+        "return_notes",
+        "return_incident_notes",
+        "overdue_days",
         "payment_expires_at",
         "charged_days",
         "daily_price_snapshot",
@@ -500,7 +559,10 @@ class ReservationAdmin(SecureModelView):
         "delivery_price_per_km_snapshot",
         "delivery_amount",
         "total_amount",
-        "tool_deposit_amount",
+        "deposit_amount_snapshot",
+        "deposit_status",
+        "deposit_action",
+        "rental_action",
         "created_at",
         "updated_at",
         "review_delivery_action",
@@ -509,6 +571,8 @@ class ReservationAdmin(SecureModelView):
     column_formatters = {
         "tool": lambda view, context, model, name: model.tool.name,
         "status": lambda view, context, model, name: view._status_label(model),
+        "delivered_at": lambda view, context, model, name: view._format_datetime(model.delivered_at),
+        "returned_at": lambda view, context, model, name: view._format_datetime(model.returned_at),
         "daily_price_snapshot": lambda view, context, model, name: view._format_amount(
             model.daily_price_snapshot
         ),
@@ -518,9 +582,11 @@ class ReservationAdmin(SecureModelView):
         "rental_amount": lambda view, context, model, name: view._format_amount(model.rental_amount),
         "delivery_amount": lambda view, context, model, name: view._format_amount(model.delivery_amount),
         "total_amount": lambda view, context, model, name: view._format_amount(model.total_amount),
-        "tool_deposit_amount": lambda view, context, model, name: view._format_amount(
-            model.tool.deposit_amount
-        ),
+        "deposit_amount_snapshot": lambda view, context, model, name: view._format_amount(model.deposit_amount_snapshot),
+        "deposit_status": lambda view, context, model, name: view._deposit_status(model),
+        "deposit_action": lambda view, context, model, name: view._deposit_action_link(model),
+        "rental_action": lambda view, context, model, name: view._rental_action_link(model),
+        "overdue_days": lambda view, context, model, name: view._overdue_label(model),
         "review_delivery_action": lambda view, context, model, name: view._review_delivery_link(model),
         "cancel_action": lambda view, context, model, name: view._cancel_reservation_link(model),
     }
@@ -544,6 +610,129 @@ class ReservationAdmin(SecureModelView):
     def _can_cancel(reservation: Reservation) -> bool:
         return reservation.status in {"pending_review", "pending_payment", "confirmed"}
 
+    @staticmethod
+    def _format_datetime(value: datetime | None) -> str:
+        if value is None:
+            return "—"
+        timestamp = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+        return timestamp.astimezone(OPERATIONAL_TIMEZONE).strftime("%d/%m/%Y %H:%M")
+
+    def _overdue_label(self, reservation: Reservation) -> str:
+        if reservation.status not in {
+            RESERVATION_STATUS_IN_PROGRESS,
+            RESERVATION_STATUS_RETURNED_PENDING_CLOSURE,
+        }:
+            return "—"
+        days = calculate_overdue_days(reservation)
+        if days == 0:
+            if is_reservation_overdue(reservation):
+                return "Retraso menor de un día"
+            return "En plazo"
+        return f"{days} {'día' if days == 1 else 'días'}"
+
+    @staticmethod
+    def _deposit_payment(reservation: Reservation) -> Payment | None:
+        return (
+            Payment.query.filter_by(
+                reservation_id=reservation.id,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            )
+            .order_by(Payment.id.desc())
+            .first()
+        )
+
+    @staticmethod
+    def _deposit_capture_window_expired(payment: Payment) -> bool:
+        if payment.capture_before is None:
+            return False
+        capture_before = payment.capture_before
+        if capture_before.tzinfo is None:
+            capture_before = capture_before.replace(tzinfo=timezone.utc)
+        return capture_before <= datetime.now(timezone.utc)
+
+    def _deposit_status(self, reservation: Reservation) -> str:
+        if reservation.deposit_amount_snapshot is None:
+            return "Sin snapshot histórico"
+        if Decimal(reservation.deposit_amount_snapshot) == 0:
+            return "No requerida"
+        payment = self._deposit_payment(reservation)
+        if payment is None:
+            return "Pendiente de autorización"
+        labels = {
+            PAYMENT_STATUS_PENDING_AUTHORIZATION: "Pendiente de autorización",
+            PAYMENT_STATUS_AUTHORIZED: "Autorizada",
+            PAYMENT_STATUS_CAPTURED: "Capturada totalmente",
+            PAYMENT_STATUS_CAPTURED_PARTIALLY: "Capturada parcialmente",
+            "released": "Liberada",
+            "authorization_expired": "Caducada o cancelada por Stripe",
+            "authorization_failed": "Falló la autorización",
+            "requires_review": "Requiere revisión",
+        }
+        label = labels.get(payment.status, payment.status)
+        if payment.status == PAYMENT_STATUS_AUTHORIZED and payment.capture_before is not None:
+            if self._deposit_capture_window_expired(payment):
+                return (
+                    "Caducada o pendiente de confirmación por Stripe"
+                    f" · venció {payment.capture_before.strftime('%d/%m/%Y %H:%M')}"
+                )
+            label += f" · válida hasta {payment.capture_before.strftime('%d/%m/%Y %H:%M')}"
+        return label
+
+    def _deposit_action_link(self, reservation: Reservation):
+        if reservation.status not in {
+            "confirmed",
+            RESERVATION_STATUS_RETURNED_PENDING_CLOSURE,
+        } or reservation.deposit_amount_snapshot is None or Decimal(reservation.deposit_amount_snapshot) <= 0:
+            return "—"
+        payment = self._deposit_payment(reservation)
+        if payment is None or payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
+            url = url_for(".authorize_deposit", reservation_id=reservation.id)
+            return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Autorizar fianza</a>')
+        if payment.status == PAYMENT_STATUS_AUTHORIZED:
+            if self._deposit_capture_window_expired(payment):
+                return "—"
+            release_url = url_for(".release_deposit", reservation_id=reservation.id)
+            capture_url = url_for(".capture_deposit", reservation_id=reservation.id)
+            return Markup(
+                f'<a class="btn btn-default btn-xs" href="{release_url}">Liberar</a> '
+                f'<a class="btn btn-warning btn-xs" href="{capture_url}">Capturar</a>'
+            )
+        return "—"
+
+    def _rental_action_link(self, reservation: Reservation):
+        if reservation.status == RESERVATION_STATUS_CONFIRMED:
+            if reservation.deposit_amount_snapshot is None:
+                return "—"
+            if Decimal(reservation.deposit_amount_snapshot) > 0:
+                payment = self._deposit_payment(reservation)
+                if (
+                    payment is None
+                    or payment.status != PAYMENT_STATUS_AUTHORIZED
+                    or self._deposit_capture_window_expired(payment)
+                ):
+                    return "—"
+            url = url_for(".mark_delivered", reservation_id=reservation.id)
+            return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Marcar entregada</a>')
+        if reservation.status == RESERVATION_STATUS_IN_PROGRESS:
+            url = url_for(".mark_returned", reservation_id=reservation.id)
+            return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Marcar devuelta</a>')
+        if reservation.status == RESERVATION_STATUS_RETURNED_PENDING_CLOSURE:
+            if reservation.returned_at is None:
+                return "—"
+            if reservation.deposit_amount_snapshot is None:
+                return "—"
+            if Decimal(reservation.deposit_amount_snapshot) > 0:
+                payment = self._deposit_payment(reservation)
+                if payment is None or payment.status not in {
+                    PAYMENT_STATUS_RELEASED,
+                    PAYMENT_STATUS_CAPTURED_PARTIALLY,
+                    PAYMENT_STATUS_CAPTURED,
+                }:
+                    return "—"
+            url = url_for(".complete_rental", reservation_id=reservation.id)
+            return Markup(f'<a class="btn btn-default btn-xs" href="{url}">Cerrar alquiler</a>')
+        return "—"
+
     def _review_delivery_link(self, reservation: Reservation):
         if not self._is_pending_delivery_review(reservation):
             return "—"
@@ -557,6 +746,178 @@ class ReservationAdmin(SecureModelView):
 
         cancel_url = url_for(".cancel_reservation", reservation_id=reservation.id)
         return Markup(f'<a class="btn btn-warning btn-xs" href="{cancel_url}">Cancelar reserva</a>')
+
+    @expose("/authorize-deposit/<int:reservation_id>", methods=("GET", "POST"))
+    def authorize_deposit(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                db.session.rollback()
+                checkout_url = start_or_recover_deposit_checkout(reservation_id)
+            except (ReservationPaymentNotFoundError, ReservationPaymentStateError, DepositAuthorizationError) as error:
+                flash(str(error) or "No se puede autorizar esta fianza.", "error")
+                return redirect(url_for(".details_view", id=reservation_id))
+            except (StripeConfigurationError, StripeCheckoutError):
+                logger.exception("Could not create a deposit authorization Checkout.")
+                flash("No se ha podido crear el enlace seguro de fianza.", "error")
+                return redirect(url_for(".details_view", id=reservation_id))
+            return self.render("admin/deposit_checkout.html", reservation=reservation, checkout_url=checkout_url)
+        return self.render("admin/authorize_deposit.html", reservation=reservation, csrf_form=csrf_form)
+
+    @expose("/release-deposit/<int:reservation_id>", methods=("GET", "POST"))
+    def release_deposit(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                db.session.rollback()
+                outbox_ids: list[int] = []
+                release_deposit_authorization(reservation_id, outbox_ids=outbox_ids)
+            except (DepositAuthorizationNotFoundError, DepositAuthorizationError) as error:
+                flash(str(error), "error")
+            else:
+                deliver_outbox_emails(outbox_ids)
+                flash("Fianza liberada correctamente en Stripe.", "success")
+            return redirect(url_for(".details_view", id=reservation_id))
+        return self.render("admin/release_deposit.html", reservation=reservation, csrf_form=csrf_form)
+
+    @expose("/capture-deposit/<int:reservation_id>", methods=("GET", "POST"))
+    def capture_deposit(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                amount = Decimal((request.form.get("amount") or "").strip())
+                db.session.rollback()
+                outbox_ids: list[int] = []
+                capture_deposit_authorization(
+                    reservation_id,
+                    amount,
+                    request.form.get("reason") or "",
+                    outbox_ids=outbox_ids,
+                )
+            except (InvalidOperation, DepositAuthorizationNotFoundError, DepositAuthorizationError) as error:
+                flash(str(error) or "El importe de captura no es válido.", "error")
+            else:
+                deliver_outbox_emails(outbox_ids)
+                flash("Captura de fianza confirmada por Stripe.", "success")
+            return redirect(url_for(".details_view", id=reservation_id))
+        return self.render("admin/capture_deposit.html", reservation=reservation, csrf_form=csrf_form)
+
+    @staticmethod
+    def _parse_local_return_datetime(value: str | None) -> datetime:
+        if not value:
+            return datetime.now(OPERATIONAL_TIMEZONE).astimezone(timezone.utc)
+        try:
+            parsed = datetime.fromisoformat(value)
+        except ValueError as error:
+            raise ValueError("La fecha de devolución no es válida.") from error
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=OPERATIONAL_TIMEZONE)
+        return parsed.astimezone(timezone.utc)
+
+    @expose("/mark-delivered/<int:reservation_id>", methods=("GET", "POST"))
+    def mark_delivered(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                db.session.rollback()
+                outbox_ids: list[int] = []
+                mark_reservation_delivered(
+                    reservation_id,
+                    request.form.get("delivery_notes"),
+                    outbox_ids=outbox_ids,
+                )
+            except (ReservationOperationalNotFoundError, RentalLifecycleError) as error:
+                flash(str(error) or "No se puede registrar la entrega.", "error")
+            else:
+                deliver_outbox_emails(outbox_ids)
+                flash("Entrega registrada. La herramienta queda en alquiler.", "success")
+            return redirect(url_for(".details_view", id=reservation_id))
+        return self.render("admin/mark_delivered.html", reservation=reservation, csrf_form=csrf_form)
+
+    @expose("/mark-returned/<int:reservation_id>", methods=("GET", "POST"))
+    def mark_returned(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                returned_at = self._parse_local_return_datetime(request.form.get("returned_at"))
+                db.session.rollback()
+                outbox_ids: list[int] = []
+                returned = mark_reservation_returned(
+                    reservation_id,
+                    returned_at,
+                    request.form.get("return_notes"),
+                    request.form.get("return_incident_notes"),
+                    outbox_ids=outbox_ids,
+                )
+                late_days = calculate_overdue_days(returned)
+            except (ValueError, ReservationOperationalNotFoundError, RentalLifecycleError) as error:
+                flash(str(error) or "No se puede registrar la devolución.", "error")
+            else:
+                deliver_outbox_emails(outbox_ids)
+                message = "Devolución registrada. Resuelve la fianza antes de cerrar el alquiler."
+                if late_days:
+                    message += f" Retraso informativo: {late_days} {'día' if late_days == 1 else 'días'}."
+                flash(message, "success")
+            return redirect(url_for(".details_view", id=reservation_id))
+        now_value = datetime.now(OPERATIONAL_TIMEZONE).strftime("%Y-%m-%dT%H:%M")
+        return self.render(
+            "admin/mark_returned.html",
+            reservation=reservation,
+            returned_at_default=now_value,
+            csrf_form=csrf_form,
+        )
+
+    @expose("/complete-rental/<int:reservation_id>", methods=("GET", "POST"))
+    def complete_rental(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                db.session.rollback()
+                outbox_ids: list[int] = []
+                complete_reservation_rental(reservation_id, outbox_ids=outbox_ids)
+            except (ReservationOperationalNotFoundError, RentalLifecycleError) as error:
+                flash(str(error) or "No se puede cerrar el alquiler.", "error")
+            else:
+                deliver_outbox_emails(outbox_ids)
+                flash("Alquiler cerrado correctamente.", "success")
+            return redirect(url_for(".details_view", id=reservation_id))
+        return self.render("admin/complete_rental.html", reservation=reservation, csrf_form=csrf_form)
 
     @staticmethod
     def _parse_billable_km(value: str | None) -> Decimal:
@@ -619,10 +980,12 @@ class ReservationAdmin(SecureModelView):
             try:
                 # See review_delivery: cancellation owns its own transaction.
                 db.session.rollback()
-                cancel_reservation(reservation_id)
+                outbox_ids: list[int] = []
+                cancel_reservation(reservation_id, outbox_ids=outbox_ids)
             except ReservationCancellationError:
                 flash("La reserva ya no se puede cancelar.", "error")
             else:
+                deliver_outbox_emails(outbox_ids)
                 flash(
                     "Reserva cancelada. Esta acción no gestiona pagos, reembolsos ni fianzas.",
                     "success",

@@ -1,8 +1,10 @@
 "use client";
 
-import { DayPicker, type DateRange } from "react-day-picker";
+import { DayPicker, type DateRange, type Matcher } from "react-day-picker";
 import { es } from "react-day-picker/locale";
 import { useEffect, useId, useRef, useState } from "react";
+
+import { getToolUnavailableRanges, type UnavailableDateRange } from "@/lib/api";
 
 import styles from "./rental-date-range-picker.module.css";
 
@@ -12,9 +14,14 @@ type RentalDateRangePickerProps = {
   minDate: string;
   onChange: (startDate: string, endDate: string) => void;
   startDate: string;
+  toolId: number;
 };
 
 type ActiveField = "start" | "end";
+type UnavailableMonth = {
+  activeRental: boolean;
+  ranges: UnavailableDateRange[];
+};
 
 function dateFromIso(value: string): Date | undefined {
   if (!value) {
@@ -35,6 +42,41 @@ function dateToIso(date: Date): string {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getMonthPeriod(month: Date): { startDate: string; endDate: string } {
+  const startDate = new Date(month.getFullYear(), month.getMonth(), 1);
+  const endDate = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+
+  return { startDate: dateToIso(startDate), endDate: dateToIso(endDate) };
+}
+
+function toMatchers(ranges: UnavailableDateRange[]): Matcher[] {
+  return ranges.flatMap(({ start_date, end_date }) => {
+    const from = dateFromIso(start_date);
+    const to = dateFromIso(end_date);
+
+    return from && to ? [{ from, to }] : [];
+  });
+}
+
+function mergeUnavailableRanges(
+  existingRanges: UnavailableDateRange[],
+  nextRanges: UnavailableDateRange[],
+): UnavailableDateRange[] {
+  const rangesByKey = new Map(
+    existingRanges.map((range) => [`${range.start_date}:${range.end_date}`, range]),
+  );
+
+  for (const range of nextRanges) {
+    rangesByKey.set(`${range.start_date}:${range.end_date}`, range);
+  }
+
+  return [...rangesByKey.values()];
 }
 
 function formatDate(value: string): string {
@@ -65,9 +107,15 @@ export default function RentalDateRangePicker({
   minDate,
   onChange,
   startDate,
+  toolId,
 }: RentalDateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("start");
+  const [displayMonth, setDisplayMonth] = useState(() => dateFromIso(startDate) ?? dateFromIso(minDate) ?? new Date());
+  const [knownUnavailableRanges, setKnownUnavailableRanges] = useState<UnavailableDateRange[]>([]);
+  const [hasActiveRental, setHasActiveRental] = useState(false);
+  const [loadingMonthKey, setLoadingMonthKey] = useState<string | null>(null);
+  const unavailableRangesByMonth = useRef(new Map<string, UnavailableMonth>());
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverId = useId();
@@ -75,6 +123,8 @@ export default function RentalDateRangePicker({
   const range: DateRange | undefined = startDate
     ? { from: dateFromIso(startDate), to: dateFromIso(endDate) }
     : undefined;
+  const currentMonthKey = monthKey(displayMonth);
+  const unavailableMatchers = toMatchers(knownUnavailableRanges);
 
   function closePicker(restoreFocus = false) {
     setIsOpen(false);
@@ -110,6 +160,54 @@ export default function RentalDateRangePicker({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const cachedMonth = unavailableRangesByMonth.current.get(currentMonthKey);
+    if (cachedMonth) {
+      setKnownUnavailableRanges((existingRanges) => mergeUnavailableRanges(existingRanges, cachedMonth.ranges));
+      setHasActiveRental(cachedMonth.activeRental);
+      setLoadingMonthKey(null);
+      return;
+    }
+
+    let cancelled = false;
+    const { startDate: periodStartDate, endDate: periodEndDate } = getMonthPeriod(displayMonth);
+    setLoadingMonthKey(currentMonthKey);
+
+    void getToolUnavailableRanges(toolId, periodStartDate, periodEndDate).then((result) => {
+      if (result.status !== "success") {
+        if (!cancelled) {
+          setLoadingMonthKey(null);
+        }
+        return;
+      }
+
+      unavailableRangesByMonth.current.set(
+        currentMonthKey,
+        {
+          activeRental: result.unavailableRanges.active_rental,
+          ranges: result.unavailableRanges.unavailable_ranges,
+        },
+      );
+      if (!cancelled) {
+        setHasActiveRental(result.unavailableRanges.active_rental);
+      }
+      setKnownUnavailableRanges((existingRanges) =>
+        mergeUnavailableRanges(existingRanges, result.unavailableRanges.unavailable_ranges),
+      );
+      if (!cancelled) {
+        setLoadingMonthKey(null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMonthKey, displayMonth, isOpen, toolId]);
+
   function openPicker(field: ActiveField, trigger: HTMLButtonElement) {
     if (disabled) {
       return;
@@ -117,6 +215,7 @@ export default function RentalDateRangePicker({
 
     triggerRef.current = trigger;
     setActiveField(field);
+    setDisplayMonth(range?.from ?? minimumDate ?? new Date());
     setIsOpen(true);
   }
 
@@ -143,7 +242,11 @@ export default function RentalDateRangePicker({
     }
   }
 
-  const statusText = endDate
+  const statusText = loadingMonthKey === currentMonthKey
+    ? "Cargando fechas no disponibles…"
+    : hasActiveRental
+      ? "Esta herramienta está actualmente en alquiler y no admite nuevas fechas."
+    : endDate
     ? `Rango seleccionado: del ${formatDate(startDate)} al ${formatDate(endDate)}.`
     : startDate
       ? `Inicio seleccionado: ${formatDate(startDate)}. Selecciona la fecha de devolución.`
@@ -217,11 +320,16 @@ export default function RentalDateRangePicker({
               range_end: styles.rangeEnd,
             }}
             defaultMonth={range?.from ?? minimumDate}
-            disabled={{ before: minimumDate }}
+            disabled={loadingMonthKey === currentMonthKey || hasActiveRental ? true : [{ before: minimumDate }, ...unavailableMatchers]}
+            excludeDisabled
             locale={es}
             mode="range"
+            modifiers={{ unavailable: unavailableMatchers }}
+            modifiersClassNames={{ unavailable: styles.unavailableDay }}
             onSelect={handleSelect}
+            onMonthChange={setDisplayMonth}
             selected={range}
+            month={displayMonth}
             weekStartsOn={1}
           />
           <button className={styles.closeButton} onClick={() => closePicker(true)} type="button">

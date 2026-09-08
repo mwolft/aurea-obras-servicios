@@ -99,6 +99,19 @@ class AdminCalendarTestCase(unittest.TestCase):
         ])
         self.assertNotIn(outside.id, [event.id for event in events])
 
+    def test_active_rental_is_visible_even_when_its_contract_dates_are_in_the_past(self):
+        tool = self.make_tool("Hormigonera")
+        active = self.make_reservation(
+            tool,
+            date(2026, 8, 1),
+            date(2026, 8, 2),
+            status="in_progress",
+        )
+
+        events = get_agenda_events(date(2026, 8, 20), date(2026, 8, 25))
+
+        self.assertEqual([(event.id, event.status) for event in events], [(active.id, "in_progress")])
+
     def test_service_filters_by_tool_and_orders_events_stably(self):
         other_tool = self.make_tool("Desbrozadora")
         tool = self.make_tool("Hormigonera")

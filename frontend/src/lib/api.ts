@@ -57,6 +57,24 @@ export type ToolAvailabilityResult =
   | { status: "not_found" }
   | { status: "error"; message?: string };
 
+export type UnavailableDateRange = {
+  start_date: string;
+  end_date: string;
+};
+
+export type ToolUnavailableRanges = {
+  tool_id: number;
+  start_date: string;
+  end_date: string;
+  active_rental: boolean;
+  unavailable_ranges: UnavailableDateRange[];
+};
+
+export type ToolUnavailableRangesResult =
+  | { status: "success"; unavailableRanges: ToolUnavailableRanges }
+  | { status: "not_found" }
+  | { status: "error"; message?: string };
+
 export type ReservationRequest = {
   start_date: string;
   end_date: string;
@@ -74,7 +92,7 @@ export type ReservationResponse = {
   tool_id: number;
   start_date: string;
   end_date: string;
-  status: "pending_review" | "pending_payment" | "confirmed" | "cancelled" | "expired";
+  status: "pending_review" | "pending_payment" | "confirmed" | "in_progress" | "returned_pending_closure" | "completed" | "cancelled" | "expired";
   fulfillment_method: "pickup" | "delivery";
   payment_expires_at: string | null;
   charged_days: number | null;
@@ -92,6 +110,45 @@ export type CreateReservationResult =
   | { status: "not_found" }
   | { status: "conflict"; message: string }
   | { status: "error"; message?: string };
+
+export type StripeCheckoutStatus = {
+  payment_status: "pending" | "paid" | "failed" | "expired" | "requires_review";
+  reservation_status: "pending_review" | "pending_payment" | "confirmed" | "in_progress" | "returned_pending_closure" | "completed" | "cancelled" | "expired";
+  payment_expired: boolean;
+};
+
+export type StartStripeCheckoutResult =
+  | { status: "success"; checkoutUrl: string }
+  | { status: "not_found" }
+  | { status: "conflict"; message: string }
+  | { status: "unavailable"; message: string }
+  | { status: "error"; message?: string };
+
+export type StripeCheckoutStatusResult =
+  | { status: "success"; checkout: StripeCheckoutStatus }
+  | { status: "not_found" }
+  | { status: "error" };
+
+export type PayPalOrderStatus = StripeCheckoutStatus;
+
+export type StartPayPalOrderResult =
+  | { status: "success"; approvalUrl: string }
+  | { status: "not_found" }
+  | { status: "conflict"; message: string }
+  | { status: "unavailable"; message: string }
+  | { status: "error"; message?: string };
+
+export type CapturePayPalOrderResult =
+  | { status: "success" }
+  | { status: "not_found" }
+  | { status: "conflict"; message: string }
+  | { status: "unavailable"; message: string }
+  | { status: "error"; message?: string };
+
+export type PayPalOrderStatusResult =
+  | { status: "success"; order: PayPalOrderStatus }
+  | { status: "not_found" }
+  | { status: "error" };
 
 export type AuthUser = {
   id: number;
@@ -125,7 +182,7 @@ export type AccountReservation = {
   tool: { id: number; name: string };
   start_date: string;
   end_date: string;
-  status: "pending_review" | "pending_payment" | "confirmed" | "cancelled" | "expired";
+  status: "pending_review" | "pending_payment" | "confirmed" | "in_progress" | "returned_pending_closure" | "completed" | "cancelled" | "expired";
   payment_expired: boolean;
   fulfillment_method: "pickup" | "delivery" | null;
   delivery_address: string | null;
@@ -302,6 +359,46 @@ export async function getToolAvailability(
   return { status: "error" };
 }
 
+export async function getToolUnavailableRanges(
+  id: number,
+  startDate: string,
+  endDate: string,
+): Promise<ToolUnavailableRangesResult> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    return { status: "error" };
+  }
+
+  try {
+    const searchParams = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+    const response = await fetch(`${apiUrl}/api/tools/${id}/unavailable-ranges?${searchParams}`, {
+      cache: "no-store",
+    });
+
+    if (response.status === 404) {
+      return { status: "not_found" };
+    }
+
+    const data: unknown = await response.json();
+
+    if (response.ok && data && typeof data === "object" && !Array.isArray(data)) {
+      return { status: "success", unavailableRanges: data as ToolUnavailableRanges };
+    }
+
+    if (data && typeof data === "object" && "error" in data && typeof data.error === "string") {
+      return { status: "error", message: data.error };
+    }
+  } catch {
+    // Calendar hints are optional when the API cannot be reached.
+  }
+
+  return { status: "error" };
+}
+
 export async function createToolReservation(
   id: number,
   reservation: ReservationRequest,
@@ -347,6 +444,141 @@ export async function createToolReservation(
     // Reservation requests may fail when the API cannot be reached.
   }
 
+  return { status: "error" };
+}
+
+export async function startStripeCheckout(
+  reservationId: number,
+): Promise<StartStripeCheckoutResult> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    return { status: "error" };
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}/api/reservations/${reservationId}/payments/stripe`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const data: unknown = await response.json();
+    const message = getApiErrorMessage(data);
+
+    if (
+      response.ok &&
+      data &&
+      typeof data === "object" &&
+      "checkout_url" in data &&
+      typeof data.checkout_url === "string"
+    ) {
+      return { status: "success", checkoutUrl: data.checkout_url };
+    }
+
+    if (response.status === 404) {
+      return { status: "not_found" };
+    }
+
+    if (response.status === 409) {
+      return { status: "conflict", message: message ?? "La reserva ya no se puede pagar." };
+    }
+
+    if (response.status === 503) {
+      return { status: "unavailable", message: message ?? "El pago no está disponible en este momento." };
+    }
+  } catch {
+    // Checkout is unavailable when the API cannot be reached.
+  }
+
+  return { status: "error" };
+}
+
+export async function getStripeCheckoutStatus(
+  externalPaymentId: string,
+): Promise<StripeCheckoutStatusResult> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (!apiUrl) {
+    return { status: "error" };
+  }
+
+  try {
+    const response = await fetch(
+      `${apiUrl}/api/payments/stripe/sessions/${encodeURIComponent(externalPaymentId)}`,
+      { cache: "no-store", credentials: "include" },
+    );
+    if (response.status === 404) {
+      return { status: "not_found" };
+    }
+
+    const data: unknown = await response.json();
+    if (response.ok && data && typeof data === "object" && !Array.isArray(data)) {
+      return { status: "success", checkout: data as StripeCheckoutStatus };
+    }
+  } catch {
+    // The redirect return must never be treated as confirmation on its own.
+  }
+
+  return { status: "error" };
+}
+
+export async function startPayPalOrder(reservationId: number): Promise<StartPayPalOrderResult> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) return { status: "error" };
+  try {
+    const response = await fetch(`${apiUrl}/api/reservations/${reservationId}/payments/paypal`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const data: unknown = await response.json();
+    const message = getApiErrorMessage(data);
+    if (response.ok && data && typeof data === "object" && "approval_url" in data && typeof data.approval_url === "string") {
+      return { status: "success", approvalUrl: data.approval_url };
+    }
+    if (response.status === 404) return { status: "not_found" };
+    if (response.status === 409) return { status: "conflict", message: message ?? "La reserva ya no se puede pagar." };
+    if (response.status === 503) return { status: "unavailable", message: message ?? "El pago no está disponible en este momento." };
+  } catch {
+    // PayPal checkout is unavailable when the API cannot be reached.
+  }
+  return { status: "error" };
+}
+
+export async function capturePayPalOrder(externalPaymentId: string): Promise<CapturePayPalOrderResult> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) return { status: "error" };
+  try {
+    const response = await fetch(`${apiUrl}/api/payments/paypal/orders/${encodeURIComponent(externalPaymentId)}/capture`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const data: unknown = await response.json();
+    const message = getApiErrorMessage(data);
+    if (response.ok) return { status: "success" };
+    if (response.status === 404) return { status: "not_found" };
+    if (response.status === 409) return { status: "conflict", message: message ?? "La reserva ya no se puede pagar." };
+    if (response.status === 503) return { status: "unavailable", message: message ?? "El pago no está disponible en este momento." };
+  } catch {
+    // A browser return never confirms the reservation by itself.
+  }
+  return { status: "error" };
+}
+
+export async function getPayPalOrderStatus(externalPaymentId: string): Promise<PayPalOrderStatusResult> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) return { status: "error" };
+  try {
+    const response = await fetch(`${apiUrl}/api/payments/paypal/orders/${encodeURIComponent(externalPaymentId)}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (response.status === 404) return { status: "not_found" };
+    const data: unknown = await response.json();
+    if (response.ok && data && typeof data === "object" && !Array.isArray(data)) {
+      return { status: "success", order: data as PayPalOrderStatus };
+    }
+  } catch {
+    // Browser state is informational; only a verified webhook confirms it.
+  }
   return { status: "error" };
 }
 

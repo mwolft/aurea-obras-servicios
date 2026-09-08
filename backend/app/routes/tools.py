@@ -5,8 +5,9 @@ from decimal import Decimal
 from flask import Blueprint, abort, jsonify, request
 from sqlalchemy.orm import selectinload
 
+from app.extensions import db
 from app.models import Reservation, Tool
-from app.services.availability import is_tool_available
+from app.services.availability import get_tool_unavailable_ranges, has_active_rental, is_tool_available
 from app.services.cloudinary_storage import get_public_image_url
 from app.services.reservations import (
     ReservationToolNotFoundError,
@@ -18,6 +19,7 @@ from app.services.authentication import get_authenticated_user_id
 
 
 tools_bp = Blueprint("tools", __name__)
+MAX_UNAVAILABLE_RANGE_DAYS = 31
 
 
 def decimal_to_json(value: Decimal | None) -> str | None:
@@ -120,7 +122,7 @@ def serialize_reservation(reservation: Reservation) -> dict[str, object]:
         "rental_amount": decimal_to_json(reservation.rental_amount),
         "delivery_amount": decimal_to_json(reservation.delivery_amount),
         "total_amount": decimal_to_json(reservation.total_amount),
-        "deposit_amount": decimal_to_json(reservation.tool.deposit_amount),
+        "deposit_amount": decimal_to_json(reservation.deposit_amount_snapshot),
     }
 
 
@@ -173,6 +175,47 @@ def get_tool_availability(tool_id: int):
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
             "available": is_tool_available(tool, start_date, end_date),
+        }
+    )
+
+
+@tools_bp.get("/<int:tool_id>/unavailable-ranges")
+def get_tool_unavailable_ranges_for_period(tool_id: int):
+    tool = Tool.query.filter_by(id=tool_id, is_published=True).first()
+    if tool is None:
+        abort(404)
+
+    start_date, start_error = parse_iso_date(request.args.get("start_date"), "start_date")
+    if start_error:
+        return jsonify(start_error[0]), start_error[1]
+
+    end_date, end_error = parse_iso_date(request.args.get("end_date"), "end_date")
+    if end_error:
+        return jsonify(end_error[0]), end_error[1]
+
+    if end_date < start_date:
+        return jsonify({"error": "end_date must be on or after start_date."}), 400
+
+    if (end_date - start_date).days >= MAX_UNAVAILABLE_RANGE_DAYS:
+        return jsonify({"error": "The requested period must not exceed 31 days."}), 400
+
+    unavailable_ranges = (
+        [(start_date, end_date)]
+        if not tool.is_available
+        else get_tool_unavailable_ranges(db.session, tool.id, start_date, end_date)
+    )
+    active_rental = has_active_rental(db.session, tool.id)
+
+    return jsonify(
+        {
+            "tool_id": tool.id,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "active_rental": active_rental,
+            "unavailable_ranges": [
+                {"start_date": range_start.isoformat(), "end_date": range_end.isoformat()}
+                for range_start, range_end in unavailable_ranges
+            ],
         }
     )
 

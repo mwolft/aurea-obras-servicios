@@ -1,0 +1,18 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container-fluid">
+  <h3>Marcar entrega de reserva #{{ reservation.id }}</h3>
+  <p><strong>{{ reservation.tool.name }}</strong> · {{ reservation.customer_name }}</p>
+  <p class="text-muted">La entrega solo se registrará si la fianza está autorizada cuando corresponda.</p>
+  <form method="post">
+    {{ csrf_form.csrf_token }}
+    <div class="form-group">
+      <label for="delivery_notes">Notas de entrega <span class="text-muted">(opcional)</span></label>
+      <textarea class="form-control" id="delivery_notes" name="delivery_notes" rows="4"></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Confirmar entrega</button>
+    <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

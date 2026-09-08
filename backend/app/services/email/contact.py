@@ -1,13 +1,7 @@
 """Contact-specific content and delivery using AUREA's common email shell."""
 
-from flask import current_app
-import requests
-
 from .base import EmailContent, information_block, information_row, message_block, render_email
-
-
-RESEND_EMAILS_URL = "https://api.resend.com/emails"
-RESEND_TIMEOUT_SECONDS = 10
+from .resend import ResendConfigurationError, ResendDeliveryError, send_resend_email
 CONTACT_EMAIL_TITLE = "Nuevo contacto desde la web"
 CONTACT_EMAIL_PREHEADER = "Has recibido una nueva consulta desde la web de AUREA."
 CONTACT_EMAIL_FOOTER = "Mensaje recibido desde el formulario web de AUREA."
@@ -77,29 +71,23 @@ def build_contact_email(
 def send_contact_email(
     *, name: str, email: str, phone: str | None, subject: str | None, message: str
 ) -> None:
-    api_key = current_app.config.get("RESEND_API_KEY")
-    from_email = current_app.config.get("CONTACT_FROM_EMAIL")
+    from flask import current_app
+
     to_email = current_app.config.get("CONTACT_TO_EMAIL")
-    if not all((api_key, from_email, to_email)):
+    if not to_email:
         raise ContactEmailConfigurationError("Contact email configuration is incomplete.")
     content = build_contact_email(
         name=name, email=email, phone=phone, subject=subject, message=message
     )
-    payload = {
-        "from": from_email,
-        "to": [to_email],
-        "reply_to": email,
-        "subject": build_contact_subject(subject),
-        "text": content.text,
-        "html": content.html,
-    }
     try:
-        response = requests.post(
-            RESEND_EMAILS_URL,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=payload,
-            timeout=RESEND_TIMEOUT_SECONDS,
+        send_resend_email(
+            recipient=to_email,
+            reply_to=email,
+            subject=build_contact_subject(subject),
+            text=content.text,
+            html=content.html,
         )
-        response.raise_for_status()
-    except requests.RequestException as error:
+    except ResendConfigurationError as error:
+        raise ContactEmailConfigurationError("Contact email configuration is incomplete.") from error
+    except ResendDeliveryError as error:
         raise ContactEmailDeliveryError("Resend did not accept the contact email.") from error

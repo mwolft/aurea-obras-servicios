@@ -119,6 +119,14 @@ class Reservation(db.Model):
     rental_amount = db.Column(db.Numeric(10, 2), nullable=True)
     delivery_amount = db.Column(db.Numeric(10, 2), nullable=True)
     total_amount = db.Column(db.Numeric(10, 2), nullable=True)
+    # Null is reserved for reservations created before the fianza snapshot migration.
+    # New reservations always receive the tool value at creation time.
+    deposit_amount_snapshot = db.Column(db.Numeric(10, 2), nullable=True)
+    delivered_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    returned_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    delivery_notes = db.Column(db.Text(), nullable=True)
+    return_notes = db.Column(db.Text(), nullable=True)
+    return_incident_notes = db.Column(db.Text(), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = db.Column(
         db.DateTime(timezone=True),
@@ -129,6 +137,8 @@ class Reservation(db.Model):
 
     tool = db.relationship("Tool", back_populates="reservations")
     user = db.relationship("User", back_populates="reservations")
+    payments = db.relationship("Payment", back_populates="reservation")
+    email_outbox = db.relationship("EmailOutbox", back_populates="reservation")
 
 
 class ToolBlock(db.Model):

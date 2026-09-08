@@ -1,0 +1,20 @@
+{% extends 'admin/master.html' %}
+{% block body %}
+<h3>Capturar fianza de reserva #{{ reservation.id }}</h3>
+<p>Solo debe usarse ante una incidencia o daño documentado. El importe no puede superar la fianza autorizada.</p>
+<form method="post" class="form-horizontal">
+  {{ csrf_form.csrf_token }}
+  <div class="form-group">
+    <label class="col-md-2 control-label" for="amount">Importe (€)</label>
+    <div class="col-md-4"><input class="form-control" id="amount" inputmode="decimal" name="amount" required type="text"></div>
+  </div>
+  <div class="form-group">
+    <label class="col-md-2 control-label" for="reason">Motivo</label>
+    <div class="col-md-6"><textarea class="form-control" id="reason" name="reason" required rows="4"></textarea></div>
+  </div>
+  <div class="form-group"><div class="col-md-offset-2 col-md-10">
+    <button class="btn btn-warning" type="submit">Confirmar captura</button>
+    <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Cancelar</a>
+  </div></div>
+</form>
+{% endblock %}

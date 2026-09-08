@@ -98,7 +98,7 @@ class AdminDashboardTestCase(unittest.TestCase):
             current_date + timedelta(days=5),
             current_date + timedelta(days=5),
             "pending_payment",
-            payment_expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+            payment_expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
         )
         self.make_reservation(
             tool,

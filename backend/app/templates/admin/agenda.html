@@ -46,8 +46,12 @@
                   {% if event.type == 'reservation' %}
                     {% if event.status_label in ('Pago caducado', 'Caducada', 'Cancelada') %}
                       {% set badge_class = 'label-default' %}
-                    {% elif event.status == 'confirmed' %}
+                    {% elif event.status in ('confirmed', 'completed') %}
                       {% set badge_class = 'label-success' %}
+                    {% elif event.status == 'in_progress' %}
+                      {% set badge_class = 'label-primary' %}
+                    {% elif event.status == 'returned_pending_closure' %}
+                      {% set badge_class = 'label-info' %}
                     {% elif event.status == 'pending_review' %}
                       {% set badge_class = 'label-warning' %}
                     {% else %}

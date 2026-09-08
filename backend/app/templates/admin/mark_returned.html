@@ -1,0 +1,25 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container-fluid">
+  <h3>Marcar devolución de reserva #{{ reservation.id }}</h3>
+  <p><strong>{{ reservation.tool.name }}</strong> · {{ reservation.customer_name }}</p>
+  <form method="post">
+    {{ csrf_form.csrf_token }}
+    <div class="form-group">
+      <label for="returned_at">Fecha y hora de devolución</label>
+      <input class="form-control" id="returned_at" name="returned_at" required type="datetime-local" value="{{ returned_at_default }}">
+    </div>
+    <div class="form-group">
+      <label for="return_notes">Notas de devolución <span class="text-muted">(opcional)</span></label>
+      <textarea class="form-control" id="return_notes" name="return_notes" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="return_incident_notes">Incidencia <span class="text-muted">(opcional)</span></label>
+      <textarea class="form-control" id="return_incident_notes" name="return_incident_notes" rows="3"></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Confirmar devolución</button>
+    <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

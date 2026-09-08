@@ -214,3 +214,22 @@ class AccountReservationsApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.get_json()["payment_expired"])
         self.assertEqual(db.session.get(Reservation, reservation.id).status, "pending_payment")
+
+    def test_operational_statuses_are_exposed_without_financial_deposit_details(self):
+        user = self.create_user("user@example.com")
+        tool = self.create_tool("Tool")
+        reservations = [
+            self.create_reservation(tool, user.id, status=status, start_date=date(2026, 10, index + 1), end_date=date(2026, 10, index + 1))
+            for index, status in enumerate(("in_progress", "returned_pending_closure", "completed"))
+        ]
+        self.authenticate_as(user)
+
+        response = self.client.get("/api/account/reservations")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {item["id"]: item["status"] for item in response.get_json()},
+            {reservation.id: reservation.status for reservation in reservations},
+        )
+        self.assertNotIn("capture_before", response.get_data(as_text=True))
+        self.assertNotIn("payment_intent", response.get_data(as_text=True))
