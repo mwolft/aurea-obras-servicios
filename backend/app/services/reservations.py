@@ -14,7 +14,11 @@ from app.services.payment_domain import (
     RESERVATION_STATUS_PENDING_PAYMENT,
     RESERVATION_STATUS_PENDING_REVIEW,
 )
-from app.services.email.rental import queue_reservation_cancelled
+from app.services.email.rental import (
+    queue_delivery_review_completed,
+    queue_delivery_review_requested,
+    queue_reservation_cancelled,
+)
 from app.services.quotes import QuoteCalculationError, ReservationQuote, calculate_quote
 
 
@@ -67,6 +71,7 @@ def create_reservation(
     session: Session | None = None,
     now: datetime | None = None,
     user_id: int | None = None,
+    outbox_ids: list[int] | None = None,
 ) -> Reservation:
     """Create a pickup checkout or delivery review after serializing writes for its tool."""
     reservation_session = db.session if session is None else session
@@ -135,6 +140,11 @@ def create_reservation(
         reservation_session.add(reservation)
         reservation_session.flush()
 
+        if reservation.status == RESERVATION_STATUS_PENDING_REVIEW:
+            for email in queue_delivery_review_requested(reservation_session, reservation):
+                if outbox_ids is not None and email is not None:
+                    outbox_ids.append(email.id)
+
     return reservation
 
 
@@ -143,6 +153,7 @@ def review_delivery_reservation(
     billable_km: Decimal,
     session: Session | None = None,
     now: datetime | None = None,
+    outbox_ids: list[int] | None = None,
 ) -> Reservation:
     """Freeze a reviewed delivery quote and start its payment window.
 
@@ -191,6 +202,9 @@ def review_delivery_reservation(
         reservation.status = RESERVATION_STATUS_PENDING_PAYMENT
         current_time = utc_now() if now is None else now
         reservation.payment_expires_at = current_time + PAYMENT_WINDOW
+        email = queue_delivery_review_completed(reservation_session, reservation)
+        if outbox_ids is not None and email is not None:
+            outbox_ids.append(email.id)
         reservation_session.flush()
 
     return reservation

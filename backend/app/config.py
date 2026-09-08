@@ -31,6 +31,7 @@ def load_config() -> dict[str, str | bool | None]:
         raise RuntimeError("SECRET_KEY must be configured.")
 
     frontend_origin = os.getenv("FRONTEND_ORIGIN")
+    backend_origin = os.getenv("BACKEND_ORIGIN")
     cloudinary_values = {
         "CLOUDINARY_CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
         "CLOUDINARY_API_KEY": os.getenv("CLOUDINARY_API_KEY"),
@@ -76,6 +77,7 @@ def load_config() -> dict[str, str | bool | None]:
     return {
         "APP_ENV": app_env,
         "FRONTEND_ORIGIN": frontend_origin or "http://localhost:3000",
+        "BACKEND_ORIGIN": backend_origin or "",
         "DATABASE_URL": database_url,
         "SQLALCHEMY_DATABASE_URI": normalize_database_url(database_url),
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,

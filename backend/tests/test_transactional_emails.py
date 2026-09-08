@@ -45,6 +45,8 @@ from app.services.rental_lifecycle import (
     mark_reservation_returned,
 )
 from app.services.reservations import cancel_reservation
+from app.services.reservations import create_reservation, review_delivery_reservation
+from app.services.email.rental import queue_delivery_review_requested
 from app.services.stripe_checkout import process_stripe_event
 from app.services.email.base import EmailContent
 
@@ -56,6 +58,7 @@ class TransactionalEmailTestCase(unittest.TestCase):
             RESEND_API_KEY="test-resend-secret",
             CONTACT_FROM_EMAIL="AUREA <contact@example.test>",
             CONTACT_TO_EMAIL="operations@example.test",
+            BACKEND_ORIGIN="https://api.example.test",
         )
         self.context = self.app.app_context()
         self.context.push()
@@ -66,14 +69,15 @@ class TransactionalEmailTestCase(unittest.TestCase):
         db.drop_all()
         self.context.pop()
 
-    def tool(self, deposit=Decimal("0.00")):
+    def tool(self, deposit=Decimal("0.00"), *, delivery_available=False):
         tool = Tool(
             name=f"Herramienta {uuid.uuid4().hex[:8]}",
             category="Tests",
             daily_price=Decimal("10.00"),
             deposit_amount=deposit,
             pickup_available=True,
-            delivery_available=False,
+            delivery_available=delivery_available,
+            delivery_price_per_km=Decimal("1.50") if delivery_available else None,
             is_published=True,
             is_available=True,
         )
@@ -181,6 +185,112 @@ class TransactionalEmailTestCase(unittest.TestCase):
         self.assertIn("Cliente &lt;prueba&gt;", email.html_body)
         self.assertNotIn(payment.external_payment_id, email.html_body)
         self.assertNotIn(payment.external_payment_id, email.text_body)
+
+    def test_delivery_request_queues_customer_and_admin_emails_once(self):
+        tool_id = self.tool(delivery_available=True).id
+        db.session.rollback()
+        outbox_ids = []
+        reservation = create_reservation(
+            tool_id,
+            date(2026, 10, 1),
+            date(2026, 10, 2),
+            "Cliente <transporte>",
+            "cliente@example.test",
+            "600000000",
+            True,
+            True,
+            "delivery",
+            "Calle <entrega> 1",
+            outbox_ids=outbox_ids,
+        )
+
+        self.assertEqual(reservation.status, "pending_review")
+        self.assertEqual(len(outbox_ids), 2)
+        emails = {email.event_type: email for email in EmailOutbox.query.all()}
+        customer = emails["reservation_pending_review_customer"]
+        admin = emails["reservation_pending_review_admin"]
+        self.assertEqual(customer.recipient, "cliente@example.test")
+        self.assertEqual(admin.recipient, "operations@example.test")
+        self.assertIn("Todavía no debes realizar ningún pago", customer.text_body)
+        self.assertIn("Calle &lt;entrega&gt; 1", customer.html_body)
+        self.assertNotIn("Total final", customer.text_body)
+        self.assertIn(
+            f"https://api.example.test/admin/reservation/details/?id={reservation.id}",
+            admin.html_body,
+        )
+        self.assertIn("Cliente &lt;transporte&gt;", admin.html_body)
+
+        db.session.rollback()
+        with db.session.begin():
+            repeated = queue_delivery_review_requested(db.session, reservation)
+        self.assertEqual(len([email for email in repeated if email is not None]), 2)
+        self.assertEqual(EmailOutbox.query.count(), 2)
+
+    def test_delivery_review_queues_payment_email_after_quote_is_frozen(self):
+        tool_id = self.tool(delivery_available=True).id
+        db.session.rollback()
+        reservation = create_reservation(
+            tool_id,
+            date(2026, 10, 1),
+            date(2026, 10, 2),
+            "Cliente de transporte",
+            "cliente@example.test",
+            "600000000",
+            True,
+            True,
+            "delivery",
+            "Calle de prueba 1",
+        )
+        reservation_id = reservation.id
+        self.assertEqual(
+            EmailOutbox.query.filter_by(event_type="reservation_pending_payment").count(), 0
+        )
+        db.session.rollback()
+
+        outbox_ids = []
+        review_delivery_reservation(
+            reservation_id,
+            Decimal("12.50"),
+            now=datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc),
+            outbox_ids=outbox_ids,
+        )
+
+        email = EmailOutbox.query.filter_by(event_type="reservation_pending_payment").one()
+        self.assertEqual(outbox_ids, [email.id])
+        self.assertIn("12.50 km", email.text_body)
+        self.assertIn("1.50 €/km", email.text_body)
+        self.assertIn("18.75 €", email.text_body)
+        self.assertIn("38.75 €", email.text_body)
+        self.assertIn(
+            f"http://localhost:3000/mi-cuenta/reservas/{reservation_id}", email.html_body
+        )
+        self.assertNotIn("https://api.example.test", email.html_body)
+
+    def test_failed_delivery_review_email_never_reverts_the_payment_transition(self):
+        tool_id = self.tool(delivery_available=True).id
+        db.session.rollback()
+        reservation = create_reservation(
+            tool_id,
+            date(2026, 10, 1),
+            date(2026, 10, 2),
+            "Cliente de transporte",
+            "cliente@example.test",
+            "600000000",
+            True,
+            True,
+            "delivery",
+            "Calle de prueba 1",
+        )
+        reservation_id = reservation.id
+        db.session.rollback()
+        outbox_ids = []
+        review_delivery_reservation(reservation_id, Decimal("12.50"), outbox_ids=outbox_ids)
+
+        with patch("app.services.email.outbox.send_resend_email", side_effect=ResendDeliveryError("x")):
+            self.assertFalse(deliver_outbox_email(outbox_ids[0]))
+
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "pending_payment")
+        self.assertEqual(db.session.get(EmailOutbox, outbox_ids[0]).status, EMAIL_OUTBOX_STATUS_FAILED)
 
     def test_cancel_delivery_return_and_completion_each_queue_one_customer_email(self):
         cancelled = self.reservation(self.tool())

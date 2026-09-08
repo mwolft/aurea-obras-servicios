@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import {
   getAccountReservation,
+  startPayPalOrder,
+  startStripeCheckout,
   type AccountReservationDetail,
 } from "@/lib/api";
 
@@ -17,6 +19,11 @@ type DetailState =
   | { kind: "success"; reservation: AccountReservationDetail }
   | { kind: "not-found" }
   | { kind: "error" };
+
+type PaymentStartStatus =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string };
 
 const statusLabels: Record<AccountReservationDetail["status"], string> = {
   pending_review: "Pendiente de revisión",
@@ -53,6 +60,69 @@ function formatAmount(value: string | null): string | null {
 
 function formatKilometres(value: string | null): string | null {
   return value === null ? null : `${value.replace(".", ",")} km`;
+}
+
+function PaymentActions({ reservationId }: { reservationId: number }) {
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStartStatus>({ kind: "idle" });
+
+  async function startStripePayment() {
+    setPaymentStatus({ kind: "loading" });
+    const result = await startStripeCheckout(reservationId);
+    if (result.status === "success") {
+      window.location.assign(result.checkoutUrl);
+      return;
+    }
+    setPaymentStatus({
+      kind: "error",
+      message:
+        result.status === "conflict" || result.status === "unavailable"
+          ? result.message
+          : "No se ha podido iniciar el pago. Inténtalo de nuevo.",
+    });
+  }
+
+  async function startPayPalPayment() {
+    setPaymentStatus({ kind: "loading" });
+    const result = await startPayPalOrder(reservationId);
+    if (result.status === "success") {
+      window.location.assign(result.approvalUrl);
+      return;
+    }
+    setPaymentStatus({
+      kind: "error",
+      message:
+        result.status === "conflict" || result.status === "unavailable"
+          ? result.message
+          : "No se ha podido iniciar el pago. Inténtalo de nuevo.",
+    });
+  }
+
+  return (
+    <div className={styles.paymentActions}>
+      <p className={styles.paymentActionTitle}>Continuar con el pago</p>
+      <div className={styles.paymentActionButtons}>
+        <button
+          className={styles.paymentButton}
+          disabled={paymentStatus.kind === "loading"}
+          onClick={() => void startStripePayment()}
+          type="button"
+        >
+          {paymentStatus.kind === "loading" ? "Abriendo pago seguro…" : "Pagar con tarjeta"}
+        </button>
+        <button
+          className={styles.paypalButton}
+          disabled={paymentStatus.kind === "loading"}
+          onClick={() => void startPayPalPayment()}
+          type="button"
+        >
+          Pagar con PayPal
+        </button>
+      </div>
+      {paymentStatus.kind === "error" && (
+        <p className={styles.paymentError} role="alert">{paymentStatus.message}</p>
+      )}
+    </div>
+  );
 }
 
 function ReservationDetail({ reservation }: { reservation: AccountReservationDetail }) {
@@ -125,8 +195,10 @@ function ReservationDetail({ reservation }: { reservation: AccountReservationDet
           )}
           {reservation.status === "pending_review" ? (
             <p className={styles.notice}>
-              AUREA está valorando los kilómetros de transporte. El importe definitivo
-              estará disponible después de la revisión.
+              <strong>Estamos revisando el transporte</strong>
+              <br />
+              Hemos recibido tu solicitud. AUREA revisará el kilometraje y el importe
+              del transporte. Te avisaremos cuando puedas continuar con el pago.
             </p>
           ) : (
             <dl className={styles.details}>
@@ -189,10 +261,13 @@ function ReservationDetail({ reservation }: { reservation: AccountReservationDet
         {reservation.status === "pending_payment" &&
           !expiredPayment &&
           reservation.payment_expires_at && (
-            <p className={styles.paymentNotice}>
-              Esta reserva está pendiente de pago hasta el{" "}
-              {formatDateTime(reservation.payment_expires_at)}.
-            </p>
+            <>
+              <p className={styles.paymentNotice}>
+                Esta reserva está pendiente de pago hasta el{" "}
+                {formatDateTime(reservation.payment_expires_at)}.
+              </p>
+              <PaymentActions reservationId={reservation.id} />
+            </>
           )}
         {expiredPayment && (
           <p className={styles.notice}>El plazo de pago de esta reserva ha caducado.</p>

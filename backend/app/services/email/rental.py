@@ -13,6 +13,9 @@ from .outbox import internal_alert_recipient, queue_transactional_email
 
 
 EVENT_RESERVATION_CONFIRMED = "reservation_confirmed"
+EVENT_RESERVATION_PENDING_REVIEW_CUSTOMER = "reservation_pending_review_customer"
+EVENT_RESERVATION_PENDING_REVIEW_ADMIN = "reservation_pending_review_admin"
+EVENT_RESERVATION_PENDING_PAYMENT = "reservation_pending_payment"
 EVENT_RESERVATION_CANCELLED = "reservation_cancelled"
 EVENT_DEPOSIT_AUTHORIZED = "deposit_authorized"
 EVENT_DEPOSIT_RELEASED = "deposit_released"
@@ -74,19 +77,38 @@ def _reservation_text(reservation: Reservation, *, include_total: bool = False, 
     return lines
 
 
-def _build_email(*, title: str, preheader: str, rows: str, text_lines: list[str], message: str, footer: str) -> EmailContent:
+def _build_email(
+    *,
+    title: str,
+    preheader: str,
+    rows: str,
+    text_lines: list[str],
+    message: str,
+    footer: str,
+    action_label: str | None = "Contactar con AUREA",
+    action_url: str | None = None,
+) -> EmailContent:
     contact_url = f"{current_app.config['FRONTEND_ORIGIN'].rstrip('/')}/contacto"
+    resolved_action_url = (action_url or contact_url) if action_label else None
+    action_html = (
+        action_button(action_label, resolved_action_url)
+        if action_label and resolved_action_url
+        else ""
+    )
     html = render_email(
         title=title,
         preheader=preheader,
         body_html=(
             information_block(rows)
             + message_block("Información", message)
-            + action_button("Contactar con AUREA", contact_url)
+            + action_html
         ),
         footer_text=footer,
     )
-    text = "\n".join([title, "", *text_lines, "", message, "", footer, f"Contacto: {contact_url}"])
+    text_parts = [title, "", *text_lines, "", message, "", footer]
+    if action_label and resolved_action_url:
+        text_parts.append(f"{action_label}: {resolved_action_url}")
+    text = "\n".join(text_parts)
     return EmailContent(html=html, text=text)
 
 
@@ -107,6 +129,135 @@ def _queue_customer(
         subject=subject,
         content=content,
         reservation_id=reservation.id,
+    )
+
+
+def _customer_reservation_url(reservation: Reservation) -> str:
+    return f"{current_app.config['FRONTEND_ORIGIN'].rstrip('/')}/mi-cuenta/reservas/{reservation.id}"
+
+
+def _admin_reservation_url(reservation: Reservation) -> str | None:
+    origin = current_app.config.get("BACKEND_ORIGIN")
+    if not isinstance(origin, str) or not origin.strip():
+        return None
+    return f"{origin.rstrip('/')}/admin/reservation/details/?id={reservation.id}"
+
+
+def _delivery_review_rows(reservation: Reservation, *, include_customer: bool) -> str:
+    rows = ""
+    if include_customer:
+        rows += information_row("Cliente", reservation.customer_name or "Cliente")
+    rows += information_row("Referencia", f"#{reservation.id}")
+    rows += information_row("Herramienta", _tool_name(reservation))
+    rows += information_row("Fechas", f"{_format_date(reservation.start_date)} — {_format_date(reservation.end_date)}")
+    rows += information_row("Modalidad", "Entrega")
+    if reservation.delivery_address:
+        rows += information_row("Dirección", reservation.delivery_address)
+    if reservation.billable_km is not None:
+        rows += information_row("Kilómetros", f"{reservation.billable_km} km")
+    return rows
+
+
+def _delivery_review_text(reservation: Reservation, *, include_customer: bool) -> list[str]:
+    lines = []
+    if include_customer:
+        lines.append(f"Cliente: {reservation.customer_name or 'Cliente'}")
+    lines.extend(
+        [
+            f"Referencia: #{reservation.id}",
+            f"Herramienta: {_tool_name(reservation)}",
+            f"Fechas: {_format_date(reservation.start_date)} — {_format_date(reservation.end_date)}",
+            "Modalidad: Entrega",
+        ]
+    )
+    if reservation.delivery_address:
+        lines.append(f"Dirección: {reservation.delivery_address}")
+    if reservation.billable_km is not None:
+        lines.append(f"Kilómetros: {reservation.billable_km} km")
+    return lines
+
+
+def queue_delivery_review_requested(session: Session, reservation: Reservation):
+    """Queue the customer acknowledgement and the separate Admin alert."""
+
+    customer_email = _queue_customer(
+        session,
+        reservation,
+        event_type=EVENT_RESERVATION_PENDING_REVIEW_CUSTOMER,
+        idempotency_key=f"reservation:{reservation.id}:pending_review:customer",
+        subject="Hemos recibido tu solicitud de reserva · AUREA",
+        content=_build_email(
+            title="Hemos recibido tu solicitud de reserva",
+            preheader="Revisaremos el transporte antes de que realices el pago.",
+            rows=_delivery_review_rows(reservation, include_customer=False),
+            text_lines=_delivery_review_text(reservation, include_customer=False),
+            message=(
+                "AUREA revisará el kilometraje y el importe del transporte. "
+                "Todavía no debes realizar ningún pago. Te enviaremos otro correo "
+                "cuando la reserva esté lista para continuar."
+            ),
+            footer="Solicitud de transporte recibida por AUREA Obras y Servicios.",
+        ),
+    )
+    admin_url = _admin_reservation_url(reservation)
+    admin_email = queue_transactional_email(
+        session,
+        event_type=EVENT_RESERVATION_PENDING_REVIEW_ADMIN,
+        idempotency_key=f"reservation:{reservation.id}:pending_review:admin",
+        recipient=internal_alert_recipient(),
+        subject="Nueva reserva pendiente de revisar transporte · AUREA",
+        content=_build_email(
+            title="Nueva reserva pendiente de revisar transporte",
+            preheader="Una solicitud de entrega requiere revisión administrativa.",
+            rows=_delivery_review_rows(reservation, include_customer=True),
+            text_lines=_delivery_review_text(reservation, include_customer=True),
+            message="Revisa el kilometraje y prepara el importe final antes de habilitar el pago.",
+            footer="Alerta interna de AUREA Obras y Servicios.",
+            action_label="Revisar reserva" if admin_url else None,
+            action_url=admin_url,
+        ),
+        reservation_id=reservation.id,
+    )
+    return customer_email, admin_email
+
+
+def queue_delivery_review_completed(session: Session, reservation: Reservation):
+    payment_url = _customer_reservation_url(reservation)
+    rows = _delivery_review_rows(reservation, include_customer=False)
+    rows += information_row("Tarifa aplicada", f"{_format_amount(reservation.delivery_price_per_km_snapshot)}/km")
+    rows += information_row("Importe de transporte", _format_amount(reservation.delivery_amount))
+    rows += information_row("Importe de alquiler", _format_amount(reservation.rental_amount))
+    rows += information_row("Total final", _format_amount(reservation.total_amount))
+    rows += information_row("Límite de pago", _format_datetime(reservation.payment_expires_at))
+    text_lines = _delivery_review_text(reservation, include_customer=False)
+    text_lines.extend(
+        [
+            f"Tarifa aplicada: {_format_amount(reservation.delivery_price_per_km_snapshot)}/km",
+            f"Importe de transporte: {_format_amount(reservation.delivery_amount)}",
+            f"Importe de alquiler: {_format_amount(reservation.rental_amount)}",
+            f"Total final: {_format_amount(reservation.total_amount)}",
+            f"Límite de pago: {_format_datetime(reservation.payment_expires_at)}",
+        ]
+    )
+    return _queue_customer(
+        session,
+        reservation,
+        event_type=EVENT_RESERVATION_PENDING_PAYMENT,
+        idempotency_key=f"reservation:{reservation.id}:pending_payment",
+        subject="Tu reserva está lista para pagar · AUREA",
+        content=_build_email(
+            title="Tu reserva está lista para pagar",
+            preheader="El transporte ha sido revisado y puedes completar tu reserva.",
+            rows=rows,
+            text_lines=text_lines,
+            message=(
+                "Hemos validado el kilometraje, el transporte y el importe final. "
+                "Completa el pago antes de la fecha límite para confirmar tu reserva."
+            ),
+            footer="Reserva lista para pago enviada por AUREA Obras y Servicios.",
+            action_label="Completar reserva",
+            action_url=payment_url,
+        ),
     )
 
 

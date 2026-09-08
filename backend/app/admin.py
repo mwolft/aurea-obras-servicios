@@ -948,12 +948,14 @@ class ReservationAdmin(SecureModelView):
                 # Access control loaded the session user. The domain service owns the
                 # transactional operation, so begin it with a clean session.
                 db.session.rollback()
-                review_delivery_reservation(reservation_id, billable_km)
+                outbox_ids: list[int] = []
+                review_delivery_reservation(reservation_id, billable_km, outbox_ids=outbox_ids)
             except ValueError as error:
                 flash(str(error), "error")
             except ReservationReviewError:
                 flash("La reserva ya no está pendiente de revisión de transporte.", "error")
             else:
+                deliver_outbox_emails(outbox_ids)
                 flash("Transporte revisado y presupuesto preparado para el pago.", "success")
 
             return redirect(url_for(".details_view", id=reservation_id))

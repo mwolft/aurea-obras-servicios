@@ -16,6 +16,7 @@ from app.services.reservations import (
     create_reservation,
 )
 from app.services.authentication import get_authenticated_user_id
+from app.services.email.outbox import deliver_outbox_emails
 
 
 tools_bp = Blueprint("tools", __name__)
@@ -270,6 +271,7 @@ def create_tool_reservation(tool_id: int):
             return jsonify(delivery_address_error[0]), delivery_address_error[1]
 
     try:
+        outbox_ids: list[int] = []
         reservation = create_reservation(
             tool_id,
             start_date,
@@ -282,10 +284,12 @@ def create_tool_reservation(tool_id: int):
             fulfillment_method,
             delivery_address,
             user_id=get_authenticated_user_id(),
+            outbox_ids=outbox_ids,
         )
     except ReservationToolNotFoundError:
         abort(404)
     except (ReservationUnavailableError, ReservationFulfillmentUnavailableError):
         return jsonify({"error": "La herramienta no está disponible para las fechas seleccionadas."}), 409
 
+    deliver_outbox_emails(outbox_ids)
     return jsonify(serialize_reservation(reservation)), 201

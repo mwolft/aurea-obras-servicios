@@ -165,7 +165,9 @@ class ReservationAdminTestCase(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 302)
-        review_service.assert_called_once_with(reservation_id, Decimal("12.50"))
+        review_service.assert_called_once()
+        self.assertEqual(review_service.call_args.args, (reservation_id, Decimal("12.50")))
+        self.assertIn("outbox_ids", review_service.call_args.kwargs)
         reservation = db.session.get(Reservation, reservation_id)
         self.assertEqual(reservation.status, "pending_payment")
         self.assertEqual(reservation.billable_km, Decimal("12.50"))
