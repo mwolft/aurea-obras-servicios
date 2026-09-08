@@ -7,6 +7,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import { getToolUnavailableRanges, type UnavailableDateRange } from "@/lib/api";
 
 import styles from "./rental-date-range-picker.module.css";
+import {
+  selectRentalDate,
+  type RentalDateField,
+} from "./rental-date-range-selection";
 
 type RentalDateRangePickerProps = {
   disabled?: boolean;
@@ -17,7 +21,6 @@ type RentalDateRangePickerProps = {
   toolId: number;
 };
 
-type ActiveField = "start" | "end";
 type UnavailableMonth = {
   activeRental: boolean;
   ranges: UnavailableDateRange[];
@@ -110,7 +113,7 @@ export default function RentalDateRangePicker({
   toolId,
 }: RentalDateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeField, setActiveField] = useState<ActiveField>("start");
+  const [activeField, setActiveField] = useState<RentalDateField>("start");
   const [displayMonth, setDisplayMonth] = useState(() => dateFromIso(startDate) ?? dateFromIso(minDate) ?? new Date());
   const [knownUnavailableRanges, setKnownUnavailableRanges] = useState<UnavailableDateRange[]>([]);
   const [hasActiveRental, setHasActiveRental] = useState(false);
@@ -208,7 +211,7 @@ export default function RentalDateRangePicker({
     };
   }, [currentMonthKey, displayMonth, isOpen, toolId]);
 
-  function openPicker(field: ActiveField, trigger: HTMLButtonElement) {
+  function openPicker(field: RentalDateField, trigger: HTMLButtonElement) {
     if (disabled) {
       return;
     }
@@ -219,26 +222,33 @@ export default function RentalDateRangePicker({
     setIsOpen(true);
   }
 
-  function handleSelect(nextRange: DateRange | undefined, triggerDate: Date) {
-    if (!nextRange?.from) {
-      onChange("", "");
+  function handleSelect(_nextRange: DateRange | undefined, triggerDate: Date) {
+    const selectedDate = dateToIso(triggerDate);
+    const isUnavailable = loadingMonthKey === currentMonthKey
+      || hasActiveRental
+      || selectedDate < minDate
+      || knownUnavailableRanges.some(
+        (unavailableRange) => selectedDate >= unavailableRange.start_date && selectedDate <= unavailableRange.end_date,
+      );
+    const nextSelection = selectRentalDate(
+      { startDate, endDate, activeField },
+      selectedDate,
+      isUnavailable,
+    );
+
+    if (
+      nextSelection.startDate === startDate
+      && nextSelection.endDate === endDate
+      && nextSelection.activeField === activeField
+    ) {
       return;
     }
 
-    if (startDate && endDate) {
-      onChange(dateToIso(triggerDate), "");
-      setActiveField("end");
-      return;
-    }
+    onChange(nextSelection.startDate, nextSelection.endDate);
+    setActiveField(nextSelection.activeField);
 
-    const nextStartDate = dateToIso(nextRange.from);
-    const nextEndDate = nextRange.to ? dateToIso(nextRange.to) : "";
-    onChange(nextStartDate, nextEndDate);
-
-    if (nextEndDate) {
+    if (activeField === "end" && startDate && nextSelection.endDate) {
       closePicker();
-    } else {
-      setActiveField("end");
     }
   }
 
