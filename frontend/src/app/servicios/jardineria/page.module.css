@@ -9,6 +9,11 @@
   gap: clamp(4.5rem, 10vw, 8rem);
 }
 
+.topSection {
+  display: grid;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+}
+
 .breadcrumbs ol {
   display: flex;
   flex-wrap: wrap;
@@ -423,6 +428,10 @@
 @media (max-width: 700px) {
   .main {
     gap: 4.5rem;
+  }
+
+  .topSection {
+    gap: var(--space-6);
   }
 
   .hero h1 {

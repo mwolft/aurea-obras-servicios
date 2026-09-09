@@ -55,34 +55,36 @@ export default function GardeningPage() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <nav aria-label="Migas de pan" className={styles.breadcrumbs}>
-          <ol>
-            <li><Link href="/servicios">Servicios</Link></li>
-            <li aria-current="page">Jardinería</li>
-          </ol>
-        </nav>
-        <section aria-labelledby="gardening-title" className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>Jardinería</p>
-            <h1 id="gardening-title">Servicios de jardinería en Ciudad Real</h1>
-            <p className={styles.intro}>
-              AUREA realiza trabajos de jardinería para terrenos, jardines y zonas exteriores en Ciudad Real capital y provincia, con especial atención al desbroce de parcelas y maleza, jardines de urbanizaciones y mini excavaciones vinculadas a jardines y espacios exteriores.
-            </p>
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/contacto">Cuéntanos qué necesitas</Link>
-              <Link className={styles.secondaryAction} href="/servicios">Ver todos los servicios</Link>
+        <div className={styles.topSection}>
+          <nav aria-label="Migas de pan" className={styles.breadcrumbs}>
+            <ol>
+              <li><Link href="/servicios">Servicios</Link></li>
+              <li aria-current="page">Jardinería</li>
+            </ol>
+          </nav>
+          <section aria-labelledby="gardening-title" className={styles.hero}>
+            <div className={styles.heroCopy}>
+              <p className={styles.eyebrow}>Jardinería</p>
+              <h1 id="gardening-title">Servicios de jardinería en Ciudad Real</h1>
+              <p className={styles.intro}>
+                AUREA realiza trabajos de jardinería para terrenos, jardines y zonas exteriores en Ciudad Real capital y provincia, con especial atención al desbroce de parcelas y maleza, jardines de urbanizaciones y mini excavaciones vinculadas a jardines y espacios exteriores.
+              </p>
+              <div className={styles.heroActions}>
+                <Link className={styles.primaryAction} href="/contacto">Cuéntanos qué necesitas</Link>
+                <Link className={styles.secondaryAction} href="/servicios">Ver todos los servicios</Link>
+              </div>
             </div>
-          </div>
 
-          <div aria-hidden="true" className={styles.heroVisual}>
-            <div className={styles.visualSun} />
-            <div className={styles.visualStem} />
-            <div className={`${styles.visualLeaf} ${styles.leafLeft}`} />
-            <div className={`${styles.visualLeaf} ${styles.leafRight}`} />
-            <div className={styles.visualGround} />
-            <span className={styles.visualLabel}>Jardinería AUREA</span>
-          </div>
-        </section>
+            <div aria-hidden="true" className={styles.heroVisual}>
+              <div className={styles.visualSun} />
+              <div className={styles.visualStem} />
+              <div className={`${styles.visualLeaf} ${styles.leafLeft}`} />
+              <div className={`${styles.visualLeaf} ${styles.leafRight}`} />
+              <div className={styles.visualGround} />
+              <span className={styles.visualLabel}>Jardinería AUREA</span>
+            </div>
+          </section>
+        </div>
 
         <section aria-labelledby="presentation-title" className={styles.presentation}>
           <div>

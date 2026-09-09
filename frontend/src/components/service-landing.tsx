@@ -77,38 +77,40 @@ export function ServiceLanding({
   return (
     <div className={className}>
       <main className={styles.main}>
-        {breadcrumb ? (
-          <nav aria-label="Migas de pan" className={styles.breadcrumbs}>
-            <ol>
-              {breadcrumb.map((item, index) => {
-                const isCurrentPage = index === breadcrumb.length - 1;
+        <div className={styles.topSection}>
+          {breadcrumb ? (
+            <nav aria-label="Migas de pan" className={styles.breadcrumbs}>
+              <ol>
+                {breadcrumb.map((item, index) => {
+                  const isCurrentPage = index === breadcrumb.length - 1;
 
-                return (
-                  <li aria-current={isCurrentPage ? "page" : undefined} key={item.label}>
-                    {item.href && !isCurrentPage ? <Link href={item.href}>{item.label}</Link> : item.label}
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        ) : null}
+                  return (
+                    <li aria-current={isCurrentPage ? "page" : undefined} key={item.label}>
+                      {item.href && !isCurrentPage ? <Link href={item.href}>{item.label}</Link> : item.label}
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
+          ) : null}
 
-        <section aria-labelledby="service-title" className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>{eyebrow}</p>
-            <h1 id="service-title">{title}</h1>
-            <p className={styles.introduction}>{introduction}</p>
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/contacto">
-                {contactLabel}
-              </Link>
-              <Link className={styles.secondaryAction} href="/servicios">
-                Volver a Servicios
-              </Link>
+          <section aria-labelledby="service-title" className={styles.hero}>
+            <div className={styles.heroCopy}>
+              <p className={styles.eyebrow}>{eyebrow}</p>
+              <h1 id="service-title">{title}</h1>
+              <p className={styles.introduction}>{introduction}</p>
+              <div className={styles.heroActions}>
+                <Link className={styles.primaryAction} href="/contacto">
+                  {contactLabel}
+                </Link>
+                <Link className={styles.secondaryAction} href="/servicios">
+                  Volver a Servicios
+                </Link>
+              </div>
             </div>
-          </div>
-          <ServiceVisual label={visualLabel} type={visualType} />
-        </section>
+            <ServiceVisual label={visualLabel} type={visualType} />
+          </section>
+        </div>
 
         <section aria-labelledby="focus-title" className={styles.focus}>
           <div>
