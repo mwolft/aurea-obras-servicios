@@ -45,3 +45,37 @@ export function EmailIcon(props: IconProps) {
     </BaseIcon>
   );
 }
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </BaseIcon>
+  );
+}
+
+export function MachineryIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M3 18h13" />
+      <path d="M5 18v-5h6l2 5" />
+      <path d="M11 13V8h4l3 5" />
+      <path d="M15 8V5h3" />
+      <circle cx="7" cy="19" r="1.5" />
+      <circle cx="15" cy="19" r="1.5" />
+    </BaseIcon>
+  );
+}
+
+export function ToolsIcon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="m14.5 5.5 4 4" />
+      <path d="m6 18 10-10" />
+      <path d="m5 5 3 3" />
+      <path d="m4.5 8.5 4-4" />
+      <path d="m14 16 3 3" />
+      <path d="m16 14 4 4" />
+    </BaseIcon>
+  );
+}

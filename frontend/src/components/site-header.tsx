@@ -9,7 +9,7 @@ import { businessProfile } from "@/lib/business-profile";
 import { getCategorySlug } from "@/lib/category-slug";
 
 import { useAuth } from "./auth-provider";
-import { EmailIcon, LocationIcon, PhoneIcon } from "./icons";
+import { ChevronDownIcon, EmailIcon, LocationIcon, MachineryIcon, PhoneIcon, ToolsIcon } from "./icons";
 import styles from "./site-header.module.css";
 
 type NavigationActionsProps = {
@@ -71,7 +71,8 @@ function RentalNavigation({ closeMenu, variant }: Pick<NavigationActionsProps, "
         href={machineryRentalPath}
         onClick={handleNavigation}
       >
-        Maquinaria
+        {variant === "desktop" ? <MachineryIcon className={styles.rentalCategoryIcon} /> : null}
+        <span>Maquinaria</span>
       </Link>
       <Link
         aria-current={isCategoryActive(toolsRentalPath) ? "page" : undefined}
@@ -79,7 +80,8 @@ function RentalNavigation({ closeMenu, variant }: Pick<NavigationActionsProps, "
         href={toolsRentalPath}
         onClick={handleNavigation}
       >
-        Herramientas
+        {variant === "desktop" ? <ToolsIcon className={styles.rentalCategoryIcon} /> : null}
+        <span>Herramientas</span>
       </Link>
     </>
   );
@@ -112,7 +114,7 @@ function RentalNavigation({ closeMenu, variant }: Pick<NavigationActionsProps, "
             onClick={() => setIsOpen((open) => !open)}
             type="button"
           >
-            <span aria-hidden="true">⌄</span>
+            <ChevronDownIcon className={styles.rentalChevron} />
           </button>
           {isOpen ? (
             <div aria-label="Categorías de alquiler" className={styles.rentalCategoryMenu} id="rental-category-menu">
