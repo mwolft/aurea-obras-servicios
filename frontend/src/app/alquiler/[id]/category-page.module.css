@@ -9,6 +9,8 @@
 .eyebrow { margin-top: var(--space-6); color: var(--color-accent-dark); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 .header h1 { color: var(--color-primary); font-size: clamp(2.5rem, 5vw, 4.5rem); line-height: 0.98; letter-spacing: -0.06em; }
 .header > p:last-child { color: var(--color-text-muted); font-size: 1.1rem; line-height: 1.65; }
+.catalog { display: grid; gap: var(--space-6); }
+.catalog h2 { color: var(--color-primary); font-size: clamp(1.5rem, 2.5vw, 2rem); letter-spacing: -0.03em; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); }
 .feedback { display: grid; gap: var(--space-3); max-width: 44rem; padding: 2rem; border: 1px solid var(--color-border); border-left: 0.35rem solid #a13a2a; border-radius: var(--radius-md); background: var(--color-surface); }
 .feedback h1 { color: var(--color-primary); font-size: 1.4rem; } .feedback p { color: var(--color-text-muted); line-height: 1.6; }

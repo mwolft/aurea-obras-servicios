@@ -1,30 +1,30 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { legalInfo } from "@/lib/legal";
 import { getPublicUrl } from "@/lib/site";
 
 import styles from "./page.module.css";
 
 const socialImageUrl = getPublicUrl("/icon.png");
-const socialDescription =
-  `Consulta el alquiler de herramientas de ${legalInfo.companyName}. También contamos con servicios de jardinería, fontanería, electricidad y obras y reformas.`;
+const commercialTitle = "AUREA | Alquiler y servicios en Ciudad Real";
+const commercialDescription =
+  "Alquiler de maquinaria y herramientas y servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real capital y provincia.";
 
 export const metadata: Metadata = {
-  title: `${legalInfo.companyName} | Alquiler de herramientas y servicios`,
-  description: socialDescription,
+  title: commercialTitle,
+  description: commercialDescription,
   alternates: { canonical: "/" },
   openGraph: {
-    title: legalInfo.companyName,
-    description: socialDescription,
+    title: commercialTitle,
+    description: commercialDescription,
     url: getPublicUrl(),
     type: "website",
     images: [{ url: socialImageUrl, width: 1536, height: 1024, alt: "Icono de AUREA" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: legalInfo.companyName,
-    description: socialDescription,
+    title: commercialTitle,
+    description: commercialDescription,
     images: [socialImageUrl],
   },
 };
@@ -74,10 +74,10 @@ export default function Home() {
           <div aria-hidden="true" className={styles.rentalIcon}><ToolsIcon /></div>
           <div>
             <p className={styles.eyebrow}>Alquiler</p>
-            <h2 id="rental-title">Herramientas para cuando quieres hacer tu propio proyecto.</h2>
-            <p>Si necesitas herramientas, consulta el catálogo de alquiler. Si buscas que AUREA realice un trabajo, explora nuestros servicios.</p>
+            <h2 id="rental-title">Maquinaria y herramientas para tu proyecto</h2>
+            <p>Si necesitas maquinaria o herramientas, consulta el catálogo de alquiler. Si buscas que AUREA realice un trabajo, explora nuestros servicios.</p>
           </div>
-          <Link className={styles.secondaryAction} href="/alquiler">Ver herramientas en alquiler</Link>
+          <Link className={styles.secondaryAction} href="/alquiler">Ver maquinaria y herramientas</Link>
         </section>
 
         <section aria-labelledby="services-title" className={styles.services}>
@@ -98,16 +98,25 @@ export default function Home() {
               <div className={styles.icon}><ServicesIcon /></div>
               <h3>Fontanería</h3>
               <p>Una de las áreas de servicio de AUREA.</p>
+              <Link className={styles.cardLink} href="/servicios/fontaneria">
+                Ver servicios de fontanería <span aria-hidden="true">→</span>
+              </Link>
             </article>
             <article className={styles.serviceCard}>
               <div className={styles.icon}><ServicesIcon /></div>
               <h3>Electricidad</h3>
               <p>Una de las áreas de servicio de AUREA.</p>
+              <Link className={styles.cardLink} href="/servicios/electricidad">
+                Ver servicios de electricidad <span aria-hidden="true">→</span>
+              </Link>
             </article>
             <article className={styles.serviceCard}>
               <div className={styles.icon}><ServicesIcon /></div>
               <h3>Obras y reformas</h3>
               <p>Una de las áreas de servicio de AUREA.</p>
+              <Link className={styles.cardLink} href="/servicios/obras-reformas">
+                Ver obras y reformas <span aria-hidden="true">→</span>
+              </Link>
             </article>
           </div>
           <Link className={styles.servicesAction} href="/servicios">Ver todos los servicios</Link>
@@ -128,7 +137,7 @@ export default function Home() {
           <blockquote>“Los fuegos se apagan en invierno”.</blockquote>
           <div>
             <h2 id="winter-title">Preparar los espacios antes de los meses de mayor riesgo.</h2>
-            <p>El trabajo realizado con antelación permite limpiar, desbrozar y preparar parcelas y zonas exteriores con tiempo.</p>
+            <p>El trabajo realizado con antelación permite desbrozar y preparar parcelas y zonas exteriores con tiempo.</p>
           </div>
         </section>
 

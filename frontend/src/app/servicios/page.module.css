@@ -38,7 +38,7 @@
 }
 
 .hero h1 {
-  max-width: 15ch;
+  max-width: 20ch;
   margin-top: var(--space-2);
   font-size: clamp(3rem, 7vw, 6rem);
 }

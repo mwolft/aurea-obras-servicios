@@ -15,7 +15,7 @@ function ToolPlaceholder() {
       <svg aria-hidden="true" viewBox="0 0 48 48">
         <path d="m30 10 8 8-10 10-8-8 10-10ZM22 18 10 30l8 8 12-12M10 14l8 8m-8 0 10-10" />
       </svg>
-      <span>Imagen próximamente</span>
+      <span>Sin imagen disponible</span>
     </div>
   );
 }

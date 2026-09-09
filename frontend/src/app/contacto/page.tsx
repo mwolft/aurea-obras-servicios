@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { legalInfo } from "@/lib/legal";
 import { businessProfile } from "@/lib/business-profile";
 import { LocationIcon, PhoneIcon } from "@/components/icons";
 
@@ -8,8 +7,9 @@ import { ContactForm } from "./contact-form";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: `Contacto | ${legalInfo.companyName}`,
-  description: `Contacta con ${legalInfo.companyName} para plantear tu necesidad de forma sencilla.`,
+  title: "Contacto | AUREA",
+  description:
+    "Contacta con AUREA para consultas sobre alquiler de maquinaria y herramientas y servicios en Ciudad Real capital y provincia.",
   alternates: { canonical: "/contacto" },
 };
 

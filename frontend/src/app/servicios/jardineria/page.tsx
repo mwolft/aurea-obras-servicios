@@ -1,32 +1,45 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { legalInfo } from "@/lib/legal";
-
 import styles from "./page.module.css";
 
-const gardeningAreas = [
+type GardeningArea = {
+  title: string;
+  description: string;
+  href?: string;
+  rentalLink?: {
+    href: string;
+    label: string;
+  };
+};
+
+const gardeningAreas: GardeningArea[] = [
   {
-    title: "Desbroce y maleza",
+    title: "Desbroce de parcelas y maleza",
     description:
-      "Trabajos de desbroce y control de maleza para mantener parcelas y zonas exteriores atendidas.",
+      "Trabajos de desbroce y control de maleza en parcelas y zonas exteriores para recuperar y preparar el espacio.",
+    href: "/servicios/jardineria/desbroce-parcelas",
   },
   {
     title: "Jardines de urbanizaciones",
     description:
-      "Atención a jardines y espacios comunes de urbanizaciones dentro de la línea de jardinería de AUREA.",
+      "Atención a jardines y espacios exteriores de urbanizaciones según las necesidades de cada zona.",
   },
   {
-    title: "Mini excavaciones",
+    title: "Mini excavaciones para jardín",
     description:
-      "Trabajos auxiliares y movimientos puntuales donde el uso de maquinaria compacta resulta adecuado para el jardín.",
+      "AUREA realiza trabajos auxiliares y movimientos puntuales con maquinaria compacta en jardines y espacios exteriores.",
+    rentalLink: {
+      href: "/alquiler/maquinaria/mini-retroexcavadora-13",
+      label: "Alquilar una mini retroexcavadora",
+    },
   },
 ];
 
 export const metadata: Metadata = {
-  title: `Jardinería | ${legalInfo.companyName}`,
+  title: "Servicios de jardinería en Ciudad Real | AUREA",
   description:
-    "Jardinería en AUREA: desbroce y maleza, jardines de urbanizaciones y mini excavaciones vinculadas a espacios exteriores.",
+    "Servicios de jardinería en Ciudad Real capital y provincia: desbroce de parcelas y maleza, jardines de urbanizaciones y mini excavaciones para jardín.",
   alternates: { canonical: "/servicios/jardineria" },
 };
 
@@ -42,12 +55,18 @@ export default function GardeningPage() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
+        <nav aria-label="Migas de pan" className={styles.breadcrumbs}>
+          <ol>
+            <li><Link href="/servicios">Servicios</Link></li>
+            <li aria-current="page">Jardinería</li>
+          </ol>
+        </nav>
         <section aria-labelledby="gardening-title" className={styles.hero}>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>Jardinería</p>
-            <h1 id="gardening-title">Jardinería para terrenos, jardines y zonas exteriores.</h1>
+            <h1 id="gardening-title">Servicios de jardinería en Ciudad Real</h1>
             <p className={styles.intro}>
-              AUREA realiza trabajos de jardinería y mantenimiento de terrenos desde una perspectiva práctica, adaptada a las necesidades de cada espacio.
+              AUREA realiza trabajos de jardinería para terrenos, jardines y zonas exteriores en Ciudad Real capital y provincia, con especial atención al desbroce de parcelas y maleza, jardines de urbanizaciones y mini excavaciones vinculadas a jardines y espacios exteriores.
             </p>
             <div className={styles.heroActions}>
               <Link className={styles.primaryAction} href="/contacto">Cuéntanos qué necesitas</Link>
@@ -71,22 +90,27 @@ export default function GardeningPage() {
             <h2 id="presentation-title">Cada espacio necesita una actuación adecuada.</h2>
           </div>
           <p>
-            Valoramos el terreno, la vegetación y el tipo de trabajo para plantear una actuación ordenada y ajustada a la necesidad concreta.
+            Parcelas, jardines y zonas exteriores pueden requerir actuaciones diferentes según el estado y las necesidades de cada espacio.
           </p>
         </section>
 
         <section aria-labelledby="services-title" className={styles.services} id="servicios-jardineria">
           <div className={styles.sectionHeading}>
             <p className={styles.eyebrow}>Líneas de trabajo</p>
-            <h2 id="services-title">Jardinería para mantener y preparar espacios exteriores.</h2>
+            <h2 id="services-title">Trabajos de jardinería en Ciudad Real</h2>
             <p>Estas son las principales líneas de trabajo de AUREA dentro de Jardinería.</p>
           </div>
           <div className={styles.serviceGrid}>
             {gardeningAreas.map((service) => (
               <article className={styles.serviceCard} key={service.title}>
                 <div className={styles.serviceIcon}><GardenLineIcon /></div>
-                <h3>{service.title}</h3>
+                <h3>{service.href ? <Link className={styles.serviceCardLink} href={service.href}>{service.title}</Link> : service.title}</h3>
                 <p>{service.description}</p>
+                {service.rentalLink ? (
+                  <Link className={styles.serviceCardSecondaryLink} href={service.rentalLink.href}>
+                    {service.rentalLink.label} <span aria-hidden="true">→</span>
+                  </Link>
+                ) : null}
               </article>
             ))}
           </div>
@@ -99,7 +123,7 @@ export default function GardeningPage() {
           </div>
           <div className={styles.winterCopy}>
             <p>
-              Mantener el terreno, desbrozar y reducir la acumulación de vegetación con antelación ayuda a preparar los espacios antes de los meses de mayor riesgo.
+              Actuar con antelación mediante desbroce, control de maleza y preparación del terreno ayuda a atender parcelas y zonas exteriores antes de los meses de mayor riesgo.
             </p>
             <Link className={styles.winterAction} href="/contacto">Contactar con AUREA</Link>
           </div>

@@ -7,7 +7,6 @@ import { CookieConsent } from "@/components/cookie-consent";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { SiteFooter } from "@/components/site-footer";
-import { legalInfo } from "@/lib/legal";
 import { siteUrl } from "@/lib/site";
 import { SiteHeader } from "@/components/site-header";
 
@@ -22,8 +21,9 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: legalInfo.companyName,
-  description: `Obras, jardinería y alquiler de herramientas de ${legalInfo.companyName}.`,
+  title: "AUREA | Alquiler y servicios en Ciudad Real",
+  description:
+    "Alquiler de maquinaria y herramientas y servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real capital y provincia.",
 };
 
 export const viewport: Viewport = {

@@ -53,6 +53,7 @@ export function SiteFooter() {
           <section aria-labelledby="footer-rental" className={styles.footerSection}>
             <h2 id="footer-rental">Alquiler</h2>
             <nav aria-label="Alquiler de AUREA" className={styles.rentalNavigation}>
+              <Link href="/alquiler">Ver todo el alquiler</Link>
               <Link href={machineryRentalPath}>Alquiler de maquinaria</Link>
               <Link href={toolsRentalPath}>Alquiler de herramientas</Link>
             </nav>

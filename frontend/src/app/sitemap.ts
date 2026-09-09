@@ -10,6 +10,7 @@ const staticPaths = [
   "/",
   "/servicios",
   "/servicios/jardineria",
+  "/servicios/jardineria/desbroce-parcelas",
   "/servicios/fontaneria",
   "/servicios/electricidad",
   "/servicios/obras-reformas",

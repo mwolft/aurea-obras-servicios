@@ -138,7 +138,7 @@
   .content {
     gap: var(--space-6);
     width: min(100% - 2rem, var(--container-width));
-    padding: 2rem 0;
+    padding: 2rem 0 calc(2rem + 3.75rem);
   }
 
   .primaryRow {
@@ -148,7 +148,21 @@
 
   .legalNavigation {
     display: grid;
-    gap: var(--space-4);
+    gap: 0;
+  }
+
+  .footerSection a,
+  .legalNavigation a,
+  .cookiePreferencesButton {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.5rem 0;
+  }
+
+  .servicesNavigation,
+  .rentalNavigation {
+    gap: 0;
   }
 }
 

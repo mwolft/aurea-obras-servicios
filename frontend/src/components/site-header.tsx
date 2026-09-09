@@ -18,40 +18,128 @@ type NavigationActionsProps = {
   onLogout: () => void;
 };
 
+type NavigationVariant = "desktop" | "mobile";
+
 const machineryRentalPath = `/alquiler/${getCategorySlug("Maquinaria")}`;
 const toolsRentalPath = `/alquiler/${getCategorySlug("Herramientas")}`;
 
-function NavigationLinks({ closeMenu }: Pick<NavigationActionsProps, "closeMenu">) {
+function RentalNavigation({ closeMenu, variant }: Pick<NavigationActionsProps, "closeMenu"> & { variant: NavigationVariant }) {
+  const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+  const rentalNavigationRef = useRef<HTMLDivElement>(null);
+
+  const isCategoryActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
+  const closeRentalNavigation = () => setIsOpen(false);
+  const handleNavigation = () => {
+    closeRentalNavigation();
+    closeMenu();
+  };
+
+  useEffect(() => {
+    if (variant !== "desktop" || !isOpen) {
+      return;
+    }
+
+    const closeOnOutsideInteraction = (event: MouseEvent | TouchEvent) => {
+      if (rentalNavigationRef.current && !rentalNavigationRef.current.contains(event.target as Node)) {
+        closeRentalNavigation();
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeRentalNavigation();
+      }
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideInteraction);
+    document.addEventListener("touchstart", closeOnOutsideInteraction);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideInteraction);
+      document.removeEventListener("touchstart", closeOnOutsideInteraction);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen, variant]);
+
+  const categoryLinks = (
+    <>
+      <Link
+        aria-current={isCategoryActive(machineryRentalPath) ? "page" : undefined}
+        className={styles.rentalCategoryLink}
+        href={machineryRentalPath}
+        onClick={handleNavigation}
+      >
+        Maquinaria
+      </Link>
+      <Link
+        aria-current={isCategoryActive(toolsRentalPath) ? "page" : undefined}
+        className={styles.rentalCategoryLink}
+        href={toolsRentalPath}
+        onClick={handleNavigation}
+      >
+        Herramientas
+      </Link>
+    </>
+  );
+
+  return (
+    <div
+      className={`${styles.rentalNavGroup} ${variant === "desktop" ? styles.desktopRentalNavGroup : styles.mobileRentalNavGroup}`}
+      onBlur={(event) => {
+        if (variant === "desktop" && !event.currentTarget.contains(event.relatedTarget)) {
+          closeRentalNavigation();
+        }
+      }}
+      ref={rentalNavigationRef}
+    >
+      <Link
+        aria-current={pathname === "/alquiler" ? "page" : undefined}
+        className={styles.rentalHubLink}
+        href="/alquiler"
+        onClick={handleNavigation}
+      >
+        Alquiler
+      </Link>
+      {variant === "desktop" ? (
+        <>
+          <button
+            aria-controls="rental-category-menu"
+            aria-expanded={isOpen}
+            aria-label={isOpen ? "Cerrar categorías de alquiler" : "Abrir categorías de alquiler"}
+            className={styles.rentalToggle}
+            onClick={() => setIsOpen((open) => !open)}
+            type="button"
+          >
+            <span aria-hidden="true">⌄</span>
+          </button>
+          {isOpen ? (
+            <div aria-label="Categorías de alquiler" className={styles.rentalCategoryMenu} id="rental-category-menu">
+              {categoryLinks}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div aria-label="Categorías de alquiler" className={styles.rentalCategoryLinks}>
+          {categoryLinks}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NavigationLinks({ closeMenu, variant }: Pick<NavigationActionsProps, "closeMenu"> & { variant: NavigationVariant }) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-  const isRentalCategoryActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
-
   return (
     <>
       <Link aria-current={isActive("/") ? "page" : undefined} href="/" onClick={closeMenu}>
         Inicio
       </Link>
-      <div className={styles.rentalNavGroup}>
-        <Link
-          aria-current={isRentalCategoryActive(machineryRentalPath) ? "page" : undefined}
-          className={styles.machineryNavLink}
-          href={machineryRentalPath}
-          onClick={closeMenu}
-        >
-          Maquinaria
-        </Link>
-        <Link
-          aria-current={isRentalCategoryActive(toolsRentalPath) ? "page" : undefined}
-          className={styles.toolsNavLink}
-          href={toolsRentalPath}
-          onClick={closeMenu}
-        >
-          Herramientas
-        </Link>
-      </div>
+      <RentalNavigation closeMenu={closeMenu} variant={variant} />
       <Link
         aria-current={isActive("/servicios") ? "page" : undefined}
         href="/servicios"
@@ -223,7 +311,7 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Navegación principal" className={styles.desktopNavigation}>
-          <NavigationLinks closeMenu={closeMenu} />
+          <NavigationLinks closeMenu={closeMenu} variant="desktop" />
           <NavigationActions
             closeMenu={closeMenu}
             isLoggingOut={isLoggingOut}
@@ -264,7 +352,7 @@ export function SiteHeader() {
             <LocationIcon className={styles.mobileContactIcon} />
             <span>{businessProfile.location.city}</span>
           </p>
-          <NavigationLinks closeMenu={closeMenu} />
+          <NavigationLinks closeMenu={closeMenu} variant="mobile" />
           <NavigationActions
             closeMenu={closeMenu}
             isLoggingOut={isLoggingOut}

@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 
 import { getRentalCategory, getToolPublicPath } from "@/lib/category-slug";
 import { getCatalogTool, getCatalogTools } from "@/lib/api";
-import { legalInfo } from "@/lib/legal";
+import { getRentalCategoryPageContent } from "@/lib/rental-category-content";
 
 import RentalCategoryContent from "./category-page";
 import categoryStyles from "./category-page.module.css";
@@ -28,9 +28,13 @@ export async function generateMetadata({ params }: RentalToolPageProps): Promise
     return {};
   }
 
+  const content = getRentalCategoryPageContent(category);
+
   return {
-    title: `${category.name} | Alquiler | ${legalInfo.companyName}`,
-    description: `Consulta las herramientas disponibles en la categoría ${category.name} de ${legalInfo.companyName}.`,
+    title: content.metadata?.title ?? `${category.name} de alquiler | AUREA`,
+    description:
+      content.metadata?.description ??
+      `Consulta las herramientas disponibles en la categoría ${category.name} de AUREA.`,
     alternates: { canonical: `/alquiler/${category.slug}` },
   };
 }

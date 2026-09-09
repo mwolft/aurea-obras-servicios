@@ -9,6 +9,39 @@
   gap: clamp(4.5rem, 10vw, 8rem);
 }
 
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding: 0;
+  margin: 0;
+  color: var(--color-text-muted);
+  list-style: none;
+}
+
+.breadcrumbs li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.breadcrumbs li:not(:last-child)::after {
+  color: var(--color-text-muted);
+  content: "/";
+}
+
+.breadcrumbs a {
+  color: var(--color-primary);
+  font-weight: 800;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3rem;
+}
+
+.breadcrumbs a:hover {
+  color: var(--color-accent-dark);
+}
+
 .eyebrow {
   color: var(--color-accent-dark);
   font-size: 0.75rem;
@@ -247,6 +280,31 @@
   color: var(--color-primary);
   font-size: 1.3rem;
   letter-spacing: -0.025em;
+}
+
+.serviceCardLink {
+  color: inherit;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3rem;
+}
+
+.serviceCardLink:hover {
+  color: var(--color-accent-dark);
+}
+
+.serviceCardSecondaryLink {
+  width: fit-content;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.3rem;
+}
+
+.serviceCardSecondaryLink:hover {
+  color: var(--color-accent-dark);
 }
 
 .serviceCard p {

@@ -6,7 +6,7 @@
   z-index: 40;
   width: min(calc(100% - 2rem), 72rem);
   margin: 0 auto;
-  padding: 1.25rem;
+  padding: 0.75rem 1rem;
   border: 1px solid rgba(16, 42, 67, 0.16);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -22,16 +22,19 @@
 .bannerContent {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-6);
+  gap: var(--space-4);
   align-items: center;
 }
 
 .bannerCopy {
   display: grid;
-  gap: var(--space-2);
-  max-width: 48rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  max-width: none;
   color: var(--color-text-muted);
-  line-height: 1.55;
+  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
 .eyebrow {
@@ -229,28 +232,42 @@
     bottom: 0.75rem;
     left: 0.75rem;
     width: auto;
-    padding: 1rem;
+    padding: 0.75rem;
   }
 
   .bannerContent {
     grid-template-columns: 1fr;
-    gap: var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .bannerCopy {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
   }
 
   .bannerActions,
   .dialogActions {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
   }
 
   .primaryAction,
   .secondaryAction,
   .textAction {
     width: 100%;
+    padding-right: 0.35rem;
+    padding-left: 0.35rem;
+    font-size: 0.82rem;
   }
 
   .textAction {
-    justify-self: center;
+    justify-self: stretch;
+  }
+
+  .dialogActions {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
 }
 

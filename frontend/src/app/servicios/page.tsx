@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { legalInfo } from "@/lib/legal";
-
 import styles from "./page.module.css";
 
 const serviceAreas = [
@@ -27,9 +25,9 @@ const serviceAreas = [
 ];
 
 export const metadata: Metadata = {
-  title: `Servicios | ${legalInfo.companyName}`,
+  title: "Servicios en Ciudad Real | AUREA",
   description:
-    `${legalInfo.companyName} reúne jardinería, fontanería, electricidad y obras y reformas, junto a alquiler de herramientas.`,
+    "Servicios de jardinería, fontanería, electricidad y obras y reformas en Ciudad Real capital y provincia. Conoce las áreas de trabajo de AUREA.",
   alternates: { canonical: "/servicios" },
 };
 
@@ -47,9 +45,9 @@ export default function ServicesPage() {
       <main className={styles.main}>
         <section aria-labelledby="services-title" className={styles.hero}>
           <p className={styles.eyebrow}>Servicios</p>
-          <h1 id="services-title">Soluciones para trabajos, mantenimiento y actuaciones.</h1>
+          <h1 id="services-title">Servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real</h1>
           <p className={styles.intro}>
-            AUREA reúne distintos servicios para viviendas, terrenos e instalaciones. Cuéntanos qué necesitas y valoraremos la mejor forma de ayudarte.
+            AUREA reúne distintos servicios para viviendas, terrenos e instalaciones en Ciudad Real capital y provincia. Cuéntanos qué trabajo necesitas y valoraremos la mejor forma de ayudarte.
           </p>
           <div className={styles.heroActions}>
             <Link className={styles.primaryAction} href="/contacto">
@@ -94,7 +92,7 @@ export default function ServicesPage() {
             <p className={styles.eyebrow}>Áreas de AUREA</p>
             <h2 id="service-areas-title">Una empresa multiservicio.</h2>
             <p>
-              Además de Jardinería, AUREA ofrece Fontanería, Electricidad y Obras / Reformas como parte de sus áreas de trabajo.
+              Además de Jardinería, AUREA desarrolla Fontanería, Electricidad y Obras / Reformas como áreas de actividad en Ciudad Real capital y provincia.
             </p>
           </div>
           <div className={styles.areasGrid}>

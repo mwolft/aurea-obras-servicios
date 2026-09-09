@@ -7,6 +7,18 @@ type WorkApproach = {
   description: string;
 };
 
+type BreadcrumbItem = {
+  label: string;
+  href?: string;
+};
+
+type ContextualBlock = {
+  eyebrow: string;
+  title: string;
+  text: string;
+  items?: WorkApproach[];
+};
+
 type ServiceLandingProps = {
   className: string;
   eyebrow: string;
@@ -20,8 +32,15 @@ type ServiceLandingProps = {
   finalTitle: string;
   finalText: string;
   contactLabel: string;
+  finalContactLabel?: string;
   visualLabel: string;
   visualType: "fontaneria" | "electricidad" | "obras";
+  breadcrumb?: BreadcrumbItem[];
+  contextualBlock?: ContextualBlock;
+  sectionLabels?: {
+    focusEyebrow?: string;
+    approachEyebrow?: string;
+  };
 };
 
 function ServiceVisual({ label, type }: { label: string; type: ServiceLandingProps["visualType"] }) {
@@ -48,12 +67,32 @@ export function ServiceLanding({
   finalTitle,
   finalText,
   contactLabel,
+  finalContactLabel,
   visualLabel,
   visualType,
+  breadcrumb,
+  contextualBlock,
+  sectionLabels,
 }: Readonly<ServiceLandingProps>) {
   return (
     <div className={className}>
       <main className={styles.main}>
+        {breadcrumb ? (
+          <nav aria-label="Migas de pan" className={styles.breadcrumbs}>
+            <ol>
+              {breadcrumb.map((item, index) => {
+                const isCurrentPage = index === breadcrumb.length - 1;
+
+                return (
+                  <li aria-current={isCurrentPage ? "page" : undefined} key={item.label}>
+                    {item.href && !isCurrentPage ? <Link href={item.href}>{item.label}</Link> : item.label}
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        ) : null}
+
         <section aria-labelledby="service-title" className={styles.hero}>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>{eyebrow}</p>
@@ -73,15 +112,38 @@ export function ServiceLanding({
 
         <section aria-labelledby="focus-title" className={styles.focus}>
           <div>
-            <p className={styles.eyebrow}>Enfoque de AUREA</p>
+            <p className={styles.eyebrow}>{sectionLabels?.focusEyebrow ?? "Enfoque de AUREA"}</p>
             <h2 id="focus-title">{focusTitle}</h2>
           </div>
           <p>{focusText}</p>
         </section>
 
+        {contextualBlock ? (
+          <section
+            aria-labelledby="contextual-title"
+            className={`${styles.contextual}${contextualBlock.items ? ` ${styles.contextualWithItems}` : ""}`}
+          >
+            <div>
+              <p className={styles.eyebrow}>{contextualBlock.eyebrow}</p>
+              <h2 id="contextual-title">{contextualBlock.title}</h2>
+            </div>
+            <p>{contextualBlock.text}</p>
+            {contextualBlock.items ? (
+              <div className={styles.contextualGrid}>
+                {contextualBlock.items.map((item) => (
+                  <article className={styles.approachCard} key={item.title}>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
         <section aria-labelledby="approach-title" className={styles.approach}>
           <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}>Cómo se aborda cada consulta</p>
+            <p className={styles.eyebrow}>{sectionLabels?.approachEyebrow ?? "Cómo se aborda cada consulta"}</p>
             <h2 id="approach-title">{approachTitle}</h2>
             <p>{approachText}</p>
           </div>
@@ -111,7 +173,7 @@ export function ServiceLanding({
             <p>{finalText}</p>
           </div>
           <Link className={styles.finalAction} href="/contacto">
-            {contactLabel}
+            {finalContactLabel ?? contactLabel}
           </Link>
         </section>
       </main>

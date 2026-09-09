@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { RentalToolDetails } from "@/components/rental-tool-details";
 import { getCategorySlug, getToolIdFromSlug, getToolPublicPath, getToolSlug } from "@/lib/category-slug";
 import { getCatalogTool } from "@/lib/api";
-import { legalInfo } from "@/lib/legal";
+import { getRentalProductPageContent } from "@/lib/rental-product-content";
 
 import styles from "./page.module.css";
 
@@ -43,12 +43,14 @@ export async function generateMetadata({ params }: RentalToolPublicPageProps): P
     return {};
   }
 
-  const description = result.tool.description
-    ? result.tool.description
-    : `Consulta ${result.tool.name}, una herramienta de la categoría ${result.tool.category}.`;
+  const content = getRentalProductPageContent(result.tool);
+  const description =
+    content.metaDescription ??
+    result.tool.description ??
+    `Consulta ${result.tool.name}, una herramienta de la categoría ${result.tool.category}.`;
 
   return {
-    title: `${result.tool.name} | Alquiler | ${legalInfo.companyName}`,
+    title: content.metaTitle ?? `Alquiler de ${result.tool.name} | AUREA`,
     description,
     alternates: { canonical: getToolPublicPath(result.tool) },
   };

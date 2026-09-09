@@ -180,47 +180,80 @@
 }
 
 .rentalNavGroup {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
 }
 
-.desktopNavigation .machineryNavLink,
-.desktopNavigation .machineryNavLink[aria-current="page"],
-.desktopNavigation .toolsNavLink,
-.desktopNavigation .toolsNavLink[aria-current="page"] {
+.desktopRentalNavGroup {
+  gap: 0.2rem;
+}
+
+.desktopNavigation .rentalHubLink,
+.desktopNavigation .rentalHubLink[aria-current="page"],
+.rentalToggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 2.5rem;
-  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-accent);
   border-radius: var(--radius-sm);
+  color: var(--color-surface);
+  background: var(--color-accent);
   font-weight: 700;
   text-decoration: none;
 }
 
-.desktopNavigation .machineryNavLink,
-.desktopNavigation .machineryNavLink[aria-current="page"] {
-  color: var(--color-surface);
-  background: var(--color-accent);
+.desktopNavigation .rentalHubLink,
+.desktopNavigation .rentalHubLink[aria-current="page"] {
+  padding: 0.45rem 0.7rem;
 }
 
-.desktopNavigation .machineryNavLink:hover,
-.desktopNavigation .machineryNavLink[aria-current="page"]:hover {
+.rentalToggle {
+  width: 2.5rem;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.desktopNavigation .rentalHubLink:hover,
+.desktopNavigation .rentalHubLink[aria-current="page"]:hover,
+.rentalToggle:hover {
   color: var(--color-surface);
   background: var(--color-accent-dark);
 }
 
-.desktopNavigation .toolsNavLink,
-.desktopNavigation .toolsNavLink[aria-current="page"] {
+.rentalCategoryMenu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 40;
+  display: grid;
+  min-width: 12rem;
+  padding: 0.5rem;
   border: 1px solid var(--color-accent);
-  color: var(--color-accent);
-  background: transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
-.desktopNavigation .toolsNavLink:hover,
-.desktopNavigation .toolsNavLink[aria-current="page"]:hover {
-  color: var(--color-surface);
-  background: var(--color-accent);
+.desktopNavigation .rentalCategoryLink {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.desktopNavigation .rentalCategoryLink:hover,
+.desktopNavigation .rentalCategoryLink[aria-current="page"] {
+  color: var(--color-primary);
+  background: #fff0e6;
+  text-decoration: none;
 }
 
 .loading {
@@ -415,46 +448,57 @@
     font-weight: 700;
   }
 
-  .rentalNavGroup {
+  .mobileRentalNavGroup {
     display: grid;
     gap: 0.25rem;
     width: 100%;
     margin: 0.25rem 0;
   }
 
-  .mobileNavigation .machineryNavLink,
-  .mobileNavigation .machineryNavLink[aria-current="page"],
-  .mobileNavigation .toolsNavLink,
-  .mobileNavigation .toolsNavLink[aria-current="page"] {
+  .mobileNavigation .rentalHubLink,
+  .mobileNavigation .rentalHubLink[aria-current="page"] {
+    display: flex;
+    align-items: center;
     justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
     border-radius: var(--radius-sm);
+    color: var(--color-surface) !important;
+    background: var(--color-accent);
     font-weight: 700;
     text-decoration: none;
   }
 
-  .mobileNavigation .machineryNavLink,
-  .mobileNavigation .machineryNavLink[aria-current="page"] {
-    color: var(--color-surface) !important;
-    background: var(--color-accent);
-  }
-
-  .mobileNavigation .machineryNavLink:hover,
-  .mobileNavigation .machineryNavLink[aria-current="page"]:hover {
+  .mobileNavigation .rentalHubLink:hover,
+  .mobileNavigation .rentalHubLink[aria-current="page"]:hover {
     color: var(--color-surface) !important;
     background: var(--color-accent-dark);
   }
 
-  .mobileNavigation .toolsNavLink,
-  .mobileNavigation .toolsNavLink[aria-current="page"] {
-    border: 1px solid var(--color-accent);
-    color: var(--color-accent) !important;
-    background: transparent;
+  .rentalCategoryLinks {
+    display: grid;
+    gap: 0.25rem;
+    margin-left: 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid rgba(255, 98, 0, 0.42);
   }
 
-  .mobileNavigation .toolsNavLink:hover,
-  .mobileNavigation .toolsNavLink[aria-current="page"]:hover {
-    color: var(--color-surface) !important;
-    background: var(--color-accent);
+  .mobileNavigation .rentalCategoryLink,
+  .mobileNavigation .rentalCategoryLink[aria-current="page"] {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: var(--radius-sm);
+    color: var(--color-primary) !important;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .mobileNavigation .rentalCategoryLink:hover,
+  .mobileNavigation .rentalCategoryLink[aria-current="page"]:hover {
+    color: var(--color-primary) !important;
+    background: #fff0e6;
   }
 
   .mobileEmail {

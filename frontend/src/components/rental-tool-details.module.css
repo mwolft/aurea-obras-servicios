@@ -20,7 +20,14 @@
 .description { color: var(--color-text-muted); font-size: 1.05rem; line-height: 1.65; }
 .pricePanel { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); padding: var(--space-4) 0; border-block: 1px solid var(--color-border); }
 .pricePanel div { display: grid; gap: 0.3rem; } .pricePanel span { color: var(--color-text-muted); font-size: 0.85rem; font-weight: 700; } .pricePanel strong { color: var(--color-primary); font-size: 1.45rem; } .pricePanel small { color: var(--color-text-muted); font-size: 0.8rem; }
+.depositNotice { display: block; max-width: 18rem; margin-top: 0.2rem; line-height: 1.45; }
 .fulfillment { display: grid; gap: var(--space-3); } .fulfillment h2 { color: var(--color-primary); font-size: 1.15rem; }
 .fulfillment ul { display: grid; gap: 0.75rem; padding: 0; list-style: none; } .fulfillment li { display: flex; justify-content: space-between; gap: var(--space-4); color: var(--color-text-muted); font-size: 0.92rem; } .fulfillment strong { color: var(--color-text); } .fulfillment span { text-align: right; }
+.transportNotice { color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.5; }
+.editorial { display: grid; gap: var(--space-3); max-width: 52rem; padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-left: 0.3rem solid var(--color-accent); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.editorial h2 { color: var(--color-primary); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.035em; }
+.editorial p { color: var(--color-text-muted); line-height: 1.65; }
+.categoryLink { width: fit-content; margin-top: var(--space-2); color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 0.3rem; }
+.categoryLink:hover { color: var(--color-accent-dark); }
 @media (max-width: 900px) { .product { grid-template-columns: 1fr; } .mainImage, .placeholder { min-height: 24rem; } }
-@media (max-width: 600px) { .mainImage, .placeholder { min-height: 18rem; } .overview { padding: 1.5rem; } .fulfillment li { align-items: start; flex-direction: column; gap: 0.2rem; } .fulfillment span { text-align: left; } }
+@media (max-width: 600px) { .mainImage, .placeholder { min-height: 18rem; } .overview { padding: 1.5rem; } .pricePanel { grid-template-columns: 1fr; } .fulfillment li { align-items: start; flex-direction: column; gap: 0.2rem; } .fulfillment span { text-align: left; } }
