@@ -214,7 +214,7 @@
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
 
-.rentalToggle {
+.desktopNavigation .rentalToggle {
   width: 2.5rem;
   padding: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.35);
@@ -231,10 +231,22 @@
   background: var(--color-accent-dark);
 }
 
-.desktopNavigation .rentalHubLink:hover,
-.desktopNavigation .rentalHubLink[aria-current="page"]:hover,
-.desktopNavigation .rentalToggle:hover:not(:disabled) {
+.desktopRentalNavGroup:hover .rentalToggle {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.desktopRentalNavGroup:focus-within .rentalToggle {
   color: var(--color-surface);
+}
+
+.desktopNavigation .rentalHubLink:hover,
+.desktopNavigation .rentalHubLink[aria-current="page"]:hover {
+  color: var(--color-surface);
+  background: transparent;
+}
+
+.desktopNavigation .rentalToggle:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.88);
   background: transparent;
 }
 
