@@ -57,12 +57,13 @@ export function ChevronDownIcon(props: IconProps) {
 export function MachineryIcon(props: IconProps) {
   return (
     <BaseIcon {...props}>
-      <path d="M3 18h13" />
-      <path d="M5 18v-5h6l2 5" />
-      <path d="M11 13V8h4l3 5" />
-      <path d="M15 8V5h3" />
-      <circle cx="7" cy="19" r="1.5" />
-      <circle cx="15" cy="19" r="1.5" />
+      <path d="M3 19h11" />
+      <path d="M4 19v-2.5h9V19" />
+      <path d="M6 16.5V9h6v7.5" />
+      <path d="M12 10h3l3 3-2 2" />
+      <path d="m16 15 3 4h2" />
+      <path d="M12 9V6h3" />
+      <path d="M8.5 12.5H12" />
     </BaseIcon>
   );
 }
@@ -70,12 +71,10 @@ export function MachineryIcon(props: IconProps) {
 export function ToolsIcon(props: IconProps) {
   return (
     <BaseIcon {...props}>
-      <path d="m14.5 5.5 4 4" />
-      <path d="m6 18 10-10" />
-      <path d="m5 5 3 3" />
-      <path d="m4.5 8.5 4-4" />
-      <path d="m14 16 3 3" />
-      <path d="m16 14 4 4" />
+      <path d="m14 5 5 5" />
+      <path d="m16 4-3 3 5 5 3-3Z" />
+      <path d="m15 10-9 9" />
+      <path d="M7.5 4.5a4 4 0 0 0 5 5L5.2 16.8a2.1 2.1 0 0 0 3 3l7.3-7.3a4 4 0 0 0 5-5l-2.4 2.4-3-3Z" />
     </BaseIcon>
   );
 }
