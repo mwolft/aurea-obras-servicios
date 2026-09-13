@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
@@ -29,8 +30,26 @@ RESERVATION_STATUS_LABELS = {
 }
 
 
+# Reservation dates are a customer-facing, calendar-date concept. Keep their
+# boundary aligned with the operational timezone rather than the UTC server
+# date so a booking cannot become invalid or valid at the wrong local midnight.
+OPERATIONAL_TIMEZONE = ZoneInfo("Europe/Madrid")
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def operational_today(now: datetime | None = None) -> date:
+    """Return today's calendar date in AUREA's operational timezone.
+
+    Test callers may pass a deterministic instant. Naive values are interpreted
+    as UTC, consistently with the rest of the backend's persisted timestamps.
+    """
+    current_time = utc_now() if now is None else now
+    if current_time.tzinfo is None:
+        current_time = current_time.replace(tzinfo=timezone.utc)
+    return current_time.astimezone(OPERATIONAL_TIMEZONE).date()
 
 
 def is_pending_payment_expired(

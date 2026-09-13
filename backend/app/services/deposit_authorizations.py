@@ -175,6 +175,17 @@ def _retrieve_checkout(checkout_id: str) -> Any:
         raise StripeCheckoutError("Stripe deposit Checkout could not be retrieved.") from error
 
 
+def _retrieve_payment_intent(payment_intent_id: str) -> Any:
+    """Read Stripe's source of truth before replacing a stale authorization."""
+    stripe.api_key = _stripe_secret_key()
+    try:
+        return stripe.PaymentIntent.retrieve(payment_intent_id)
+    except stripe.StripeError as error:
+        raise DepositAuthorizationError(
+            "No se ha podido comprobar el estado de la autorización anterior en Stripe."
+        ) from error
+
+
 def _latest_deposit_payment(session: Session, reservation_id: int, *, lock: bool = False) -> Payment | None:
     statement = select(Payment).where(
         Payment.reservation_id == reservation_id,
@@ -184,6 +195,41 @@ def _latest_deposit_payment(session: Session, reservation_id: int, *, lock: bool
     if lock:
         statement = statement.with_for_update()
     return session.execute(statement).scalars().first()
+
+
+def _deposit_payments(session: Session, reservation_id: int, *, lock: bool = False) -> list[Payment]:
+    """Return the complete deposit history, newest first, for safety checks."""
+    statement = select(Payment).where(
+        Payment.reservation_id == reservation_id,
+        Payment.provider == PAYMENT_PROVIDER_STRIPE,
+        Payment.purpose == PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+    ).order_by(Payment.id.desc())
+    if lock:
+        statement = statement.with_for_update()
+    return list(session.execute(statement).scalars())
+
+
+def _reconcile_expired_authorization(payment: Payment) -> bool:
+    """Mark an elapsed card hold terminal only after Stripe confirms it.
+
+    The old row deliberately remains intact for accounting and webhook audit
+    history. A new authorization can be created only after this transition.
+    """
+    if not payment.external_payment_id:
+        raise DepositAuthorizationError(
+            "La autorización anterior requiere revisión antes de volver a intentarlo."
+        )
+    payment_intent = _retrieve_payment_intent(payment.external_payment_id)
+    stripe_status = _object_value(payment_intent, "status")
+    if stripe_status == "canceled":
+        payment.status = PAYMENT_STATUS_AUTHORIZATION_EXPIRED
+        return True
+    if stripe_status == "succeeded":
+        payment.status = PAYMENT_STATUS_REQUIRES_REVIEW
+        return False
+    raise DepositAuthorizationError(
+        "La autorización anterior sigue activa en Stripe y no puede sustituirse todavía."
+    )
 
 
 def start_or_recover_deposit_checkout(
@@ -196,6 +242,8 @@ def start_or_recover_deposit_checkout(
     """Create one card-only, manual-capture Checkout session for the deposit."""
     payment_session = db.session if session is None else session
     current_time = utc_now() if now is None else now
+    deferred_error: ReservationPaymentStateError | None = None
+    checkout_url: str | None = None
     with payment_session.begin():
         reservation = payment_session.execute(
             select(Reservation).where(Reservation.id == reservation_id).with_for_update()
@@ -205,47 +253,87 @@ def start_or_recover_deposit_checkout(
         if not is_admin and (reservation.user_id is None or reservation.user_id != user_id):
             raise ReservationPaymentNotFoundError
         deposit_amount = _assert_eligible(payment_session, reservation)
-        payment = _latest_deposit_payment(payment_session, reservation.id, lock=True)
+        payments = _deposit_payments(payment_session, reservation.id, lock=True)
+        payment = payments[0] if payments else None
+        # A reservation lock serializes normal starts. This second check also
+        # protects against inconsistent historical data: never create another
+        # hold while any older authorization can still charge a card.
+        for previous_payment in payments[1:]:
+            if previous_payment.status in {
+                PAYMENT_STATUS_PENDING_AUTHORIZATION,
+                PAYMENT_STATUS_AUTHORIZED,
+                PAYMENT_STATUS_REQUIRES_REVIEW,
+            }:
+                raise ReservationPaymentStateError(
+                    "Existe una autorización de fianza anterior que requiere revisión."
+                )
         if payment is not None:
             if payment.status == PAYMENT_STATUS_AUTHORIZED:
-                raise ReservationPaymentStateError("La fianza ya está autorizada.")
-            if payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION and payment.provider_checkout_id:
-                checkout = _retrieve_checkout(payment.provider_checkout_id)
-                checkout_status = _object_value(checkout, "status")
-                if checkout_status == "open":
-                    return _checkout_url(checkout)
-                if checkout_status == "complete":
-                    raise ReservationPaymentStateError(
-                        "La autorización está pendiente de confirmación por Stripe."
+                if not _capture_window_has_expired(payment, current_time):
+                    raise ReservationPaymentStateError("La fianza ya está autorizada.")
+                if not _reconcile_expired_authorization(payment):
+                    # Commit the requires_review state before reporting the
+                    # error; raising inside this transaction would roll it back.
+                    deferred_error = ReservationPaymentStateError(
+                        "Stripe indica que la autorización anterior se completó y requiere revisión."
                     )
-                # A Checkout session has its own short-lived URL. Once Stripe
-                # expires it, it cannot be reused for a later handover.
-                payment.status = PAYMENT_STATUS_AUTHORIZATION_EXPIRED
-            if payment.status in {PAYMENT_STATUS_CAPTURED, PAYMENT_STATUS_CAPTURED_PARTIALLY}:
-                raise ReservationPaymentStateError("La fianza ya fue capturada.")
-            if payment.status == PAYMENT_STATUS_RELEASED:
-                raise ReservationPaymentStateError("La fianza ya fue liberada.")
-        payment = Payment(
-            reservation_id=reservation.id,
-            provider=PAYMENT_PROVIDER_STRIPE,
-            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
-            status=PAYMENT_STATUS_PENDING_AUTHORIZATION,
-            amount=deposit_amount,
-            currency=DEPOSIT_CURRENCY,
-            idempotency_key=uuid.uuid4().hex,
-            # This only controls the hosted Checkout session. The subsequent card
-            # hold is governed solely by Stripe's capture_before value.
-            expires_at=current_time + PAYMENT_WINDOW,
-        )
-        payment_session.add(payment)
-        payment_session.flush()
-        tool = payment_session.get(Tool, reservation.tool_id)
-        checkout = _create_checkout(payment, reservation, tool)
-        checkout_id = _object_value(checkout, "id")
-        if not isinstance(checkout_id, str) or not checkout_id:
-            raise StripeCheckoutError("Stripe did not return a deposit Checkout ID.")
-        payment.provider_checkout_id = checkout_id
-        return _checkout_url(checkout)
+            if deferred_error is None:
+                if payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION and payment.provider_checkout_id:
+                    checkout = _retrieve_checkout(payment.provider_checkout_id)
+                    checkout_status = _object_value(checkout, "status")
+                    if checkout_status == "open":
+                        return _checkout_url(checkout)
+                    if checkout_status == "complete":
+                        raise ReservationPaymentStateError(
+                            "La autorización está pendiente de confirmación por Stripe."
+                        )
+                    # A Checkout session has its own short-lived URL. Once Stripe
+                    # expires it, it cannot be reused for a later handover.
+                    payment.status = PAYMENT_STATUS_AUTHORIZATION_EXPIRED
+                elif payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
+                    raise ReservationPaymentStateError(
+                        "La autorización de fianza anterior requiere revisión antes de volver a intentarlo."
+                    )
+                if payment.status == PAYMENT_STATUS_REQUIRES_REVIEW:
+                    raise ReservationPaymentStateError("La fianza requiere revisión antes de volver a intentarlo.")
+                if payment.status in {PAYMENT_STATUS_CAPTURED, PAYMENT_STATUS_CAPTURED_PARTIALLY}:
+                    raise ReservationPaymentStateError("La fianza ya fue capturada.")
+                if payment.status == PAYMENT_STATUS_RELEASED:
+                    raise ReservationPaymentStateError("La fianza ya fue liberada.")
+                if payment.status not in {
+                    PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
+                    PAYMENT_STATUS_AUTHORIZATION_FAILED,
+                }:
+                    raise ReservationPaymentStateError(
+                        "La autorización de fianza anterior no puede sustituirse todavía."
+                    )
+        if deferred_error is None:
+            payment = Payment(
+                reservation_id=reservation.id,
+                provider=PAYMENT_PROVIDER_STRIPE,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+                status=PAYMENT_STATUS_PENDING_AUTHORIZATION,
+                amount=deposit_amount,
+                currency=DEPOSIT_CURRENCY,
+                idempotency_key=uuid.uuid4().hex,
+                # This only controls the hosted Checkout session. The subsequent card
+                # hold is governed solely by Stripe's capture_before value.
+                expires_at=current_time + PAYMENT_WINDOW,
+            )
+            payment_session.add(payment)
+            payment_session.flush()
+            tool = payment_session.get(Tool, reservation.tool_id)
+            checkout = _create_checkout(payment, reservation, tool)
+            checkout_id = _object_value(checkout, "id")
+            if not isinstance(checkout_id, str) or not checkout_id:
+                raise StripeCheckoutError("Stripe did not return a deposit Checkout ID.")
+            payment.provider_checkout_id = checkout_id
+            checkout_url = _checkout_url(checkout)
+    if deferred_error is not None:
+        raise deferred_error
+    if checkout_url is None:
+        raise StripeCheckoutError("Stripe did not return a deposit Checkout URL.")
+    return checkout_url
 
 
 def _capture_before(payment_intent: Any) -> datetime | None:

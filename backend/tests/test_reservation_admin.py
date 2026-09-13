@@ -12,7 +12,13 @@ os.environ["APP_ENV"] = "development"
 from app import create_app
 from app.admin import ReservationAdmin
 from app.extensions import db
-from app.models import Reservation, Tool, User
+from app.models import Payment, Reservation, Tool, User
+from app.services.payment_domain import (
+    PAYMENT_PROVIDER_STRIPE,
+    PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+    PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
+    PAYMENT_STATUS_AUTHORIZED,
+)
 from app.services.availability import is_tool_available
 from app.services.reservations import cancel_reservation, review_delivery_reservation
 
@@ -292,6 +298,50 @@ class ReservationAdminTestCase(unittest.TestCase):
         response = self.post_admin(f"/admin/reservation/complete-rental/{reservation_id}")
         self.assertEqual(response.status_code, 302)
         self.assertEqual(db.session.get(Reservation, reservation_id).status, "completed")
+
+    def test_admin_shows_reauthorize_only_for_an_expired_deposit(self):
+        expired_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        active_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        db.session.add_all([
+            Payment(
+                reservation_id=expired_id,
+                provider=PAYMENT_PROVIDER_STRIPE,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+                status=PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
+                amount=Decimal("75.00"),
+                currency="eur",
+                idempotency_key="expired-admin-deposit",
+                expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            ),
+            Payment(
+                reservation_id=active_id,
+                provider=PAYMENT_PROVIDER_STRIPE,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+                status=PAYMENT_STATUS_AUTHORIZED,
+                amount=Decimal("75.00"),
+                currency="eur",
+                idempotency_key="active-admin-deposit",
+                external_payment_id="pi_active_admin",
+                capture_before=datetime.now(timezone.utc) + timedelta(days=1),
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            ),
+        ])
+        db.session.commit()
+
+        response = self.client.get("/admin/reservation/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            f"/admin/reservation/authorize-deposit/{expired_id}".encode(), response.data
+        )
+        self.assertIn(b"Reautorizar fianza", response.data)
+        self.assertNotIn(
+            f"/admin/reservation/authorize-deposit/{active_id}".encode(), response.data
+        )
 
     def test_cancelled_or_expired_reservation_cannot_be_cancelled_again(self):
         cancelled_id = self.create_cancellable_reservation("cancelled")

@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import date, timedelta
 from decimal import Decimal
 
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -54,9 +55,10 @@ class AuthenticationApiTestCase(unittest.TestCase):
 
     @staticmethod
     def reservation_payload(**overrides):
+        start_date = date.today() + timedelta(days=14)
         values = {
-            "start_date": "2026-09-10",
-            "end_date": "2026-09-12",
+            "start_date": start_date.isoformat(),
+            "end_date": (start_date + timedelta(days=2)).isoformat(),
             "customer_name": "Reservation Customer",
             "customer_email": "reservation@example.com",
             "customer_phone": "600000000",

@@ -10,7 +10,11 @@ from app import create_app
 from app.extensions import db
 from app.models import Reservation, Tool
 from app.services.availability import is_tool_available
-from app.services.reservations import review_delivery_reservation
+from app.services.reservations import (
+    ReservationDateValidationError,
+    create_reservation as create_reservation_service,
+    review_delivery_reservation,
+)
 
 
 class ReservationApiTestCase(unittest.TestCase):
@@ -83,9 +87,10 @@ class ReservationApiTestCase(unittest.TestCase):
 
     @staticmethod
     def request_payload(**overrides):
+        start_date = date.today() + timedelta(days=14)
         values = {
-            "start_date": "2026-08-20",
-            "end_date": "2026-08-22",
+            "start_date": start_date.isoformat(),
+            "end_date": (start_date + timedelta(days=2)).isoformat(),
             "customer_name": "Customer Test",
             "customer_email": "customer@example.com",
             "customer_phone": "600000000",
@@ -227,9 +232,14 @@ class ReservationApiTestCase(unittest.TestCase):
 
     def test_confirmed_overlapping_reservation_returns_conflict(self):
         tool = self.create_tool()
-        self.create_reservation(tool, date(2026, 8, 20), date(2026, 8, 22))
+        start_date = date.today() + timedelta(days=14)
+        self.create_reservation(tool, start_date, start_date + timedelta(days=2))
 
-        response = self.create_request(tool, start_date="2026-08-22", end_date="2026-08-24")
+        response = self.create_request(
+            tool,
+            start_date=(start_date + timedelta(days=2)).isoformat(),
+            end_date=(start_date + timedelta(days=4)).isoformat(),
+        )
 
         self.assertEqual(response.status_code, 409)
 
@@ -253,8 +263,11 @@ class ReservationApiTestCase(unittest.TestCase):
 
         no_json_response = self.client.post(f"/api/tools/{tool.id}/reservations")
         malformed_date_response = self.create_request(tool, start_date="20-08-2026")
+        future_start = date.today() + timedelta(days=14)
         inverted_range_response = self.create_request(
-            tool, start_date="2026-08-22", end_date="2026-08-20"
+            tool,
+            start_date=(future_start + timedelta(days=2)).isoformat(),
+            end_date=future_start.isoformat(),
         )
         invalid_method_response = self.create_request(tool, fulfillment_method="courier")
 
@@ -262,6 +275,63 @@ class ReservationApiTestCase(unittest.TestCase):
         self.assertEqual(malformed_date_response.status_code, 400)
         self.assertEqual(inverted_range_response.status_code, 400)
         self.assertEqual(invalid_method_response.status_code, 400)
+
+    def test_api_rejects_past_dates_and_allows_today_inclusive_range(self):
+        tool = self.create_tool()
+        yesterday = date.today() - timedelta(days=1)
+        today = date.today()
+
+        yesterday_response = self.create_request(
+            tool, start_date=yesterday.isoformat(), end_date=today.isoformat()
+        )
+        past_range_response = self.create_request(
+            tool,
+            start_date=(today - timedelta(days=2)).isoformat(),
+            end_date=yesterday.isoformat(),
+        )
+        today_response = self.create_request(
+            tool, start_date=today.isoformat(), end_date=today.isoformat()
+        )
+
+        self.assertEqual(yesterday_response.status_code, 400)
+        self.assertIn("fecha de inicio", yesterday_response.get_json()["error"].lower())
+        self.assertEqual(past_range_response.status_code, 400)
+        self.assertEqual(today_response.status_code, 201)
+        self.assertEqual(today_response.get_json()["start_date"], today.isoformat())
+        self.assertEqual(today_response.get_json()["end_date"], today.isoformat())
+
+    def test_service_rejects_past_dates_using_europe_madrid_boundary(self):
+        tool = self.create_tool()
+        tool_id = tool.id
+        # 22:30 UTC is already the next civil day in Madrid during summer time.
+        madrid_next_day = datetime(2026, 6, 1, 22, 30, tzinfo=timezone.utc)
+        with self.assertRaises(ReservationDateValidationError):
+            create_reservation_service(
+                tool_id,
+                date(2026, 6, 1),
+                date(2026, 6, 1),
+                "Cliente",
+                "cliente@example.com",
+                "600000000",
+                True,
+                True,
+                "pickup",
+                now=madrid_next_day,
+            )
+        db.session.rollback()
+        reservation = create_reservation_service(
+            tool_id,
+            date(2026, 6, 2),
+            date(2026, 6, 2),
+            "Cliente",
+            "cliente@example.com",
+            "600000000",
+            True,
+            True,
+            "pickup",
+            now=madrid_next_day,
+        )
+        self.assertEqual(reservation.start_date, date(2026, 6, 2))
 
     def test_customer_data_and_acceptances_are_required(self):
         tool = self.create_tool()

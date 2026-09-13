@@ -10,6 +10,7 @@ from app.models import Reservation, Tool
 from app.services.availability import get_tool_unavailable_ranges, has_active_rental, is_tool_available
 from app.services.cloudinary_storage import get_public_image_url
 from app.services.reservations import (
+    ReservationDateValidationError,
     ReservationToolNotFoundError,
     ReservationFulfillmentUnavailableError,
     ReservationUnavailableError,
@@ -288,6 +289,8 @@ def create_tool_reservation(tool_id: int):
         )
     except ReservationToolNotFoundError:
         abort(404)
+    except ReservationDateValidationError as error:
+        return jsonify({"error": str(error)}), 400
     except (ReservationUnavailableError, ReservationFulfillmentUnavailableError):
         return jsonify({"error": "La herramienta no está disponible para las fechas seleccionadas."}), 409
 

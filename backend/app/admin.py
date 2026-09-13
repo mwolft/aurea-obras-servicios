@@ -68,6 +68,7 @@ from app.services.stripe_checkout import (
 from app.services.payment_domain import (
     PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
     PAYMENT_STATUS_AUTHORIZED,
+    PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
     PAYMENT_STATUS_CAPTURED,
     PAYMENT_STATUS_CAPTURED_PARTIALLY,
     PAYMENT_STATUS_PENDING_AUTHORIZATION,
@@ -679,10 +680,7 @@ class ReservationAdmin(SecureModelView):
         return label
 
     def _deposit_action_link(self, reservation: Reservation):
-        if reservation.status not in {
-            "confirmed",
-            RESERVATION_STATUS_RETURNED_PENDING_CLOSURE,
-        } or reservation.deposit_amount_snapshot is None or Decimal(reservation.deposit_amount_snapshot) <= 0:
+        if reservation.status != "confirmed" or reservation.deposit_amount_snapshot is None or Decimal(reservation.deposit_amount_snapshot) <= 0:
             return "—"
         payment = self._deposit_payment(reservation)
         if payment is None or payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
@@ -690,13 +688,17 @@ class ReservationAdmin(SecureModelView):
             return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Autorizar fianza</a>')
         if payment.status == PAYMENT_STATUS_AUTHORIZED:
             if self._deposit_capture_window_expired(payment):
-                return "—"
+                url = url_for(".authorize_deposit", reservation_id=reservation.id)
+                return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Reautorizar fianza</a>')
             release_url = url_for(".release_deposit", reservation_id=reservation.id)
             capture_url = url_for(".capture_deposit", reservation_id=reservation.id)
             return Markup(
                 f'<a class="btn btn-default btn-xs" href="{release_url}">Liberar</a> '
                 f'<a class="btn btn-warning btn-xs" href="{capture_url}">Capturar</a>'
             )
+        if payment.status == PAYMENT_STATUS_AUTHORIZATION_EXPIRED:
+            url = url_for(".authorize_deposit", reservation_id=reservation.id)
+            return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Reautorizar fianza</a>')
         return "—"
 
     def _rental_action_link(self, reservation: Reservation):

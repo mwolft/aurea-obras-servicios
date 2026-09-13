@@ -1,7 +1,7 @@
 import os
 import threading
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -61,6 +61,8 @@ class PostgreSQLReservationConcurrencyTestCase(unittest.TestCase):
 
     def test_only_one_concurrent_reservation_is_created(self):
         tool_id = None
+        reservation_start = date.today() + timedelta(days=14)
+        reservation_end = reservation_start + timedelta(days=2)
         try:
             setup_session = self.Session()
             try:
@@ -92,8 +94,8 @@ class PostgreSQLReservationConcurrencyTestCase(unittest.TestCase):
                     start_barrier.wait()
                     reservation = create_reservation(
                         tool_id,
-                        date(2026, 8, 20),
-                        date(2026, 8, 22),
+                        reservation_start,
+                        reservation_end,
                         "Concurrency Test",
                         "concurrency@example.com",
                         "600000000",
@@ -151,6 +153,8 @@ class PostgreSQLReservationConcurrencyTestCase(unittest.TestCase):
 
     def test_reservation_and_tool_block_cannot_be_created_for_the_same_dates(self):
         tool_id = None
+        reservation_start = date.today() + timedelta(days=14)
+        reservation_end = reservation_start + timedelta(days=2)
         try:
             setup_session = self.Session()
             try:
@@ -182,8 +186,8 @@ class PostgreSQLReservationConcurrencyTestCase(unittest.TestCase):
                     start_barrier.wait()
                     create_reservation(
                         tool_id,
-                        date(2026, 8, 20),
-                        date(2026, 8, 22),
+                        reservation_start,
+                        reservation_end,
                         "Concurrency Test",
                         "concurrency@example.com",
                         "600000000",
@@ -209,8 +213,8 @@ class PostgreSQLReservationConcurrencyTestCase(unittest.TestCase):
                     start_barrier.wait()
                     create_tool_block(
                         tool_id,
-                        date(2026, 8, 20),
-                        date(2026, 8, 22),
+                        reservation_start,
+                        reservation_end,
                         "Mantenimiento de concurrencia",
                         session=session,
                     )

@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.extensions import db
 from app.models import Reservation, Tool
-from app.services.availability import has_blocking_reservation, has_tool_block, utc_now
+from app.services.availability import (
+    has_blocking_reservation,
+    has_tool_block,
+    operational_today,
+    utc_now,
+)
 from app.services.payment_domain import (
     PAYMENT_WINDOW,
     RESERVATION_STATUS_CANCELLED,
@@ -42,6 +47,24 @@ class ReservationCancellationError(Exception):
     """Raised when a reservation cannot transition to cancelled."""
 
 
+class ReservationDateValidationError(Exception):
+    """Raised when requested dates cannot create a new reservation."""
+
+
+def _validate_new_reservation_dates(
+    start_date: date, end_date: date, current_time: datetime
+) -> None:
+    """Enforce the public booking calendar rules at the domain boundary."""
+    if end_date < start_date:
+        raise ReservationDateValidationError(
+            "La fecha de devolución debe ser igual o posterior a la fecha de inicio."
+        )
+    if start_date < operational_today(current_time):
+        raise ReservationDateValidationError(
+            "La fecha de inicio no puede ser anterior a la fecha actual."
+        )
+
+
 def apply_quote(reservation: Reservation, quote: ReservationQuote) -> None:
     """Copy the authoritative quote to immutable-in-practice reservation snapshots."""
     reservation.billable_km = quote.billable_km
@@ -75,6 +98,8 @@ def create_reservation(
 ) -> Reservation:
     """Create a pickup checkout or delivery review after serializing writes for its tool."""
     reservation_session = db.session if session is None else session
+    current_time = utc_now() if now is None else now
+    _validate_new_reservation_dates(start_date, end_date, current_time)
 
     with reservation_session.begin():
         tool = (
@@ -99,8 +124,6 @@ def create_reservation(
             not tool.delivery_available or tool.delivery_price_per_km is None
         ):
             raise ReservationFulfillmentUnavailableError
-
-        current_time = utc_now() if now is None else now
 
         if has_blocking_reservation(
             reservation_session,

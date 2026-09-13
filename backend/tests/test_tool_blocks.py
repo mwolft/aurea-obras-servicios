@@ -98,9 +98,10 @@ class ToolBlockTestCase(unittest.TestCase):
 
     @staticmethod
     def reservation_payload(**overrides):
+        start_date = date.today() + timedelta(days=14)
         values = {
-            "start_date": "2026-08-20",
-            "end_date": "2026-08-22",
+            "start_date": start_date.isoformat(),
+            "end_date": (start_date + timedelta(days=2)).isoformat(),
             "customer_name": "Customer Test",
             "customer_email": "customer@example.com",
             "customer_phone": "600000000",
@@ -206,7 +207,8 @@ class ToolBlockTestCase(unittest.TestCase):
 
     def test_reservation_overlapping_block_returns_conflict_but_outside_range_is_created(self):
         tool = self.create_tool()
-        self.create_block(tool, date(2026, 8, 20), date(2026, 8, 22))
+        start_date = date.today() + timedelta(days=14)
+        self.create_block(tool, start_date, start_date + timedelta(days=2))
         tool_id = tool.id
         db.session.remove()
 
@@ -215,7 +217,10 @@ class ToolBlockTestCase(unittest.TestCase):
         )
         outside_response = self.client.post(
             f"/api/tools/{tool_id}/reservations",
-            json=self.reservation_payload(start_date="2026-08-23", end_date="2026-08-24"),
+            json=self.reservation_payload(
+                start_date=(start_date + timedelta(days=3)).isoformat(),
+                end_date=(start_date + timedelta(days=4)).isoformat(),
+            ),
         )
 
         self.assertEqual(blocked_response.status_code, 409)
