@@ -12,6 +12,7 @@ from app.models import Payment, Reservation
 from app.services.availability import utc_now
 from app.services.payment_domain import (
     PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+    PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
     PAYMENT_STATUS_AUTHORIZED,
     PAYMENT_STATUS_CAPTURED,
     PAYMENT_STATUS_CAPTURED_PARTIALLY,
@@ -210,6 +211,10 @@ def _deposit_is_resolved_for_closure(session: Session, reservation: Reservation)
     }
 
 
+def _has_return_incident(reservation: Reservation) -> bool:
+    return bool((reservation.return_incident_notes or "").strip())
+
+
 def complete_reservation_rental(
     reservation_id: int, *, session: Session | None = None, outbox_ids: list[int] | None = None
 ) -> Reservation:
@@ -227,6 +232,50 @@ def complete_reservation_rental(
             raise RentalLifecycleError("La herramienta debe estar devuelta antes de cerrar el alquiler.")
         if not _deposit_is_resolved_for_closure(operation_session, reservation):
             raise RentalLifecycleError("La fianza todavía no está resuelta.")
+        reservation.status = RESERVATION_STATUS_COMPLETED
+        email = queue_reservation_completed(operation_session, reservation)
+        if outbox_ids is not None and email is not None:
+            outbox_ids.append(email.id)
+
+    return reservation
+
+
+def complete_reservation_without_charge_for_expired_deposit(
+    reservation_id: int, *, session: Session | None = None, outbox_ids: list[int] | None = None
+) -> Reservation:
+    """Explicitly close a returned rental after Stripe confirms its hold expired.
+
+    This is intentionally separate from the normal closure path: it does not
+    reauthorize, release, capture, or alter the expired financial record.
+    """
+    from app.services.deposit_authorizations import (
+        reconcile_expired_deposit_authorization_for_closure,
+    )
+
+    operation_session = db.session if session is None else session
+    reconcile_expired_deposit_authorization_for_closure(
+        reservation_id, session=operation_session
+    )
+
+    with operation_session.begin():
+        reservation = operation_session.execute(
+            select(Reservation).where(Reservation.id == reservation_id).with_for_update()
+        ).scalar_one_or_none()
+        if reservation is None:
+            raise ReservationOperationalNotFoundError
+        if reservation.status != RESERVATION_STATUS_RETURNED_PENDING_CLOSURE:
+            raise RentalLifecycleError("Solo una devolución pendiente de cierre puede completarse.")
+        if reservation.returned_at is None:
+            raise RentalLifecycleError("La herramienta debe estar devuelta antes de cerrar el alquiler.")
+        if _has_return_incident(reservation):
+            raise RentalLifecycleError(
+                "No se puede cerrar sin cargo una devolución con una incidencia registrada."
+            )
+        if reservation.deposit_amount_snapshot is None or Decimal(reservation.deposit_amount_snapshot) <= 0:
+            raise RentalLifecycleError("Esta acción solo corresponde a una fianza contractual caducada.")
+        payment = _latest_deposit_payment(operation_session, reservation.id)
+        if payment is None or payment.status != PAYMENT_STATUS_AUTHORIZATION_EXPIRED:
+            raise RentalLifecycleError("La fianza no está confirmada como caducada por Stripe.")
         reservation.status = RESERVATION_STATUS_COMPLETED
         email = queue_reservation_completed(operation_session, reservation)
         if outbox_ids is not None and email is not None:

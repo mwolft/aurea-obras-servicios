@@ -12,20 +12,31 @@ os.environ["APP_ENV"] = "development"
 from app import create_app
 from app.admin import ReservationAdmin
 from app.extensions import db
-from app.models import Payment, Reservation, Tool, User
+from app.models import EmailOutbox, Payment, Reservation, Tool, User
 from app.services.payment_domain import (
     PAYMENT_PROVIDER_STRIPE,
     PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+    PAYMENT_PURPOSE_RENTAL_CHARGE,
     PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
     PAYMENT_STATUS_AUTHORIZED,
+    PAYMENT_STATUS_PAID,
+    PAYMENT_STATUS_PENDING_AUTHORIZATION,
+    PAYMENT_STATUS_RELEASED,
+    PAYMENT_STATUS_REQUIRES_REVIEW,
 )
 from app.services.availability import is_tool_available
-from app.services.reservations import cancel_reservation, review_delivery_reservation
+from app.services.reservations import (
+    ReservationCancellationError,
+    cancel_reservation,
+    review_delivery_reservation,
+)
+from app.services.stripe_checkout import StripeConfigurationError
 
 
 class ReservationAdminTestCase(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
+        self.app.config["STRIPE_SECRET_KEY"] = "sk_test_reservation_admin"
         self.context = self.app.app_context()
         self.context.push()
         db.create_all()
@@ -114,6 +125,58 @@ class ReservationAdminTestCase(unittest.TestCase):
         db.session.add(reservation)
         db.session.commit()
         return reservation.id
+
+    def add_authorized_deposit(self, reservation_id: int, *, capture_before=None):
+        reservation = db.session.get(Reservation, reservation_id)
+        payment = Payment(
+            reservation_id=reservation_id,
+            provider=PAYMENT_PROVIDER_STRIPE,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            status=PAYMENT_STATUS_AUTHORIZED,
+            amount=Decimal(reservation.deposit_amount_snapshot),
+            currency="eur",
+            idempotency_key=f"authorized-admin-deposit-{reservation_id}",
+            external_payment_id=f"pi_authorized_admin_{reservation_id}",
+            authorized_amount=Decimal(reservation.deposit_amount_snapshot),
+            capture_before=capture_before or datetime.now(timezone.utc) + timedelta(days=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return payment
+
+    def add_rental_charge(self, reservation_id: int):
+        payment = Payment(
+            reservation_id=reservation_id,
+            provider=PAYMENT_PROVIDER_STRIPE,
+            purpose=PAYMENT_PURPOSE_RENTAL_CHARGE,
+            status=PAYMENT_STATUS_PAID,
+            amount=Decimal("20.00"),
+            currency="eur",
+            idempotency_key=f"paid-rental-{reservation_id}",
+            external_payment_id=f"cs_paid_rental_{reservation_id}",
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return payment
+
+    def add_pending_deposit(self, reservation_id: int):
+        reservation = db.session.get(Reservation, reservation_id)
+        payment = Payment(
+            reservation_id=reservation_id,
+            provider=PAYMENT_PROVIDER_STRIPE,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            status=PAYMENT_STATUS_PENDING_AUTHORIZATION,
+            amount=Decimal(reservation.deposit_amount_snapshot),
+            currency="eur",
+            idempotency_key=f"pending-admin-deposit-{reservation_id}",
+            provider_checkout_id=f"cs_pending_admin_{reservation_id}",
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return payment
 
     def test_admin_is_read_only_for_reservations(self):
         self.assertFalse(ReservationAdmin.can_create)
@@ -268,6 +331,175 @@ class ReservationAdminTestCase(unittest.TestCase):
         self.assertEqual(db.session.get(Reservation, pending_payment_id).status, "cancelled")
         self.assertEqual(db.session.get(Reservation, confirmed_id).status, "cancelled")
 
+    def test_cancel_paid_reservation_keeps_rental_charge_and_shows_no_refund_warning(self):
+        reservation_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("0.00")
+        )
+        rental_payment = self.add_rental_charge(reservation_id)
+        rental_payment_id = rental_payment.id
+        db.session.remove()
+
+        page = self.client.get(f"/admin/reservation/cancel/{reservation_id}")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"El alquiler ya est", page.data)
+        self.assertIn(b"no realiza ning", page.data)
+
+        response = self.post_admin(f"/admin/reservation/cancel/{reservation_id}")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "cancelled")
+        self.assertEqual(db.session.get(Payment, rental_payment_id).status, PAYMENT_STATUS_PAID)
+
+    def test_cancel_pending_deposit_expires_checkout_before_cancelling(self):
+        reservation_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        payment = self.add_pending_deposit(reservation_id)
+        payment_id = payment.id
+        checkout_id = payment.provider_checkout_id
+        db.session.remove()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.retrieve",
+            return_value={"id": checkout_id, "status": "open"},
+        ), patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.expire",
+            return_value={"id": checkout_id, "status": "expired"},
+        ) as expire_checkout:
+            page = self.client.get(f"/admin/reservation/cancel/{reservation_id}")
+            self.assertIn(b"se invalidar", page.data)
+            response = self.post_admin(f"/admin/reservation/cancel/{reservation_id}")
+
+        self.assertEqual(response.status_code, 302)
+        expire_checkout.assert_called_once_with(checkout_id)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "cancelled")
+        self.assertEqual(
+            db.session.get(Payment, payment_id).status,
+            PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
+        )
+
+    def test_cancel_authorized_deposit_releases_hold_before_cancelling(self):
+        reservation_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        payment = self.add_authorized_deposit(reservation_id)
+        payment_id = payment.id
+        payment_intent_id = payment.external_payment_id
+        db.session.remove()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.cancel",
+            return_value={"id": payment_intent_id, "status": "canceled"},
+        ) as cancel_intent:
+            page = self.client.get(f"/admin/reservation/cancel/{reservation_id}")
+            self.assertIn(b"se liberar", page.data)
+            response = self.post_admin(f"/admin/reservation/cancel/{reservation_id}")
+
+        self.assertEqual(response.status_code, 302)
+        cancel_intent.assert_called_once_with(payment_intent_id)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "cancelled")
+        self.assertEqual(db.session.get(Payment, payment_id).status, PAYMENT_STATUS_RELEASED)
+
+    def test_ambiguous_deposit_blocks_cancellation_and_is_marked_for_review(self):
+        reservation_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        payment = self.add_authorized_deposit(reservation_id)
+        payment_id = payment.id
+        payment_intent_id = payment.external_payment_id
+        db.session.remove()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.cancel",
+            return_value={"id": payment_intent_id, "status": "requires_capture"},
+        ):
+            response = self.post_admin(f"/admin/reservation/cancel/{reservation_id}")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "confirmed")
+        self.assertEqual(
+            db.session.get(Payment, payment_id).status,
+            PAYMENT_STATUS_REQUIRES_REVIEW,
+        )
+
+    def test_stripe_failure_blocks_cancellation_without_marking_the_reservation_cancelled(self):
+        reservation_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        payment = self.add_authorized_deposit(reservation_id)
+        payment_id = payment.id
+        db.session.remove()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.cancel",
+            side_effect=StripeConfigurationError("Stripe no configurado"),
+        ):
+            response = self.post_admin(f"/admin/reservation/cancel/{reservation_id}")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "confirmed")
+        self.assertEqual(
+            db.session.get(Payment, payment_id).status,
+            PAYMENT_STATUS_REQUIRES_REVIEW,
+        )
+
+    def test_expired_deposit_can_be_cancelled_but_review_deposit_cannot(self):
+        expired_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        review_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        db.session.add_all([
+            Payment(
+                reservation_id=expired_id,
+                provider=PAYMENT_PROVIDER_STRIPE,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+                status=PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
+                amount=Decimal("75.00"),
+                currency="eur",
+                idempotency_key="cancel-expired-deposit",
+                expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            ),
+            Payment(
+                reservation_id=review_id,
+                provider=PAYMENT_PROVIDER_STRIPE,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+                status=PAYMENT_STATUS_REQUIRES_REVIEW,
+                amount=Decimal("75.00"),
+                currency="eur",
+                idempotency_key="cancel-review-deposit",
+                expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            ),
+        ])
+        db.session.commit()
+        db.session.remove()
+
+        expired_response = self.post_admin(f"/admin/reservation/cancel/{expired_id}")
+        review_page = self.client.get(f"/admin/reservation/cancel/{review_id}")
+
+        self.assertEqual(expired_response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, expired_id).status, "cancelled")
+        self.assertEqual(review_page.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, review_id).status, "confirmed")
+
+    def test_repeated_cancellation_creates_one_cancellation_email(self):
+        reservation_id = self.create_cancellable_reservation("confirmed")
+        outbox_ids: list[int] = []
+        db.session.remove()
+        cancel_reservation(reservation_id, outbox_ids=outbox_ids)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "cancelled")
+        db.session.remove()
+
+        with self.assertRaises(ReservationCancellationError):
+            cancel_reservation(reservation_id, outbox_ids=[])
+
+        self.assertEqual(
+            EmailOutbox.query.filter_by(
+                event_type="reservation_cancelled", reservation_id=reservation_id
+            ).count(),
+            1,
+        )
+
     def test_admin_can_complete_the_operational_flow_for_a_zero_deposit_reservation(self):
         reservation_id = self.create_cancellable_reservation(
             "confirmed",
@@ -341,6 +573,142 @@ class ReservationAdminTestCase(unittest.TestCase):
         self.assertIn(b"Reautorizar fianza", response.data)
         self.assertNotIn(
             f"/admin/reservation/authorize-deposit/{active_id}".encode(), response.data
+        )
+
+    def test_admin_only_shows_deposit_resolution_actions_after_return(self):
+        confirmed_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        in_progress_id = self.create_cancellable_reservation(
+            "in_progress", deposit_amount_snapshot=Decimal("75.00")
+        )
+        returned_id = self.create_cancellable_reservation(
+            "returned_pending_closure",
+            deposit_amount_snapshot=Decimal("75.00"),
+            returned_at=datetime.now(timezone.utc),
+        )
+        expired_returned_id = self.create_cancellable_reservation(
+            "returned_pending_closure",
+            deposit_amount_snapshot=Decimal("75.00"),
+            returned_at=datetime.now(timezone.utc),
+        )
+        self.add_authorized_deposit(confirmed_id)
+        self.add_authorized_deposit(in_progress_id)
+        self.add_authorized_deposit(returned_id)
+        self.add_authorized_deposit(
+            expired_returned_id,
+            capture_before=datetime.now(timezone.utc) - timedelta(minutes=1),
+        )
+
+        response = self.client.get("/admin/reservation/")
+
+        self.assertEqual(response.status_code, 200)
+        for reservation_id in (confirmed_id, in_progress_id, expired_returned_id):
+            self.assertNotIn(
+                f"/admin/reservation/release-deposit/{reservation_id}".encode(), response.data
+            )
+            self.assertNotIn(
+                f"/admin/reservation/capture-deposit/{reservation_id}".encode(), response.data
+            )
+        self.assertIn(
+            f"/admin/reservation/release-deposit/{returned_id}".encode(), response.data
+        )
+        self.assertIn(
+            f"/admin/reservation/capture-deposit/{returned_id}".encode(), response.data
+        )
+        self.assertIn(
+            f"/admin/reservation/mark-delivered/{confirmed_id}".encode(), response.data
+        )
+        self.assertIn(
+            f"/admin/reservation/mark-returned/{in_progress_id}".encode(), response.data
+        )
+        self.assertIn(
+            f"/admin/reservation/complete-rental-without-charge/{expired_returned_id}".encode(),
+            response.data,
+        )
+        self.assertNotIn(
+            f"/admin/reservation/authorize-deposit/{expired_returned_id}".encode(),
+            response.data,
+        )
+
+    def test_admin_can_release_a_valid_deposit_after_return_and_close_the_rental(self):
+        reservation_id = self.create_cancellable_reservation(
+            "returned_pending_closure",
+            deposit_amount_snapshot=Decimal("75.00"),
+            returned_at=datetime.now(timezone.utc),
+        )
+        self.add_authorized_deposit(reservation_id)
+        db.session.remove()
+
+        with patch("app.services.deposit_authorizations.stripe.PaymentIntent.cancel"):
+            response = self.post_admin(f"/admin/reservation/release-deposit/{reservation_id}")
+
+        self.assertEqual(response.status_code, 302)
+        payment = Payment.query.filter_by(reservation_id=reservation_id).one()
+        self.assertEqual(payment.status, "released")
+
+        response = self.client.get("/admin/reservation/")
+        self.assertIn(f"/admin/reservation/complete-rental/{reservation_id}".encode(), response.data)
+
+        response = self.post_admin(f"/admin/reservation/complete-rental/{reservation_id}")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "completed")
+
+    def test_admin_closes_an_expired_returned_deposit_only_after_confirmation(self):
+        reservation_id = self.create_cancellable_reservation(
+            "returned_pending_closure",
+            deposit_amount_snapshot=Decimal("75.00"),
+            returned_at=datetime.now(timezone.utc),
+        )
+        payment = self.add_authorized_deposit(
+            reservation_id,
+            capture_before=datetime.now(timezone.utc) - timedelta(minutes=1),
+        )
+        payment_id = payment.id
+        payment_intent_id = payment.external_payment_id
+        db.session.remove()
+        path = f"/admin/reservation/complete-rental-without-charge/{reservation_id}"
+
+        confirmation = self.client.get(path)
+        self.assertEqual(confirmation.status_code, 200)
+        self.assertIn(b"Confirmar cierre sin cargo", confirmation.data)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "returned_pending_closure")
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.retrieve",
+            return_value={"id": payment_intent_id, "status": "canceled"},
+        ):
+            response = self.post_admin(path)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, "completed")
+        self.assertEqual(db.session.get(Payment, payment_id).status, PAYMENT_STATUS_AUTHORIZATION_EXPIRED)
+        self.assertEqual(Payment.query.filter_by(reservation_id=reservation_id).count(), 1)
+
+    def test_admin_hides_close_without_charge_when_a_return_incident_exists(self):
+        reservation_id = self.create_cancellable_reservation(
+            "returned_pending_closure",
+            deposit_amount_snapshot=Decimal("75.00"),
+            returned_at=datetime.now(timezone.utc),
+            return_incident_notes="Incidencia pendiente",
+        )
+        payment = self.add_authorized_deposit(reservation_id)
+        payment.status = PAYMENT_STATUS_AUTHORIZATION_EXPIRED
+        db.session.commit()
+
+        response = self.client.get("/admin/reservation/")
+        self.assertNotIn(
+            f"/admin/reservation/complete-rental-without-charge/{reservation_id}".encode(),
+            response.data,
+        )
+
+        direct = self.post_admin(
+            f"/admin/reservation/complete-rental-without-charge/{reservation_id}"
+        )
+        self.assertEqual(direct.status_code, 302)
+        self.assertEqual(
+            db.session.get(Reservation, reservation_id).status,
+            "returned_pending_closure",
         )
 
     def test_cancelled_or_expired_reservation_cannot_be_cancelled_again(self):

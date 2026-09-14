@@ -27,6 +27,7 @@ from app.services.payment_domain import (
 from app.services.rental_lifecycle import (
     RentalLifecycleError,
     calculate_overdue_days,
+    complete_reservation_without_charge_for_expired_deposit,
     complete_reservation_rental,
     is_reservation_overdue,
     mark_reservation_delivered,
@@ -299,6 +300,38 @@ class RentalLifecycleTestCase(unittest.TestCase):
                 self.clean_session()
                 with self.assertRaises(RentalLifecycleError):
                     complete_reservation_rental(self.reservation_id(reservation))
+
+    def test_expired_deposit_can_only_close_without_charge_when_there_is_no_incident(self):
+        reservation = self.create_reservation(self.create_tool(deposit=Decimal("30.00")))
+        reservation.status = "returned_pending_closure"
+        reservation.returned_at = self.now()
+        db.session.commit()
+        payment = self.add_deposit_payment(reservation, PAYMENT_STATUS_AUTHORIZATION_EXPIRED)
+        payment_id = payment.id
+
+        self.clean_session()
+        completed = complete_reservation_without_charge_for_expired_deposit(
+            self.reservation_id(reservation)
+        )
+        self.assertEqual(completed.status, "completed")
+        self.assertEqual(db.session.get(Payment, payment_id).status, PAYMENT_STATUS_AUTHORIZATION_EXPIRED)
+
+        incident = self.create_reservation(self.create_tool(deposit=Decimal("30.00")))
+        incident.status = "returned_pending_closure"
+        incident.returned_at = self.now()
+        incident.return_incident_notes = "Daño pendiente de revisar"
+        db.session.commit()
+        self.add_deposit_payment(incident, PAYMENT_STATUS_AUTHORIZATION_EXPIRED)
+
+        self.clean_session()
+        with self.assertRaises(RentalLifecycleError):
+            complete_reservation_without_charge_for_expired_deposit(
+                self.reservation_id(incident)
+            )
+        self.assertEqual(
+            db.session.get(Reservation, self.reservation_id(incident)).status,
+            "returned_pending_closure",
+        )
 
     def test_historical_null_deposit_is_not_inferred_for_delivery_or_closure(self):
         reservation = self.create_reservation(

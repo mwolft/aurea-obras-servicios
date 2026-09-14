@@ -24,6 +24,7 @@ from app.services.email.rental import (
     queue_delivery_review_requested,
     queue_reservation_cancelled,
 )
+from app.services.deposit_authorizations import neutralize_deposit_for_reservation_cancellation
 from app.services.quotes import QuoteCalculationError, ReservationQuote, calculate_quote
 
 
@@ -45,6 +46,10 @@ class ReservationReviewError(Exception):
 
 class ReservationCancellationError(Exception):
     """Raised when a reservation cannot transition to cancelled."""
+
+
+class ReservationCancellationFinancialReviewError(ReservationCancellationError):
+    """Raised after recording a financial state that blocks cancellation."""
 
 
 class ReservationDateValidationError(Exception):
@@ -247,6 +252,7 @@ def cancel_reservation(
     """
     reservation_session = db.session if session is None else session
 
+    deferred_error: ReservationCancellationFinancialReviewError | None = None
     with reservation_session.begin():
         reservation = (
             reservation_session.execute(
@@ -262,10 +268,24 @@ def cancel_reservation(
         }:
             raise ReservationCancellationError
 
-        reservation.status = RESERVATION_STATUS_CANCELLED
-        email = queue_reservation_cancelled(reservation_session, reservation)
-        if outbox_ids is not None and email is not None:
-            outbox_ids.append(email.id)
-        reservation_session.flush()
+        financial_blocker = neutralize_deposit_for_reservation_cancellation(
+            reservation_session,
+            reservation,
+            outbox_ids=outbox_ids,
+        )
+        if financial_blocker is not None:
+            # The deposit service may have recorded ``requires_review`` and an
+            # internal alert.  Finish this transaction so that state is visible,
+            # while leaving the reservation confirmed and available for review.
+            deferred_error = ReservationCancellationFinancialReviewError(financial_blocker)
+        else:
+            reservation.status = RESERVATION_STATUS_CANCELLED
+            email = queue_reservation_cancelled(reservation_session, reservation)
+            if outbox_ids is not None and email is not None:
+                outbox_ids.append(email.id)
+            reservation_session.flush()
+
+    if deferred_error is not None:
+        raise deferred_error
 
     return reservation

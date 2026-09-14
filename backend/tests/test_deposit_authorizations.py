@@ -16,6 +16,7 @@ from app.services.deposit_authorizations import (
     DepositAuthorizationError,
     capture_deposit_authorization,
     process_stripe_deposit_event,
+    reconcile_expired_deposit_authorization_for_closure,
     release_deposit_authorization,
     start_or_recover_deposit_checkout,
 )
@@ -34,9 +35,12 @@ from app.services.payment_domain import (
     PAYMENT_STATUS_REQUIRES_REVIEW,
     PAYMENT_WINDOW,
     RESERVATION_STATUS_CONFIRMED,
+    RESERVATION_STATUS_CANCELLED,
     RESERVATION_STATUS_PENDING_PAYMENT,
+    RESERVATION_STATUS_RETURNED_PENDING_CLOSURE,
 )
 from app.services.reservations import create_reservation
+from app.services.stripe_checkout import ReservationPaymentStateError
 
 
 class DepositAuthorizationTestCase(unittest.TestCase):
@@ -334,6 +338,113 @@ class DepositAuthorizationTestCase(unittest.TestCase):
             1,
         )
 
+    def test_returned_expired_authorization_is_reconciled_without_creating_a_replacement(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation_id = reservation.id
+        original_total = reservation.total_amount
+        original_snapshot = reservation.deposit_amount_snapshot
+        rental_payment = Payment.query.filter_by(
+            reservation_id=reservation_id,
+            purpose=PAYMENT_PURPOSE_RENTAL_CHARGE,
+        ).one()
+        deposit = Payment(
+            reservation_id=reservation_id,
+            provider=PAYMENT_PROVIDER_STRIPE,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            status=PAYMENT_STATUS_AUTHORIZED,
+            amount=original_snapshot,
+            currency="eur",
+            idempotency_key="returned-expired-deposit",
+            external_payment_id="pi_returned_expired",
+            provider_charge_id="ch_returned_expired",
+            authorized_amount=original_snapshot,
+            authorized_at=datetime.now(timezone.utc) - timedelta(days=2),
+            capture_before=datetime.now(timezone.utc) - timedelta(minutes=1),
+            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+        )
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.add(deposit)
+        db.session.commit()
+        deposit_id = deposit.id
+        db.session.rollback()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.retrieve",
+            return_value={"id": "pi_returned_expired", "status": "canceled"},
+        ) as retrieve:
+            reconciled = reconcile_expired_deposit_authorization_for_closure(reservation_id)
+
+        retrieve.assert_called_once_with("pi_returned_expired")
+        self.assertEqual(reconciled.id, deposit_id)
+        stored = db.session.get(Payment, deposit_id)
+        self.assertEqual(stored.status, PAYMENT_STATUS_AUTHORIZATION_EXPIRED)
+        self.assertEqual(stored.external_payment_id, "pi_returned_expired")
+        self.assertEqual(stored.provider_charge_id, "ch_returned_expired")
+        self.assertEqual(
+            Payment.query.filter_by(
+                reservation_id=reservation_id,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            ).count(),
+            1,
+        )
+        refreshed = db.session.get(Reservation, reservation_id)
+        self.assertEqual(refreshed.total_amount, original_total)
+        self.assertEqual(refreshed.deposit_amount_snapshot, original_snapshot)
+        self.assertEqual(db.session.get(Payment, rental_payment.id).status, PAYMENT_STATUS_PAID)
+
+    def test_unexpected_stripe_status_blocks_returned_expired_deposit_closure_for_review(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation_id = reservation.id
+        deposit = Payment(
+            reservation_id=reservation_id,
+            provider=PAYMENT_PROVIDER_STRIPE,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            status=PAYMENT_STATUS_AUTHORIZED,
+            amount=reservation.deposit_amount_snapshot,
+            currency="eur",
+            idempotency_key="returned-ambiguous-deposit",
+            external_payment_id="pi_returned_ambiguous",
+            authorized_amount=reservation.deposit_amount_snapshot,
+            capture_before=datetime.now(timezone.utc) - timedelta(minutes=1),
+            expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+        )
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.add(deposit)
+        db.session.commit()
+        db.session.rollback()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.retrieve",
+            return_value={"id": "pi_returned_ambiguous", "status": "requires_capture"},
+        ):
+            with self.assertRaisesRegex(DepositAuthorizationError, "requiere revisión"):
+                reconcile_expired_deposit_authorization_for_closure(reservation_id)
+
+        self.assertEqual(db.session.get(Payment, deposit.id).status, PAYMENT_STATUS_REQUIRES_REVIEW)
+
+    def test_returned_reservation_cannot_start_a_replacement_deposit_authorization(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.commit()
+        reservation_id = reservation.id
+        db.session.rollback()
+
+        with patch("app.services.deposit_authorizations.stripe.checkout.Session.create") as create:
+            with self.assertRaises(ReservationPaymentStateError):
+                start_or_recover_deposit_checkout(reservation_id)
+
+        create.assert_not_called()
+        self.assertEqual(
+            Payment.query.filter_by(
+                reservation_id=reservation_id,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            ).count(),
+            0,
+        )
+
     def test_authorization_webhook_is_idempotent_and_never_confirms_reservation(self):
         reservation = self.create_confirmed_reservation(self.create_tool())
         payment = Payment(reservation_id=reservation.id, provider=PAYMENT_PROVIDER_STRIPE, purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION, status=PAYMENT_STATUS_PENDING_AUTHORIZATION, amount=Decimal("100.00"), currency="eur", idempotency_key="deposit-event", expires_at=datetime.now(timezone.utc) + PAYMENT_WINDOW)
@@ -348,6 +459,35 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         self.assertIsNotNone(stored.capture_before)
         self.assertEqual(PaymentEvent.query.count(), 1)
         self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
+
+    def test_late_authorization_for_cancelled_reservation_is_cancelled_not_retained(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation.status = RESERVATION_STATUS_CANCELLED
+        payment = Payment(
+            reservation_id=reservation.id,
+            provider=PAYMENT_PROVIDER_STRIPE,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            status=PAYMENT_STATUS_PENDING_AUTHORIZATION,
+            amount=Decimal("100.00"),
+            currency="eur",
+            idempotency_key="cancelled-reservation-late-deposit",
+            expires_at=datetime.now(timezone.utc) + PAYMENT_WINDOW,
+        )
+        db.session.add(payment)
+        db.session.commit()
+        event = self.intent_event(payment, event_id="evt_late_cancelled_deposit")
+        db.session.rollback()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.cancel",
+            return_value={"id": "pi_deposit_1", "status": "canceled"},
+        ) as cancel_intent:
+            self.assertEqual(process_stripe_deposit_event(event), PAYMENT_STATUS_RELEASED)
+
+        cancel_intent.assert_called_once_with("pi_deposit_1")
+        self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CANCELLED)
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_RELEASED)
+        self.assertEqual(PaymentEvent.query.count(), 1)
 
     def test_sca_intermediate_and_stripe_failure_or_cancellation_do_not_confirm_reservation(self):
         reservation = self.create_confirmed_reservation(self.create_tool())
@@ -379,6 +519,9 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         reservation = self.create_confirmed_reservation(self.create_tool())
         reservation_id = reservation.id
         payment = self.authorize_payment(reservation)
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.commit()
         with patch("app.services.deposit_authorizations.stripe.PaymentIntent.cancel") as cancel:
             released = release_deposit_authorization(reservation_id)
         cancel.assert_called_once_with(payment.external_payment_id)
@@ -389,6 +532,9 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         reservation = self.create_confirmed_reservation(self.create_tool())
         reservation_id = reservation.id
         payment = self.authorize_payment(reservation)
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.commit()
         partial = {"status": "succeeded", "amount_received": 4000, "latest_charge": "ch_captured"}
         with patch("app.services.deposit_authorizations.stripe.PaymentIntent.capture", return_value=partial):
             captured = capture_deposit_authorization(reservation_id, Decimal("40.00"), "Daño documentado")
@@ -397,9 +543,15 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         self.assertEqual(captured.capture_reason, "Daño documentado")
         with self.assertRaises(DepositAuthorizationError):
             capture_deposit_authorization(reservation_id, Decimal("1.00"), "")
+        db.session.rollback()
+        with self.assertRaises(DepositAuthorizationError):
+            capture_deposit_authorization(reservation_id, Decimal("1.00"), "Segundo intento")
         second = self.create_confirmed_reservation(self.create_tool(), start_date=date(2026, 10, 3), end_date=date(2026, 10, 4))
         second_id = second.id
         self.authorize_payment(second)
+        second.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        second.returned_at = datetime.now(timezone.utc)
+        db.session.commit()
         full = {"status": "succeeded", "amount_received": 10000, "latest_charge": "ch_full"}
         with patch("app.services.deposit_authorizations.stripe.PaymentIntent.capture", return_value=full):
             captured_full = capture_deposit_authorization(second_id, Decimal("100.00"), "Daño total")
@@ -418,9 +570,51 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         reservation_id = reservation.id
         payment = self.authorize_payment(reservation)
         payment.capture_before = datetime.now(timezone.utc) - timedelta(seconds=1); db.session.commit()
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.commit()
         with self.assertRaises(DepositAuthorizationError):
             release_deposit_authorization(reservation_id)
         self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_AUTHORIZATION_EXPIRED)
+
+    def test_deposit_resolution_is_rejected_until_the_reservation_is_returned(self):
+        blocked_statuses = (
+            RESERVATION_STATUS_CONFIRMED,
+            "in_progress",
+            "pending_review",
+            RESERVATION_STATUS_PENDING_PAYMENT,
+            "completed",
+            "cancelled",
+        )
+        for status in blocked_statuses:
+            with self.subTest(status=status):
+                reservation = self.create_confirmed_reservation(
+                    self.create_tool(),
+                    start_date=date(2026, 10, 10),
+                    end_date=date(2026, 10, 11),
+                )
+                reservation_id = reservation.id
+                self.authorize_payment(reservation)
+                reservation.status = status
+                db.session.commit()
+
+                with patch("app.services.deposit_authorizations.stripe.PaymentIntent.cancel") as cancel:
+                    with self.assertRaisesRegex(
+                        DepositAuthorizationError,
+                        "después de registrar la devolución",
+                    ):
+                        release_deposit_authorization(reservation_id)
+                cancel.assert_not_called()
+
+                with patch("app.services.deposit_authorizations.stripe.PaymentIntent.capture") as capture:
+                    with self.assertRaisesRegex(
+                        DepositAuthorizationError,
+                        "después de registrar la devolución",
+                    ):
+                        capture_deposit_authorization(
+                            reservation_id, Decimal("10.00"), "Prueba de estado"
+                        )
+                capture.assert_not_called()
 
     def test_rental_charge_remains_separate_from_deposit_authorization(self):
         reservation = self.create_confirmed_reservation(self.create_tool())

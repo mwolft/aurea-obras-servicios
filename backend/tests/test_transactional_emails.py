@@ -38,6 +38,7 @@ from app.services.payment_domain import (
     PAYMENT_WINDOW,
     RESERVATION_STATUS_CONFIRMED,
     RESERVATION_STATUS_PENDING_PAYMENT,
+    RESERVATION_STATUS_RETURNED_PENDING_CLOSURE,
 )
 from app.services.rental_lifecycle import (
     complete_reservation_rental,
@@ -317,6 +318,10 @@ class TransactionalEmailTestCase(unittest.TestCase):
         ids = []
         db.session.rollback()
         self.assertEqual(process_stripe_deposit_event(event, outbox_ids=ids), "authorized")
+        reservation = db.session.get(Reservation, reservation_id)
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.commit()
         with patch("app.services.deposit_authorizations.stripe.PaymentIntent.cancel"):
             release_deposit_authorization(reservation_id, outbox_ids=ids)
         released = EmailOutbox.query.filter_by(event_type="deposit_released").one()
@@ -328,6 +333,8 @@ class TransactionalEmailTestCase(unittest.TestCase):
         deposit.authorized_amount = Decimal("100.00")
         deposit.external_payment_id = "pi_capture"
         deposit.capture_before = datetime.now(timezone.utc) + timedelta(days=1)
+        second.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        second.returned_at = datetime.now(timezone.utc)
         db.session.commit()
         intent = {"status": "succeeded", "amount_received": 4000, "latest_charge": "ch_capture"}
         with patch("app.services.deposit_authorizations.stripe.PaymentIntent.capture", return_value=intent):

@@ -1,0 +1,18 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="container-fluid">
+  <h3>Cerrar sin cargo la reserva #{{ reservation.id }}</h3>
+  <p><strong>{{ reservation.tool.name }}</strong> ya figura como devuelta.</p>
+  <p class="text-warning">
+    La autorización de fianza ha caducado. Antes de cerrar, AUREA comprobará
+    que Stripe confirma que ya no existe un importe capturable.
+  </p>
+  <p>Esta acción no liberará ni capturará ningún importe sobre esa fianza.</p>
+  <form method="post">
+    {{ csrf_form.csrf_token }}
+    <button class="btn btn-warning" type="submit">Confirmar cierre sin cargo</button>
+    <a class="btn btn-default" href="{{ url_for('.details_view', id=reservation.id) }}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

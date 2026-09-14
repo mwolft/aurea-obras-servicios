@@ -12,8 +12,24 @@
 
 <p>
   Esta acción cambia el estado de la reserva a cancelada y libera su disponibilidad.
-  No procesa pagos, reembolsos ni fianzas.
+  No realiza reembolsos del alquiler.
 </p>
+
+{% if rental_paid %}
+  <div class="alert alert-warning">
+    <strong>El alquiler ya está pagado.</strong> Cancelar la reserva no realiza ningún reembolso.
+  </div>
+{% endif %}
+
+{% if deposit_pending %}
+  <div class="alert alert-info">
+    El proceso de autorización de fianza pendiente se invalidará antes de cancelar.
+  </div>
+{% elif deposit_authorized %}
+  <div class="alert alert-info">
+    La autorización de fianza se liberará antes de cancelar.
+  </div>
+{% endif %}
 
 <form method="post" class="form-horizontal">
   {{ csrf_form.csrf_token }}

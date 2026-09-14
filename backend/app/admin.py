@@ -29,6 +29,7 @@ from app.services.availability import reservation_status_label
 from app.services.cloudinary_storage import get_cloudinary_storage
 from app.services.reservations import (
     ReservationCancellationError,
+    ReservationCancellationFinancialReviewError,
     ReservationReviewError,
     cancel_reservation,
     review_delivery_reservation,
@@ -46,6 +47,7 @@ from app.services.rental_lifecycle import (
     RentalLifecycleError,
     ReservationOperationalNotFoundError,
     calculate_overdue_days,
+    complete_reservation_without_charge_for_expired_deposit,
     complete_reservation_rental,
     is_reservation_overdue,
     mark_reservation_delivered,
@@ -67,12 +69,15 @@ from app.services.stripe_checkout import (
 )
 from app.services.payment_domain import (
     PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+    PAYMENT_PURPOSE_RENTAL_CHARGE,
     PAYMENT_STATUS_AUTHORIZED,
     PAYMENT_STATUS_AUTHORIZATION_EXPIRED,
     PAYMENT_STATUS_CAPTURED,
     PAYMENT_STATUS_CAPTURED_PARTIALLY,
     PAYMENT_STATUS_PENDING_AUTHORIZATION,
+    PAYMENT_STATUS_PAID,
     PAYMENT_STATUS_RELEASED,
+    PAYMENT_STATUS_REQUIRES_REVIEW,
     RESERVATION_STATUS_CONFIRMED,
     RESERVATION_STATUS_COMPLETED,
     RESERVATION_STATUS_IN_PROGRESS,
@@ -607,9 +612,11 @@ class ReservationAdmin(SecureModelView):
     def _status_label(cls, reservation: Reservation) -> str:
         return reservation_status_label(reservation)
 
-    @staticmethod
-    def _can_cancel(reservation: Reservation) -> bool:
-        return reservation.status in {"pending_review", "pending_payment", "confirmed"}
+    @classmethod
+    def _can_cancel(cls, reservation: Reservation) -> bool:
+        if reservation.status not in {"pending_review", "pending_payment", "confirmed"}:
+            return False
+        return not cls._has_deposit_requiring_review(reservation)
 
     @staticmethod
     def _format_datetime(value: datetime | None) -> str:
@@ -641,6 +648,55 @@ class ReservationAdmin(SecureModelView):
             .order_by(Payment.id.desc())
             .first()
         )
+
+    @staticmethod
+    def _deposit_payments(reservation: Reservation) -> list[Payment]:
+        return (
+            Payment.query.filter_by(
+                reservation_id=reservation.id,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            )
+            .order_by(Payment.id.desc())
+            .all()
+        )
+
+    @staticmethod
+    def _rental_payment(reservation: Reservation) -> Payment | None:
+        return (
+            Payment.query.filter_by(
+                reservation_id=reservation.id,
+                purpose=PAYMENT_PURPOSE_RENTAL_CHARGE,
+            )
+            .order_by(Payment.id.desc())
+            .first()
+        )
+
+    @staticmethod
+    def _has_deposit_requiring_review(reservation: Reservation) -> bool:
+        return any(
+            payment.status == PAYMENT_STATUS_REQUIRES_REVIEW
+            for payment in ReservationAdmin._deposit_payments(reservation)
+        )
+
+    def _cancellation_context(self, reservation: Reservation) -> dict[str, bool]:
+        rental_payment = self._rental_payment(reservation)
+        deposit_payments = self._deposit_payments(reservation)
+        return {
+            "rental_paid": rental_payment is not None and rental_payment.status == PAYMENT_STATUS_PAID,
+            "deposit_pending": any(
+                payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION
+                for payment in deposit_payments
+            ),
+            "deposit_authorized": any(
+                payment.status == PAYMENT_STATUS_AUTHORIZED
+                and not self._deposit_capture_window_expired(payment)
+                for payment in deposit_payments
+            ),
+            "deposit_requires_review": any(
+                payment.status == PAYMENT_STATUS_REQUIRES_REVIEW
+                for payment in deposit_payments
+            ),
+        }
 
     @staticmethod
     def _deposit_capture_window_expired(payment: Payment) -> bool:
@@ -680,26 +736,54 @@ class ReservationAdmin(SecureModelView):
         return label
 
     def _deposit_action_link(self, reservation: Reservation):
-        if reservation.status != "confirmed" or reservation.deposit_amount_snapshot is None or Decimal(reservation.deposit_amount_snapshot) <= 0:
+        if reservation.deposit_amount_snapshot is None or Decimal(reservation.deposit_amount_snapshot) <= 0:
             return "—"
         payment = self._deposit_payment(reservation)
-        if payment is None or payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
-            url = url_for(".authorize_deposit", reservation_id=reservation.id)
-            return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Autorizar fianza</a>')
-        if payment.status == PAYMENT_STATUS_AUTHORIZED:
-            if self._deposit_capture_window_expired(payment):
+        if reservation.status == RESERVATION_STATUS_CONFIRMED:
+            if payment is None or payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
+                url = url_for(".authorize_deposit", reservation_id=reservation.id)
+                return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Autorizar fianza</a>')
+            if payment.status == PAYMENT_STATUS_AUTHORIZED:
+                if self._deposit_capture_window_expired(payment):
+                    url = url_for(".authorize_deposit", reservation_id=reservation.id)
+                    return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Reautorizar fianza</a>')
+                return "—"
+            if payment.status == PAYMENT_STATUS_AUTHORIZATION_EXPIRED:
                 url = url_for(".authorize_deposit", reservation_id=reservation.id)
                 return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Reautorizar fianza</a>')
+            return "—"
+        if reservation.status == RESERVATION_STATUS_RETURNED_PENDING_CLOSURE:
+            if (
+                payment is None
+                or payment.status != PAYMENT_STATUS_AUTHORIZED
+                or self._deposit_capture_window_expired(payment)
+            ):
+                return "—"
             release_url = url_for(".release_deposit", reservation_id=reservation.id)
             capture_url = url_for(".capture_deposit", reservation_id=reservation.id)
             return Markup(
                 f'<a class="btn btn-default btn-xs" href="{release_url}">Liberar</a> '
                 f'<a class="btn btn-warning btn-xs" href="{capture_url}">Capturar</a>'
             )
-        if payment.status == PAYMENT_STATUS_AUTHORIZATION_EXPIRED:
-            url = url_for(".authorize_deposit", reservation_id=reservation.id)
-            return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Reautorizar fianza</a>')
         return "—"
+
+    def _can_close_without_charge(self, reservation: Reservation) -> bool:
+        if (
+            reservation.status != RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+            or reservation.returned_at is None
+            or reservation.deposit_amount_snapshot is None
+            or Decimal(reservation.deposit_amount_snapshot) <= 0
+            or (reservation.return_incident_notes or "").strip()
+        ):
+            return False
+        payment = self._deposit_payment(reservation)
+        return payment is not None and (
+            payment.status == PAYMENT_STATUS_AUTHORIZATION_EXPIRED
+            or (
+                payment.status == PAYMENT_STATUS_AUTHORIZED
+                and self._deposit_capture_window_expired(payment)
+            )
+        )
 
     def _rental_action_link(self, reservation: Reservation):
         if reservation.status == RESERVATION_STATUS_CONFIRMED:
@@ -723,6 +807,9 @@ class ReservationAdmin(SecureModelView):
                 return "—"
             if reservation.deposit_amount_snapshot is None:
                 return "—"
+            if self._can_close_without_charge(reservation):
+                url = url_for(".complete_rental_without_charge", reservation_id=reservation.id)
+                return Markup(f'<a class="btn btn-warning btn-xs" href="{url}">Cerrar sin cargo</a>')
             if Decimal(reservation.deposit_amount_snapshot) > 0:
                 payment = self._deposit_payment(reservation)
                 if payment is None or payment.status not in {
@@ -921,6 +1008,39 @@ class ReservationAdmin(SecureModelView):
             return redirect(url_for(".details_view", id=reservation_id))
         return self.render("admin/complete_rental.html", reservation=reservation, csrf_form=csrf_form)
 
+    @expose("/complete-rental-without-charge/<int:reservation_id>", methods=("GET", "POST"))
+    def complete_rental_without_charge(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                db.session.rollback()
+                outbox_ids: list[int] = []
+                complete_reservation_without_charge_for_expired_deposit(
+                    reservation_id, outbox_ids=outbox_ids
+                )
+            except (
+                DepositAuthorizationNotFoundError,
+                DepositAuthorizationError,
+                ReservationOperationalNotFoundError,
+                RentalLifecycleError,
+            ) as error:
+                flash(str(error) or "No se puede cerrar el alquiler sin cargo.", "error")
+            else:
+                deliver_outbox_emails(outbox_ids)
+                flash("Alquiler cerrado sin cargo sobre la fianza caducada.", "success")
+            return redirect(url_for(".details_view", id=reservation_id))
+        return self.render(
+            "admin/complete_rental_without_charge.html",
+            reservation=reservation,
+            csrf_form=csrf_form,
+        )
+
     @staticmethod
     def _parse_billable_km(value: str | None) -> Decimal:
         if value is None or not value.strip():
@@ -986,12 +1106,15 @@ class ReservationAdmin(SecureModelView):
                 db.session.rollback()
                 outbox_ids: list[int] = []
                 cancel_reservation(reservation_id, outbox_ids=outbox_ids)
+            except ReservationCancellationFinancialReviewError as error:
+                deliver_outbox_emails(outbox_ids)
+                flash(str(error), "error")
             except ReservationCancellationError:
                 flash("La reserva ya no se puede cancelar.", "error")
             else:
                 deliver_outbox_emails(outbox_ids)
                 flash(
-                    "Reserva cancelada. Esta acción no gestiona pagos, reembolsos ni fianzas.",
+                    "Reserva cancelada. El pago del alquiler se conserva; esta acción no realiza reembolsos.",
                     "success",
                 )
 
@@ -1002,6 +1125,14 @@ class ReservationAdmin(SecureModelView):
             flash("La reserva no existe.", "error")
             return redirect(url_for(".index_view"))
 
+        cancellation_context = self._cancellation_context(reservation)
+        if cancellation_context["deposit_requires_review"]:
+            flash(
+                "No puede cancelarse automáticamente mientras exista una situación de fianza pendiente de revisión.",
+                "error",
+            )
+            return redirect(url_for(".details_view", id=reservation_id))
+
         if not self._can_cancel(reservation):
             flash("La reserva ya no se puede cancelar.", "error")
             return redirect(url_for(".details_view", id=reservation_id))
@@ -1010,6 +1141,7 @@ class ReservationAdmin(SecureModelView):
             "admin/cancel_reservation.html",
             reservation=reservation,
             status_label=self._status_label(reservation),
+            **cancellation_context,
             csrf_form=csrf_form,
         )
 
