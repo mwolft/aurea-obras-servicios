@@ -9,8 +9,16 @@ os.environ["APP_ENV"] = "development"
 
 from app import create_app
 from app.extensions import db
-from app.models import Reservation, Tool, User
+from app.models import EmailOutbox, Payment, Reservation, Tool, User
 from app.services.admin_dashboard import get_dashboard_summary
+from app.services.payment_domain import (
+    PAYMENT_PROVIDER_STRIPE,
+    PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+    PAYMENT_PURPOSE_RENTAL_CHARGE,
+    PAYMENT_STATUS_AUTHORIZED,
+    PAYMENT_STATUS_PAID,
+    PAYMENT_STATUS_PENDING_AUTHORIZATION,
+)
 
 
 class AdminDashboardTestCase(unittest.TestCase):
@@ -166,3 +174,65 @@ class AdminDashboardTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Desbrozadora", response.get_data(as_text=True))
         self.assertIn(f"/admin/reservation/details/?id={reservation.id}", response.get_data(as_text=True))
+
+    def test_dashboard_separates_deposit_attention_from_customer_waiting(self):
+        current_date = date.today()
+        tool = self.make_tool("Miniexcavadora")
+        attention = self.make_reservation(
+            tool, current_date + timedelta(days=1), current_date + timedelta(days=2)
+        )
+        waiting = self.make_reservation(
+            tool, current_date + timedelta(days=2), current_date + timedelta(days=3)
+        )
+        for reservation, status in (
+            (attention, PAYMENT_STATUS_AUTHORIZED),
+            (waiting, PAYMENT_STATUS_PENDING_AUTHORIZATION),
+        ):
+            reservation.deposit_amount_snapshot = Decimal("25.00")
+            db.session.add(Payment(
+                reservation_id=reservation.id,
+                provider=PAYMENT_PROVIDER_STRIPE,
+                purpose=PAYMENT_PURPOSE_RENTAL_CHARGE,
+                status=PAYMENT_STATUS_PAID,
+                amount=Decimal("20.00"),
+                currency="eur",
+                idempotency_key=f"rental-{reservation.id}",
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            ))
+            deposit = Payment(
+                reservation_id=reservation.id,
+                provider=PAYMENT_PROVIDER_STRIPE,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+                status=status,
+                amount=Decimal("25.00"),
+                currency="eur",
+                idempotency_key=f"deposit-{reservation.id}",
+                expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+                capture_before=(
+                    datetime.now(timezone.utc) + timedelta(hours=1)
+                    if status == PAYMENT_STATUS_AUTHORIZED else None
+                ),
+            )
+            db.session.add(deposit)
+            db.session.flush()
+            if status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
+                db.session.add(EmailOutbox(
+                    event_type="deposit_authorization_requested",
+                    reservation_id=reservation.id,
+                    recipient="dashboard@example.com",
+                    subject="Solicitud",
+                    text_body="Texto",
+                    html_body="<p>Texto</p>",
+                    idempotency_key=f"deposit:{deposit.id}:authorization_requested",
+                    status="sent",
+                ))
+        db.session.commit()
+
+        dashboard = get_dashboard_summary(today=current_date)
+        self.assertEqual([item.reservation_id for item in dashboard.deposit_attention], [attention.id])
+        self.assertEqual([item.reservation_id for item in dashboard.deposit_waiting_customer], [waiting.id])
+        response = self.client.get("/admin/")
+        content = response.get_data(as_text=True)
+        self.assertIn("Fianzas que requieren atención", content)
+        self.assertIn("Esperando al cliente", content)
+        self.assertIn(f"/admin/reservation/details/?id={attention.id}", content)

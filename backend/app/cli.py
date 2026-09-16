@@ -6,6 +6,7 @@ from app.extensions import db
 from app.models import User
 from app.services.authentication import MINIMUM_PASSWORD_LENGTH, is_valid_password, normalize_email
 from app.services.email.outbox import retry_failed_outbox_email
+from app.services.deposit_request_automation import request_due_deposit_authorizations
 
 
 def _normalized_email(value: str) -> str:
@@ -80,3 +81,14 @@ def init_cli(app: Flask) -> None:
             click.echo("Email transaccional enviado correctamente.")
         else:
             click.echo("El email ya estaba enviado; no se ha reenviado.")
+
+    @app.cli.command("request-due-deposits")
+    def request_due_deposits() -> None:
+        """Request due deposit authorizations; intended for an hourly Cron Job."""
+
+        result = request_due_deposit_authorizations()
+        click.echo(
+            "Solicitudes de fianza: "
+            f"{result.requested} creadas, {result.skipped} omitidas, "
+            f"{result.failed} con revisión, {result.scanned} revisadas."
+        )

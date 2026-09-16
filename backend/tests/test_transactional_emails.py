@@ -20,6 +20,7 @@ from app.services.deposit_authorizations import (
     capture_deposit_authorization,
     process_stripe_deposit_event,
     release_deposit_authorization,
+    start_or_recover_deposit_checkout,
 )
 from app.services.email.outbox import (
     deliver_outbox_email,
@@ -291,6 +292,51 @@ class TransactionalEmailTestCase(unittest.TestCase):
             self.assertFalse(deliver_outbox_email(outbox_ids[0]))
 
         self.assertEqual(db.session.get(Reservation, reservation_id).status, "pending_payment")
+        self.assertEqual(db.session.get(EmailOutbox, outbox_ids[0]).status, EMAIL_OUTBOX_STATUS_FAILED)
+
+    def test_failed_deposit_request_email_never_reverts_the_pending_checkout(self):
+        reservation = self.reservation(
+            self.tool(Decimal("100.00")), status=RESERVATION_STATUS_CONFIRMED
+        )
+        rental_payment = self.rental_payment(reservation)
+        rental_payment.status = PAYMENT_STATUS_PAID
+        db.session.commit()
+        reservation_id = reservation.id
+        checkout = type(
+            "Checkout",
+            (),
+            {
+                "id": "cs_deposit_email_failure",
+                "url": "https://checkout.stripe.test/c/pay/cs_deposit_email_failure",
+                "status": "open",
+            },
+        )()
+        outbox_ids: list[int] = []
+        db.session.rollback()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=checkout,
+        ):
+            start_or_recover_deposit_checkout(
+                reservation_id,
+                queue_request_email=True,
+                outbox_ids=outbox_ids,
+            )
+
+        with patch(
+            "app.services.email.outbox.send_resend_email",
+            side_effect=ResendDeliveryError("x"),
+        ):
+            self.assertFalse(deliver_outbox_email(outbox_ids[0]))
+
+        deposit = Payment.query.filter_by(
+            reservation_id=reservation_id,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+        ).one()
+        self.assertEqual(db.session.get(Reservation, reservation_id).status, RESERVATION_STATUS_CONFIRMED)
+        self.assertEqual(deposit.status, PAYMENT_STATUS_PENDING_AUTHORIZATION)
+        self.assertEqual(deposit.provider_checkout_id, "cs_deposit_email_failure")
         self.assertEqual(db.session.get(EmailOutbox, outbox_ids[0]).status, EMAIL_OUTBOX_STATUS_FAILED)
 
     def test_cancel_delivery_return_and_completion_each_queue_one_customer_email(self):

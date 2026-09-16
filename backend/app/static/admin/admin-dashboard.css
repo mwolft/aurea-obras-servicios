@@ -162,6 +162,44 @@
   margin-top: 1rem;
 }
 
+.aurea-dashboard-deposits {
+  margin-bottom: 1.25rem;
+}
+
+.aurea-dashboard-deposit-list {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aurea-dashboard-deposit-list li {
+  display: grid;
+  grid-template-columns: minmax(15rem, 1.3fr) minmax(14rem, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #e6edf2;
+}
+
+.aurea-dashboard-deposit-list strong,
+.aurea-dashboard-deposit-list span,
+.aurea-dashboard-deposit-list small {
+  display: block;
+}
+
+.aurea-dashboard-deposit-list span,
+.aurea-dashboard-deposit-list small {
+  color: #52667a;
+  font-size: 0.88rem;
+}
+
+.aurea-dashboard-deposit-status span {
+  color: #7a4200;
+  font-weight: 700;
+}
+
 @media (max-width: 991.98px) {
   .aurea-dashboard-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -184,5 +222,10 @@
 
   .aurea-dashboard-activity-list li > a {
     margin-top: 0.25rem;
+  }
+
+  .aurea-dashboard-deposit-list li {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
   }
 }
