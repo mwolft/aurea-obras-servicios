@@ -15,7 +15,8 @@ from wtforms.validators import InputRequired
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
-from app.models import Payment, Reservation, Tool, ToolBlock, ToolImage, User
+from app.models import EmailOutbox, Payment, Reservation, Tool, ToolBlock, ToolImage, User
+from app.models.email_outbox import EMAIL_OUTBOX_STATUS_FAILED, EMAIL_OUTBOX_STATUS_SENT
 from app.services.authentication import (
     authenticate_with_password,
     get_current_user,
@@ -54,11 +55,21 @@ from app.services.rental_lifecycle import (
     mark_reservation_returned,
 )
 from app.services.deposit_authorizations import (
+    DEPOSIT_RESEND_MIN_INTERVAL,
     DepositAuthorizationError,
     DepositAuthorizationNotFoundError,
     capture_deposit_authorization,
     release_deposit_authorization,
+    resend_deposit_authorization_request,
     start_or_recover_deposit_checkout,
+)
+from app.services.deposit_operations import (
+    DEPOSIT_OPERATION_AUTHORIZED_INSUFFICIENT,
+    DEPOSIT_OPERATION_AWAITING_CUSTOMER,
+    DEPOSIT_OPERATION_EMAIL_FAILED,
+    DEPOSIT_OPERATION_REQUEST_EXPIRED,
+    DEPOSIT_OPERATION_REAUTHORIZE,
+    evaluate_deposit_operational_state,
 )
 from app.services.email.outbox import deliver_outbox_emails
 from app.services.stripe_checkout import (
@@ -672,6 +683,17 @@ class ReservationAdmin(SecureModelView):
         )
 
     @staticmethod
+    def _has_paid_rental(reservation: Reservation) -> bool:
+        return (
+            Payment.query.filter_by(
+                reservation_id=reservation.id,
+                purpose=PAYMENT_PURPOSE_RENTAL_CHARGE,
+                status=PAYMENT_STATUS_PAID,
+            ).first()
+            is not None
+        )
+
+    @staticmethod
     def _has_deposit_requiring_review(reservation: Reservation) -> bool:
         return any(
             payment.status == PAYMENT_STATUS_REQUIRES_REVIEW
@@ -707,14 +729,51 @@ class ReservationAdmin(SecureModelView):
             capture_before = capture_before.replace(tzinfo=timezone.utc)
         return capture_before <= datetime.now(timezone.utc)
 
+    @staticmethod
+    def _deposit_request_email(payment: Payment) -> EmailOutbox | None:
+        return EmailOutbox.query.filter_by(
+            idempotency_key=f"deposit:{payment.id}:authorization_requested"
+        ).one_or_none()
+
+    def _deposit_operational_state(self, reservation: Reservation):
+        payment = self._deposit_payment(reservation)
+        return evaluate_deposit_operational_state(
+            reservation,
+            payment,
+            self._deposit_request_email(payment) if payment is not None else None,
+            rental_paid=self._has_paid_rental(reservation),
+        )
+
+    @staticmethod
+    def _can_resend_deposit_request(payment: Payment) -> bool:
+        sent_at = (
+            EmailOutbox.query.filter(
+                EmailOutbox.idempotency_key.like(
+                    f"deposit:{payment.id}:authorization_%"
+                ),
+                EmailOutbox.status == EMAIL_OUTBOX_STATUS_SENT,
+                EmailOutbox.sent_at.is_not(None),
+            )
+            .order_by(EmailOutbox.sent_at.desc())
+            .with_entities(EmailOutbox.sent_at)
+            .first()
+        )
+        if sent_at is None:
+            return False
+        last_sent = sent_at[0]
+        if last_sent.tzinfo is None:
+            last_sent = last_sent.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) - last_sent >= DEPOSIT_RESEND_MIN_INTERVAL
+
     def _deposit_status(self, reservation: Reservation) -> str:
         if reservation.deposit_amount_snapshot is None:
             return "Sin snapshot histórico"
         if Decimal(reservation.deposit_amount_snapshot) == 0:
             return "No requerida"
         payment = self._deposit_payment(reservation)
-        if payment is None:
-            return "Pendiente de autorización"
+        operational = self._deposit_operational_state(reservation)
+        if payment is None or payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
+            return operational.label
         labels = {
             PAYMENT_STATUS_PENDING_AUTHORIZATION: "Pendiente de autorización",
             PAYMENT_STATUS_AUTHORIZED: "Autorizada",
@@ -726,6 +785,10 @@ class ReservationAdmin(SecureModelView):
             "requires_review": "Requiere revisión",
         }
         label = labels.get(payment.status, payment.status)
+        if operational.code == DEPOSIT_OPERATION_AUTHORIZED_INSUFFICIENT:
+            label = operational.label
+        elif operational.code == DEPOSIT_OPERATION_REAUTHORIZE:
+            label = operational.label
         if payment.status == PAYMENT_STATUS_AUTHORIZED and payment.capture_before is not None:
             if self._deposit_capture_window_expired(payment):
                 return (
@@ -733,6 +796,8 @@ class ReservationAdmin(SecureModelView):
                     f" · venció {payment.capture_before.strftime('%d/%m/%Y %H:%M')}"
                 )
             label += f" · válida hasta {payment.capture_before.strftime('%d/%m/%Y %H:%M')}"
+            if operational.long_rental:
+                label += " · alquiler de 6 días o más: comprobar vigencia"
         return label
 
     def _deposit_action_link(self, reservation: Reservation):
@@ -740,9 +805,26 @@ class ReservationAdmin(SecureModelView):
             return "—"
         payment = self._deposit_payment(reservation)
         if reservation.status == RESERVATION_STATUS_CONFIRMED:
-            if payment is None or payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
+            if payment is None:
                 url = url_for(".authorize_deposit", reservation_id=reservation.id)
-                return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Autorizar fianza</a>')
+                return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Solicitar fianza</a>')
+            if payment.status == PAYMENT_STATUS_PENDING_AUTHORIZATION:
+                operational = self._deposit_operational_state(reservation)
+                if operational.code == DEPOSIT_OPERATION_REQUEST_EXPIRED:
+                    url = url_for(".authorize_deposit", reservation_id=reservation.id)
+                    return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">Generar nueva solicitud</a>')
+                if operational.code == DEPOSIT_OPERATION_AWAITING_CUSTOMER:
+                    if self._can_resend_deposit_request(payment):
+                        url = url_for(".resend_deposit_request", reservation_id=reservation.id)
+                        return Markup(f'<a class="btn btn-default btn-xs" href="{url}">Reenviar solicitud</a>')
+                    return "Solicitud enviada"
+                url = url_for(".authorize_deposit", reservation_id=reservation.id)
+                label = (
+                    "Reintentar solicitud"
+                    if operational.code == DEPOSIT_OPERATION_EMAIL_FAILED
+                    else "Solicitar fianza"
+                )
+                return Markup(f'<a class="btn btn-primary btn-xs" href="{url}">{label}</a>')
             if payment.status == PAYMENT_STATUS_AUTHORIZED:
                 if self._deposit_capture_window_expired(payment):
                     url = url_for(".authorize_deposit", reservation_id=reservation.id)
@@ -848,7 +930,12 @@ class ReservationAdmin(SecureModelView):
                 abort(400)
             try:
                 db.session.rollback()
-                checkout_url = start_or_recover_deposit_checkout(reservation_id)
+                outbox_ids: list[int] = []
+                start_or_recover_deposit_checkout(
+                    reservation_id,
+                    queue_request_email=True,
+                    outbox_ids=outbox_ids,
+                )
             except (ReservationPaymentNotFoundError, ReservationPaymentStateError, DepositAuthorizationError) as error:
                 flash(str(error) or "No se puede autorizar esta fianza.", "error")
                 return redirect(url_for(".details_view", id=reservation_id))
@@ -856,8 +943,60 @@ class ReservationAdmin(SecureModelView):
                 logger.exception("Could not create a deposit authorization Checkout.")
                 flash("No se ha podido crear el enlace seguro de fianza.", "error")
                 return redirect(url_for(".details_view", id=reservation_id))
-            return self.render("admin/deposit_checkout.html", reservation=reservation, checkout_url=checkout_url)
-        return self.render("admin/authorize_deposit.html", reservation=reservation, csrf_form=csrf_form)
+            deliver_outbox_emails(outbox_ids)
+            flash(
+                "Solicitud de fianza creada. La fianza seguirá pendiente hasta que Stripe confirme la autorización.",
+                "success",
+            )
+            return redirect(url_for(".details_view", id=reservation_id))
+        operational = self._deposit_operational_state(reservation)
+        action_label = "Solicitar fianza"
+        message = "Se enviará al cliente un correo con un enlace seguro de Stripe para autorizar la tarjeta. No se realizará ningún cobro ahora."
+        if operational.code == DEPOSIT_OPERATION_REQUEST_EXPIRED:
+            action_label = "Generar nueva solicitud"
+            message = "La solicitud anterior ha vencido. Se comprobará Stripe, se conservará el historial y se enviará un nuevo enlace seguro solo si no existe una autorización activa."
+        elif operational.code == DEPOSIT_OPERATION_REAUTHORIZE:
+            action_label = "Reautorizar fianza"
+            message = "Se comprobará que la autorización anterior ya no es utilizable antes de generar una nueva solicitud segura."
+        elif operational.code == DEPOSIT_OPERATION_EMAIL_FAILED:
+            action_label = "Reintentar solicitud"
+            message = "Se reintentará el envío del mismo enlace seguro. No se creará una segunda autorización."
+        return self.render(
+            "admin/authorize_deposit.html",
+            reservation=reservation,
+            csrf_form=csrf_form,
+            action_label=action_label,
+            message=message,
+        )
+
+    @expose("/resend-deposit-request/<int:reservation_id>", methods=("GET", "POST"))
+    def resend_deposit_request(self, reservation_id: int):
+        csrf_form = AdminCsrfForm(request.form)
+        reservation = db.session.get(Reservation, reservation_id)
+        if reservation is None:
+            flash("La reserva no existe.", "error")
+            return redirect(url_for(".index_view"))
+        if request.method == "POST":
+            if not csrf_form.validate():
+                abort(400)
+            try:
+                db.session.rollback()
+                outbox_ids: list[int] = []
+                resend_deposit_authorization_request(reservation_id, outbox_ids=outbox_ids)
+            except (ReservationPaymentNotFoundError, ReservationPaymentStateError, DepositAuthorizationError) as error:
+                flash(str(error) or "No se puede reenviar esta solicitud de fianza.", "error")
+            except (StripeConfigurationError, StripeCheckoutError):
+                logger.exception("Could not resend a deposit authorization Checkout.")
+                flash("No se ha podido comprobar el enlace seguro de fianza.", "error")
+            else:
+                deliver_outbox_emails(outbox_ids)
+                flash("Recordatorio de fianza enviado al cliente.", "success")
+            return redirect(url_for(".details_view", id=reservation_id))
+        return self.render(
+            "admin/resend_deposit_request.html",
+            reservation=reservation,
+            csrf_form=csrf_form,
+        )
 
     @expose("/release-deposit/<int:reservation_id>", methods=("GET", "POST"))
     def release_deposit(self, reservation_id: int):

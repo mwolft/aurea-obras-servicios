@@ -91,6 +91,62 @@
     </section>
   </div>
 
+  <section aria-labelledby="deposit-attention-title" class="aurea-dashboard-panel aurea-dashboard-deposits">
+    <div class="aurea-dashboard-panel-heading">
+      <h2 id="deposit-attention-title">Fianzas que requieren atención</h2>
+      <span>{{ dashboard.deposit_attention|length }} pendientes</span>
+    </div>
+    {% if dashboard.deposit_attention %}
+      <ol class="aurea-dashboard-deposit-list">
+        {% for item in dashboard.deposit_attention %}
+          <li>
+            <div>
+              <strong>{{ item.tool_name }}</strong>
+              <span>Cliente: {{ item.customer_name }}</span>
+              <small>Entrega: {{ item.start_date.strftime('%d/%m/%Y') }} · Devolución: {{ item.end_date.strftime('%d/%m/%Y') }} · Fianza: {{ "%.2f"|format(item.deposit_amount) }} €</small>
+            </div>
+            <div class="aurea-dashboard-deposit-status">
+              <span>{{ item.operational_state.label }}</span>
+              {% if item.operational_state.delivery_soon %}<small>Entrega hoy o mañana</small>{% endif %}
+              {% if item.operational_state.long_rental %}<small>Alquiler de 6 días o más: comprobar vigencia.</small>{% endif %}
+            </div>
+            <a class="btn btn-primary btn-sm" href="{{ url_for('reservation.details_view', id=item.reservation_id) }}">Gestionar fianza</a>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="aurea-dashboard-clear">✓ No hay fianzas que requieran atención.</p>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="deposit-waiting-title" class="aurea-dashboard-panel aurea-dashboard-deposits">
+    <div class="aurea-dashboard-panel-heading">
+      <h2 id="deposit-waiting-title">Esperando al cliente</h2>
+      <span>{{ dashboard.deposit_waiting_customer|length }} solicitudes enviadas</span>
+    </div>
+    {% if dashboard.deposit_waiting_customer %}
+      <ol class="aurea-dashboard-deposit-list">
+        {% for item in dashboard.deposit_waiting_customer %}
+          <li>
+            <div>
+              <strong>{{ item.tool_name }}</strong>
+              <span>Cliente: {{ item.customer_name }}</span>
+              <small>Entrega: {{ item.start_date.strftime('%d/%m/%Y') }} · Devolución: {{ item.end_date.strftime('%d/%m/%Y') }} · Fianza: {{ "%.2f"|format(item.deposit_amount) }} €</small>
+            </div>
+            <div class="aurea-dashboard-deposit-status">
+              <span>{{ item.operational_state.label }}</span>
+              {% if item.operational_state.delivery_soon %}<small>Entrega hoy o mañana</small>{% endif %}
+              {% if item.operational_state.long_rental %}<small>Alquiler de 6 días o más: comprobar vigencia.</small>{% endif %}
+            </div>
+            <a class="btn btn-default btn-sm" href="{{ url_for('reservation.details_view', id=item.reservation_id) }}">Gestionar fianza</a>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="aurea-dashboard-empty">No hay solicitudes de fianza pendientes de respuesta.</p>
+    {% endif %}
+  </section>
+
   <section aria-labelledby="quick-links-title" class="aurea-dashboard-panel aurea-dashboard-quick-links">
     <h2 id="quick-links-title">Accesos rápidos</h2>
     <div>

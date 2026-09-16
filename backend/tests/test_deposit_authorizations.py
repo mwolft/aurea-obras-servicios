@@ -11,13 +11,15 @@ os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_unit_test"
 
 from app import create_app
 from app.extensions import db
-from app.models import Payment, PaymentEvent, Reservation, Tool
+from app.models import EmailOutbox, Payment, PaymentEvent, Reservation, Tool
 from app.services.deposit_authorizations import (
+    DEPOSIT_CHECKOUT_WINDOW,
     DepositAuthorizationError,
     capture_deposit_authorization,
     process_stripe_deposit_event,
     reconcile_expired_deposit_authorization_for_closure,
     release_deposit_authorization,
+    resend_deposit_authorization_request,
     start_or_recover_deposit_checkout,
 )
 from app.services.payment_domain import (
@@ -40,6 +42,7 @@ from app.services.payment_domain import (
     RESERVATION_STATUS_RETURNED_PENDING_CLOSURE,
 )
 from app.services.reservations import create_reservation
+from app.services.email.rental import EVENT_DEPOSIT_AUTHORIZATION_REQUESTED
 from app.services.stripe_checkout import ReservationPaymentStateError
 
 
@@ -134,10 +137,11 @@ class DepositAuthorizationTestCase(unittest.TestCase):
     def test_zero_deposit_creates_no_payment(self):
         reservation = self.create_confirmed_reservation(self.create_tool(Decimal("0.00")))
         with self.assertRaises(Exception):
-            start_or_recover_deposit_checkout(reservation.id)
+            start_or_recover_deposit_checkout(reservation.id, queue_request_email=True)
         self.assertEqual(
             Payment.query.filter_by(purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION).count(), 0
         )
+        self.assertEqual(EmailOutbox.query.count(), 0)
 
     def test_starts_manual_card_authorization_and_reuses_checkout(self):
         reservation = self.create_confirmed_reservation(self.create_tool())
@@ -161,6 +165,236 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         self.assertEqual(
             Payment.query.filter_by(purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION).count(), 1
         )
+
+    def test_deposit_checkout_has_its_own_24_hour_window(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation_id = reservation.id
+        requested_at = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+        checkout = self.checkout("cs_deposit_24_hours")
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=checkout,
+        ) as create:
+            start_or_recover_deposit_checkout(reservation_id, now=requested_at)
+
+        payment = Payment.query.filter_by(
+            reservation_id=reservation_id,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+        ).one()
+        self.assertEqual(
+            payment.expires_at.replace(tzinfo=timezone.utc),
+            requested_at + DEPOSIT_CHECKOUT_WINDOW,
+        )
+        self.assertEqual(
+            create.call_args.kwargs["expires_at"],
+            int((requested_at + DEPOSIT_CHECKOUT_WINDOW).timestamp()),
+        )
+
+    def test_manual_resend_reuses_open_checkout_without_second_deposit(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation_id = reservation.id
+        requested_at = datetime.now(timezone.utc) - timedelta(hours=5)
+        checkout = self.checkout("cs_deposit_resend")
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=checkout,
+        ):
+            start_or_recover_deposit_checkout(
+                reservation_id,
+                now=requested_at,
+                queue_request_email=True,
+            )
+        payment = Payment.query.filter_by(
+            reservation_id=reservation_id,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+        ).one()
+        initial_email = EmailOutbox.query.one()
+        initial_email.status = "sent"
+        initial_email.sent_at = requested_at
+        db.session.commit()
+        outbox_ids: list[int] = []
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.retrieve",
+            return_value=checkout,
+        ):
+            resend_deposit_authorization_request(
+                reservation_id,
+                now=datetime.now(timezone.utc),
+                outbox_ids=outbox_ids,
+            )
+
+        self.assertEqual(
+            Payment.query.filter_by(
+                reservation_id=reservation_id,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            ).count(),
+            1,
+        )
+        reminder = EmailOutbox.query.filter_by(event_type="deposit_authorization_reminder").one()
+        self.assertEqual(outbox_ids, [reminder.id])
+        self.assertIn(checkout.url, reminder.text_body)
+
+    def test_manual_resend_is_rate_limited_and_never_creates_a_deposit(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation_id = reservation.id
+        checkout = self.checkout("cs_deposit_rate_limit")
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=checkout,
+        ):
+            start_or_recover_deposit_checkout(
+                reservation_id,
+                queue_request_email=True,
+            )
+        email = EmailOutbox.query.one()
+        email.status = "sent"
+        email.sent_at = datetime.now(timezone.utc)
+        db.session.commit()
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.retrieve",
+            return_value=checkout,
+        ):
+            with self.assertRaisesRegex(ReservationPaymentStateError, "4 horas"):
+                resend_deposit_authorization_request(reservation_id)
+        self.assertEqual(
+            Payment.query.filter_by(
+                reservation_id=reservation_id,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            ).count(),
+            1,
+        )
+
+    def test_elapsed_checkout_is_expired_in_stripe_before_a_new_request_is_created(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation_id = reservation.id
+        requested_at = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+        first_checkout = self.checkout("cs_deposit_elapsed")
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=first_checkout,
+        ):
+            start_or_recover_deposit_checkout(reservation_id, now=requested_at)
+
+        open_checkout = self.checkout("cs_deposit_elapsed")
+        expired_checkout = self.checkout("cs_deposit_elapsed")
+        expired_checkout.status = "expired"
+        replacement_checkout = self.checkout("cs_deposit_fresh")
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.retrieve",
+            return_value=open_checkout,
+        ), patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.expire",
+            return_value=expired_checkout,
+        ) as expire, patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=replacement_checkout,
+        ):
+            self.assertEqual(
+                start_or_recover_deposit_checkout(
+                    reservation_id,
+                    now=requested_at + DEPOSIT_CHECKOUT_WINDOW,
+                ),
+                replacement_checkout.url,
+            )
+
+        expire.assert_called_once_with("cs_deposit_elapsed")
+        payments = Payment.query.filter_by(
+            reservation_id=reservation_id,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+        ).order_by(Payment.id).all()
+        self.assertEqual(len(payments), 2)
+        self.assertEqual(payments[0].status, PAYMENT_STATUS_AUTHORIZATION_EXPIRED)
+        self.assertEqual(payments[1].status, PAYMENT_STATUS_PENDING_AUTHORIZATION)
+
+    def test_requesting_deposit_queues_one_customer_email_with_the_live_checkout(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation_id = reservation.id
+        checkout = self.checkout("cs_deposit_email")
+        outbox_ids: list[int] = []
+        db.session.rollback()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=checkout,
+        ):
+            checkout_url = start_or_recover_deposit_checkout(
+                reservation_id,
+                queue_request_email=True,
+                outbox_ids=outbox_ids,
+            )
+
+        payment = Payment.query.filter_by(
+            reservation_id=reservation_id,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+        ).one()
+        email = EmailOutbox.query.one()
+        self.assertEqual(checkout_url, checkout.url)
+        self.assertEqual(payment.status, PAYMENT_STATUS_PENDING_AUTHORIZATION)
+        self.assertEqual(outbox_ids, [email.id])
+        self.assertEqual(email.event_type, EVENT_DEPOSIT_AUTHORIZATION_REQUESTED)
+        self.assertEqual(email.recipient, "deposit@example.com")
+        self.assertIn(checkout.url, email.html_body)
+        self.assertIn(checkout.url, email.text_body)
+        self.assertIn("Deposit tool", email.html_body)
+        self.assertIn("20/09/2026", email.text_body)
+        self.assertIn("21/09/2026", email.text_body)
+        self.assertIn("100.00 €", email.text_body)
+        self.assertIn("retención temporal", email.text_body.lower())
+        self.assertNotIn(payment.idempotency_key, email.html_body)
+
+        db.session.rollback()
+        repeated_outbox_ids: list[int] = []
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.retrieve",
+            return_value=checkout,
+        ) as retrieve:
+            repeated_url = start_or_recover_deposit_checkout(
+                reservation_id,
+                queue_request_email=True,
+                outbox_ids=repeated_outbox_ids,
+            )
+
+        self.assertEqual(repeated_url, checkout.url)
+        retrieve.assert_called_once_with("cs_deposit_email")
+        self.assertEqual(
+            Payment.query.filter_by(
+                reservation_id=reservation_id,
+                purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            ).count(),
+            1,
+        )
+        self.assertEqual(EmailOutbox.query.count(), 1)
+        self.assertEqual(repeated_outbox_ids, [email.id])
+
+    def test_deposit_request_rejects_unconfirmed_or_unpaid_reservations(self):
+        unconfirmed = self.create_confirmed_reservation(self.create_tool())
+        unconfirmed.status = RESERVATION_STATUS_PENDING_PAYMENT
+        db.session.commit()
+        unconfirmed_id = unconfirmed.id
+        db.session.rollback()
+        with self.assertRaises(ReservationPaymentStateError):
+            start_or_recover_deposit_checkout(unconfirmed_id, queue_request_email=True)
+
+        unpaid = self.create_confirmed_reservation(self.create_tool())
+        rental_payment = Payment.query.filter_by(
+            reservation_id=unpaid.id,
+            purpose=PAYMENT_PURPOSE_RENTAL_CHARGE,
+        ).one()
+        rental_payment.status = "pending"
+        db.session.commit()
+        unpaid_id = unpaid.id
+        db.session.rollback()
+        with self.assertRaises(ReservationPaymentStateError):
+            start_or_recover_deposit_checkout(unpaid_id, queue_request_email=True)
+
+        self.assertEqual(EmailOutbox.query.count(), 0)
 
     def test_expired_checkout_can_be_replaced_but_completed_one_waits_for_webhook(self):
         reservation = self.create_confirmed_reservation(self.create_tool())

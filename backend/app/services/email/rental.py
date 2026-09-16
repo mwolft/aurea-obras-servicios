@@ -18,6 +18,9 @@ EVENT_RESERVATION_PENDING_REVIEW_ADMIN = "reservation_pending_review_admin"
 EVENT_RESERVATION_PENDING_PAYMENT = "reservation_pending_payment"
 EVENT_RESERVATION_CANCELLED = "reservation_cancelled"
 EVENT_DEPOSIT_AUTHORIZED = "deposit_authorized"
+EVENT_DEPOSIT_AUTHORIZATION_REQUESTED = "deposit_authorization_requested"
+EVENT_DEPOSIT_AUTHORIZATION_REMINDER = "deposit_authorization_reminder"
+EVENT_DEPOSIT_AUTOMATION_FAILED = "deposit_automation_failed"
 EVENT_DEPOSIT_RELEASED = "deposit_released"
 EVENT_DEPOSIT_CAPTURED = "deposit_captured"
 EVENT_RESERVATION_DELIVERED = "reservation_delivered"
@@ -310,6 +313,120 @@ def queue_deposit_authorized(session: Session, reservation: Reservation, payment
             message="La fianza es una retención temporal asociada al alquiler; no forma parte del cobro inicial del alquiler.",
             footer="Información de fianza enviada por AUREA Obras y Servicios.",
         ),
+    )
+
+
+def queue_deposit_authorization_requested(
+    session: Session,
+    reservation: Reservation,
+    payment: Payment,
+    checkout_url: str,
+):
+    """Queue the one customer request for a pending card-hold Checkout.
+
+    The key is deliberately scoped to the deposit Payment rather than the
+    reservation: a legitimately reauthorized deposit receives a new Payment
+    and therefore a new request, while repeats for the same live Checkout stay
+    idempotent.
+    """
+
+    amount = _format_amount(payment.amount)
+    return _queue_customer(
+        session,
+        reservation,
+        event_type=EVENT_DEPOSIT_AUTHORIZATION_REQUESTED,
+        idempotency_key=f"deposit:{payment.id}:authorization_requested",
+        subject="Autoriza la fianza de tu reserva · AUREA",
+        content=_build_email(
+            title="Autoriza la fianza de tu reserva",
+            preheader="Completa la autorización temporal de la fianza antes de la entrega.",
+            rows=(
+                _reservation_rows(reservation, include_total=True, include_deposit=True)
+                + information_row("Importe a autorizar", amount)
+            ),
+            text_lines=(
+                _reservation_text(reservation, include_total=True, include_deposit=True)
+                + [f"Importe a autorizar: {amount}"]
+            ),
+            message=(
+                "El alquiler ya está confirmado. Antes de poder recibir o recoger la "
+                "herramienta, debes autorizar la fianza con una tarjeta. No se cobrará "
+                "este importe ahora: se realizará una retención temporal. La autorización "
+                "debe seguir vigente en el momento de la entrega."
+            ),
+            footer="Solicitud de fianza enviada por AUREA Obras y Servicios.",
+            action_label="Autorizar fianza",
+            action_url=checkout_url,
+        ),
+    )
+
+
+def queue_deposit_authorization_reminder(
+    session: Session,
+    reservation: Reservation,
+    payment: Payment,
+    checkout_url: str,
+    *,
+    reminder_key: str,
+):
+    """Queue one explicit Admin-requested reminder for the same open Checkout."""
+    amount = _format_amount(payment.amount)
+    return _queue_customer(
+        session,
+        reservation,
+        event_type=EVENT_DEPOSIT_AUTHORIZATION_REMINDER,
+        idempotency_key=reminder_key,
+        subject="Recordatorio: autoriza la fianza de tu reserva · AUREA",
+        content=_build_email(
+            title="Autoriza la fianza de tu reserva",
+            preheader="Completa la autorización temporal de la fianza antes de la entrega.",
+            rows=(
+                _reservation_rows(reservation, include_total=True, include_deposit=True)
+                + information_row("Importe a autorizar", amount)
+            ),
+            text_lines=(
+                _reservation_text(reservation, include_total=True, include_deposit=True)
+                + [f"Importe a autorizar: {amount}"]
+            ),
+            message=(
+                "El alquiler ya está confirmado. Antes de poder recibir o recoger la "
+                "herramienta, debes autorizar la fianza con una tarjeta. No se cobrará "
+                "este importe ahora: se realizará una retención temporal. La autorización "
+                "debe seguir vigente en el momento de la entrega."
+            ),
+            footer="Recordatorio de fianza enviado por AUREA Obras y Servicios.",
+            action_label="Autorizar fianza",
+            action_url=checkout_url,
+        ),
+    )
+
+
+def queue_deposit_automation_failure(
+    session: Session,
+    reservation: Reservation,
+    *,
+    occurrence_key: str,
+):
+    """Persist a small internal alert when the hourly request job cannot act.
+
+    This deliberately records no provider response or secret. The dashboard
+    uses the same row to show Emilio that a manual intervention is needed.
+    """
+    return queue_transactional_email(
+        session,
+        event_type=EVENT_DEPOSIT_AUTOMATION_FAILED,
+        idempotency_key=f"reservation:{reservation.id}:deposit_automation_failed:{occurrence_key}",
+        recipient=internal_alert_recipient(),
+        subject="Solicitud automática de fianza requiere revisión · AUREA",
+        content=_build_email(
+            title="Solicitud automática de fianza requiere revisión",
+            preheader="Una reserva no ha podido recibir su solicitud de fianza automáticamente.",
+            rows=_reservation_rows(reservation, include_deposit=True),
+            text_lines=_reservation_text(reservation, include_deposit=True),
+            message="Revisa la reserva desde Administración. El alquiler y sus importes no se han modificado.",
+            footer="Alerta interna de AUREA Obras y Servicios.",
+        ),
+        reservation_id=reservation.id,
     )
 
 

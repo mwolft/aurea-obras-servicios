@@ -575,6 +575,99 @@ class ReservationAdminTestCase(unittest.TestCase):
             f"/admin/reservation/authorize-deposit/{active_id}".encode(), response.data
         )
 
+    def test_admin_requests_deposit_by_email_and_keeps_it_pending_until_stripe_confirms(self):
+        reservation_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        self.add_rental_charge(reservation_id)
+        checkout = type(
+            "Checkout",
+            (),
+            {
+                "id": "cs_admin_deposit_request",
+                "url": "https://checkout.stripe.test/c/pay/cs_admin_deposit_request",
+                "status": "open",
+            },
+        )()
+
+        confirmation = self.client.get(f"/admin/reservation/authorize-deposit/{reservation_id}")
+        self.assertEqual(confirmation.status_code, 200)
+        self.assertIn(b"Solicitar fianza", confirmation.data)
+        self.assertIn(b"correo", confirmation.data)
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.checkout.Session.create",
+            return_value=checkout,
+        ), patch("app.services.email.outbox.send_resend_email", return_value="re_deposit_request"):
+            response = self.post_admin(f"/admin/reservation/authorize-deposit/{reservation_id}")
+
+        self.assertEqual(response.status_code, 302)
+        payment = Payment.query.filter_by(
+            reservation_id=reservation_id,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+        ).one()
+        email = EmailOutbox.query.one()
+        self.assertEqual(payment.status, PAYMENT_STATUS_PENDING_AUTHORIZATION)
+        self.assertEqual(email.status, "sent")
+        self.assertIn(checkout.url, email.html_body)
+
+        listing = self.client.get("/admin/reservation/")
+        self.assertIn(b"Solicitud enviada", listing.data)
+        self.assertIn(b"Esperando autorizaci", listing.data)
+        self.assertNotIn(
+            f"/admin/reservation/authorize-deposit/{reservation_id}".encode(), listing.data
+        )
+
+    def test_admin_offers_new_request_after_checkout_expiry_and_controlled_resend_when_open(self):
+        expired_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        waiting_id = self.create_cancellable_reservation(
+            "confirmed", deposit_amount_snapshot=Decimal("75.00")
+        )
+        self.add_rental_charge(expired_id)
+        self.add_rental_charge(waiting_id)
+        expired = self.add_pending_deposit(expired_id)
+        expired.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        waiting = self.add_pending_deposit(waiting_id)
+        waiting.expires_at = datetime.now(timezone.utc) + timedelta(hours=12)
+        db.session.add_all([
+            EmailOutbox(
+                event_type="deposit_authorization_requested",
+                reservation_id=expired_id,
+                recipient="customer@example.com",
+                subject="Solicitud",
+                text_body="Texto",
+                html_body="<p>Texto</p>",
+                idempotency_key=f"deposit:{expired.id}:authorization_requested",
+                status="sent",
+                sent_at=datetime.now(timezone.utc) - timedelta(hours=25),
+            ),
+            EmailOutbox(
+                event_type="deposit_authorization_requested",
+                reservation_id=waiting_id,
+                recipient="customer@example.com",
+                subject="Solicitud",
+                text_body="Texto",
+                html_body="<p>Texto</p>",
+                idempotency_key=f"deposit:{waiting.id}:authorization_requested",
+                status="sent",
+                sent_at=datetime.now(timezone.utc) - timedelta(hours=5),
+            ),
+        ])
+        db.session.commit()
+
+        response = self.client.get("/admin/reservation/")
+
+        self.assertIn(b"Generar nueva solicitud", response.data)
+        self.assertIn(
+            f"/admin/reservation/authorize-deposit/{expired_id}".encode(), response.data
+        )
+        self.assertIn(b"Reenviar solicitud", response.data)
+        self.assertIn(
+            f"/admin/reservation/resend-deposit-request/{waiting_id}".encode(), response.data
+        )
+
     def test_admin_only_shows_deposit_resolution_actions_after_return(self):
         confirmed_id = self.create_cancellable_reservation(
             "confirmed", deposit_amount_snapshot=Decimal("75.00")
