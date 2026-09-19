@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { getPublicUrl } from "@/lib/site";
@@ -59,15 +60,15 @@ export default function Home() {
               <Link className={styles.secondaryAction} href="/servicios">Ver servicios</Link>
             </div>
           </div>
-
-          <div aria-hidden="true" className={styles.heroVisual}>
-            <span className={styles.visualLabel}>Alquiler de herramientas</span>
-            <div className={styles.heroMark}><ToolsIcon /></div>
-            <span className={`${styles.heroLine} ${styles.heroLineOne}`} />
-            <span className={`${styles.heroLine} ${styles.heroLineTwo}`} />
-            <span className={`${styles.heroBlock} ${styles.heroBlockOne}`} />
-            <span className={`${styles.heroBlock} ${styles.heroBlockTwo}`} />
-          </div>
+          <Image
+            alt=""
+            aria-hidden="true"
+            className={styles.heroImage}
+            fill
+            priority
+            sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1200px) calc(100vw - 3rem), 72rem"
+            src="/alquiler-de-maquinaria-en-ciudad-real.webp"
+          />
         </section>
 
         <section aria-labelledby="rental-title" className={styles.rental}>
