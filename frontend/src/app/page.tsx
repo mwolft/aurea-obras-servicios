@@ -68,6 +68,7 @@ export default function Home() {
             className={styles.heroImage}
             fill
             priority
+            quality={100}
             sizes="100vw"
             src="/alquiler-de-maquinaria-en-ciudad-real.webp"
           />
