@@ -68,7 +68,7 @@ export default function Home() {
             className={styles.heroImage}
             fill
             priority
-            sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1200px) calc(100vw - 3rem), 72rem"
+            sizes="100vw"
             src="/alquiler-de-maquinaria-en-ciudad-real.webp"
           />
         </section>
