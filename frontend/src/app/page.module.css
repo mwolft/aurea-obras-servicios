@@ -1,12 +1,30 @@
 .page { flex: 1; color: var(--color-text); background: var(--color-background); }
 
-.main { display: grid; gap: clamp(4.5rem, 10vw, 8rem); }
+.fullMain { width: 100%; padding: 0; margin: 0; }
+.main { display: grid; width: min(100% - 3rem, var(--container-width)); gap: clamp(4.5rem, 10vw, 8rem); padding: clamp(4.5rem, 10vw, 8rem) 0 var(--main-padding-block); margin: 0 auto; }
 .eyebrow { color: var(--color-accent-dark); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
 
-.hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(22rem, 0.9fr); gap: clamp(3rem, 7vw, 7rem); align-items: center; }
-.heroCopy { max-width: 44rem; }
+.hero { position: relative; display: grid; align-items: center; min-height: clamp(33rem, 55vw, 41rem); overflow: hidden; isolation: isolate; background: var(--color-brand-blue); }
+.hero::before { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(248,247,243,.97) 0%, rgba(248,247,243,.9) 23%, rgba(248,247,243,.55) 38%, rgba(248,247,243,.18) 51%, transparent 61%); content: ""; }
+.heroInner {
+  position: relative;
+  z-index: 2;
+  width: min(100% - 3rem, var(--container-width));
+  padding-top: clamp(0.75rem, 3.5vw, 2.75rem);
+  padding-right: 0;
+  padding-bottom: clamp(2.5rem, 7vw, 5.5rem);
+  padding-left: 0;
+  margin: 0 auto;
+}
+.heroCopy { position: relative; z-index: 2; max-width: 44rem; }
+.heroImage { z-index: 0; object-fit: cover; object-position: 60% center; }
 .hero h1 { max-width: 13ch; margin: 0.9rem 0 1.5rem; color: var(--color-primary); font-size: clamp(2.9rem, 6vw, 5.25rem); font-weight: 700; line-height: 0.99; letter-spacing: -0.055em; }
-.intro { max-width: 42rem; color: var(--color-text-muted); font-size: clamp(1.05rem, 2vw, 1.25rem); line-height: 1.65; }
+.intro { max-width: 30rem; width: 100%; color: #334155; font-size: clamp(1.05rem, 2vw, 1.25rem); line-height: 1.65; }
+
+@media (min-width: 708px) and (max-width: 1083px) {
+  .intro { width: min(24rem, 100%); }
+}
+
 .heroActions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }
 .primaryAction, .secondaryAction { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0.75rem 1rem; border-radius: var(--radius-sm); font-weight: 800; text-decoration: none; }
 .primaryAction { color: var(--color-surface); background: var(--color-accent); box-shadow: var(--shadow-sm); }
@@ -14,19 +32,6 @@
 .secondaryAction { border: 1px solid var(--color-primary); color: var(--color-primary); }
 .secondaryAction:hover { color: var(--color-surface); background: var(--color-primary); }
 
-.heroVisual { position: relative; display: grid; min-height: 28rem; overflow: hidden; border-radius: var(--radius-lg); background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
-.heroVisual::before, .heroVisual::after { position: absolute; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; content: ""; }
-.heroVisual::before { top: 2rem; left: 2rem; width: 12rem; aspect-ratio: 1; }
-.heroVisual::after { right: -4rem; bottom: -4rem; width: 17rem; aspect-ratio: 1; }
-.visualLabel { position: absolute; top: 1.5rem; left: 1.5rem; color: rgba(255,255,255,.78); font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.heroMark { z-index: 1; align-self: center; justify-self: center; width: min(43%, 12rem); color: var(--color-accent); }
-.heroMark svg { width: 100%; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-.heroLine { position: absolute; display: block; height: .35rem; border-radius: 99px; background: rgba(255,255,255,.9); }
-.heroLineOne { right: 13%; bottom: 21%; left: 13%; }
-.heroLineTwo { right: 25%; bottom: 33%; left: 25%; }
-.heroBlock { position: absolute; display: block; width: 3.8rem; height: 2.1rem; border-radius: .2rem; background: var(--color-accent); box-shadow: 0 .35rem 0 rgba(6,31,63,.25); }
-.heroBlockOne { right: 18%; bottom: 12%; }
-.heroBlockTwo { bottom: 12%; left: 18%; }
 
 .services, .gardeningFeature { display: grid; gap: var(--space-8); }
 .sectionHeading { display: grid; gap: var(--space-3); max-width: 48rem; }
@@ -68,5 +73,5 @@
 .rentalIcon svg { width: 2.25rem; }
 .contactCta { grid-template-columns: minmax(0,1fr) auto; border-color: rgba(255,98,0,.35); }
 
-@media (max-width: 900px) { .hero, .gardeningFeature, .editorial, .multiservice { grid-template-columns: 1fr; } .heroVisual { min-height: 22rem; } .editorial blockquote { max-width: 18ch; } .rental { grid-template-columns: auto minmax(0,1fr); } .rental .secondaryAction { grid-column: 2; justify-self: start; } }
-@media (max-width: 700px) { .main { gap: 4.5rem; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .heroVisual { min-height: 19rem; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .cardLink { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0; } .gardeningFeature, .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .gardeningVisual { min-height: 11rem; } .contactCta .primaryAction { justify-self: start; } }
+@media (max-width: 900px) { .gardeningFeature, .editorial, .multiservice { grid-template-columns: 1fr; } .editorial blockquote { max-width: 18ch; } .rental { grid-template-columns: auto minmax(0,1fr); } .rental .secondaryAction { grid-column: 2; justify-self: start; } }
+@media (max-width: 700px) { .main { width: min(100% - 2rem, var(--container-width)); gap: 4.5rem; padding-top: 4.5rem; } .hero { min-height: 36rem; } .hero::before { background: linear-gradient(180deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.93) 44%, rgba(248,247,243,.52) 66%, rgba(248,247,243,.12) 79%, transparent 88%); } .heroInner { width: min(100% - 2rem, var(--container-width)); padding-top: 1.25rem; padding-right: 0; padding-bottom: 2.5rem; padding-left: 0; } .heroImage { object-position: 58% center; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .hero .secondaryAction { border-color: var(--color-primary); color: var(--color-surface); background: var(--color-primary); } .hero .secondaryAction:hover, .hero .secondaryAction:focus-visible { color: var(--color-primary); background: transparent; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .cardLink { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0; } .gardeningFeature, .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .gardeningVisual { min-height: 11rem; } .contactCta .primaryAction { justify-self: start; } }

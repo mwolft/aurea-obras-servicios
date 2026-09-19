@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { getPublicUrl } from "@/lib/site";
@@ -44,32 +45,36 @@ function ToolsIcon() {
 export default function Home() {
   return (
     <div className={styles.page}>
-      <main className={styles.main}>
+      <main className={styles.fullMain}>
         <section aria-labelledby="hero-title" className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>ALQUILER · MAQUINARIA · HERRAMIENTAS · SERVICIOS</p>
-            <h1 id="hero-title">Alquiler de maquinaria y herramientas.</h1>
-            <p className={styles.intro}>
-              Consulta maquinaria y herramientas disponibles para tus fechas. También ofrecemos servicios de jardinería, fontanería, electricidad y obras y reformas.
-            </p>
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/alquiler">
-                Ver alquiler
-              </Link>
-              <Link className={styles.secondaryAction} href="/servicios">Ver servicios</Link>
+          <div className={styles.heroInner}>
+            <div className={styles.heroCopy}>
+              <p className={styles.eyebrow}>ALQUILER · MAQUINARIA · HERRAMIENTAS · SERVICIOS</p>
+              <h1 id="hero-title">Alquiler de maquinaria y herramientas.</h1>
+              <p className={styles.intro}>
+                Consulta maquinaria y herramientas disponibles para tus fechas. También ofrecemos servicios de jardinería, fontanería, electricidad y obras y reformas.
+              </p>
+              <div className={styles.heroActions}>
+                <Link className={styles.primaryAction} href="/alquiler">
+                  Ver alquiler
+                </Link>
+                <Link className={styles.secondaryAction} href="/servicios">Ver servicios</Link>
+              </div>
             </div>
           </div>
-
-          <div aria-hidden="true" className={styles.heroVisual}>
-            <span className={styles.visualLabel}>Alquiler de herramientas</span>
-            <div className={styles.heroMark}><ToolsIcon /></div>
-            <span className={`${styles.heroLine} ${styles.heroLineOne}`} />
-            <span className={`${styles.heroLine} ${styles.heroLineTwo}`} />
-            <span className={`${styles.heroBlock} ${styles.heroBlockOne}`} />
-            <span className={`${styles.heroBlock} ${styles.heroBlockTwo}`} />
-          </div>
+          <Image
+            alt=""
+            aria-hidden="true"
+            className={styles.heroImage}
+            fill
+            priority
+            quality={100}
+            sizes="100vw"
+            src="/alquiler-de-maquinaria-en-ciudad-real.webp"
+          />
         </section>
 
+        <div className={styles.main}>
         <section aria-labelledby="rental-title" className={styles.rental}>
           <div aria-hidden="true" className={styles.rentalIcon}><ToolsIcon /></div>
           <div>
@@ -157,6 +162,7 @@ export default function Home() {
           </div>
           <Link className={styles.primaryAction} href="/contacto">Ir a Contacto</Link>
         </section>
+        </div>
       </main>
     </div>
   );
