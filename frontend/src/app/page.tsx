@@ -45,19 +45,21 @@ function ToolsIcon() {
 export default function Home() {
   return (
     <div className={styles.page}>
-      <main className={styles.main}>
+      <main className={styles.fullMain}>
         <section aria-labelledby="hero-title" className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>ALQUILER · MAQUINARIA · HERRAMIENTAS · SERVICIOS</p>
-            <h1 id="hero-title">Alquiler de maquinaria y herramientas.</h1>
-            <p className={styles.intro}>
-              Consulta maquinaria y herramientas disponibles para tus fechas. También ofrecemos servicios de jardinería, fontanería, electricidad y obras y reformas.
-            </p>
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryAction} href="/alquiler">
-                Ver alquiler
-              </Link>
-              <Link className={styles.secondaryAction} href="/servicios">Ver servicios</Link>
+          <div className={styles.heroInner}>
+            <div className={styles.heroCopy}>
+              <p className={styles.eyebrow}>ALQUILER · MAQUINARIA · HERRAMIENTAS · SERVICIOS</p>
+              <h1 id="hero-title">Alquiler de maquinaria y herramientas.</h1>
+              <p className={styles.intro}>
+                Consulta maquinaria y herramientas disponibles para tus fechas. También ofrecemos servicios de jardinería, fontanería, electricidad y obras y reformas.
+              </p>
+              <div className={styles.heroActions}>
+                <Link className={styles.primaryAction} href="/alquiler">
+                  Ver alquiler
+                </Link>
+                <Link className={styles.secondaryAction} href="/servicios">Ver servicios</Link>
+              </div>
             </div>
           </div>
           <Image
@@ -71,6 +73,7 @@ export default function Home() {
           />
         </section>
 
+        <div className={styles.main}>
         <section aria-labelledby="rental-title" className={styles.rental}>
           <div aria-hidden="true" className={styles.rentalIcon}><ToolsIcon /></div>
           <div>
@@ -158,6 +161,7 @@ export default function Home() {
           </div>
           <Link className={styles.primaryAction} href="/contacto">Ir a Contacto</Link>
         </section>
+        </div>
       </main>
     </div>
   );

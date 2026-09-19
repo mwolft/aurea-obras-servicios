@@ -1,12 +1,14 @@
 .page { flex: 1; color: var(--color-text); background: var(--color-background); }
 
-.main { display: grid; gap: clamp(4.5rem, 10vw, 8rem); }
+.fullMain { width: 100%; padding: 0; margin: 0; }
+.main { display: grid; width: min(100% - 3rem, var(--container-width)); gap: clamp(4.5rem, 10vw, 8rem); padding: clamp(4.5rem, 10vw, 8rem) 0 var(--main-padding-block); margin: 0 auto; }
 .eyebrow { color: var(--color-accent-dark); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
 
-.hero { position: relative; display: grid; align-items: center; min-height: clamp(33rem, 55vw, 41rem); padding: clamp(2.5rem, 7vw, 5.5rem); overflow: hidden; border-radius: var(--radius-lg); isolation: isolate; background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
-.hero::before { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(247,246,242,.97) 0%, rgba(247,246,242,.91) 32%, rgba(247,246,242,.58) 54%, rgba(247,246,242,.18) 76%, rgba(247,246,242,.06) 100%); content: ""; }
+.hero { position: relative; display: grid; align-items: center; min-height: clamp(33rem, 55vw, 41rem); overflow: hidden; isolation: isolate; background: var(--color-brand-blue); }
+.hero::before { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(248,247,243,.97) 0%, rgba(248,247,243,.9) 25%, rgba(248,247,243,.57) 43%, rgba(248,247,243,.2) 59%, transparent 77%); content: ""; }
+.heroInner { position: relative; z-index: 2; width: min(100% - 3rem, var(--container-width)); padding: clamp(2.5rem, 7vw, 5.5rem) 0; margin: 0 auto; }
 .heroCopy { position: relative; z-index: 2; max-width: 44rem; }
-.heroImage { z-index: 0; object-fit: cover; object-position: 62% center; }
+.heroImage { z-index: 0; object-fit: cover; object-position: 60% center; }
 .hero h1 { max-width: 13ch; margin: 0.9rem 0 1.5rem; color: var(--color-primary); font-size: clamp(2.9rem, 6vw, 5.25rem); font-weight: 700; line-height: 0.99; letter-spacing: -0.055em; }
 .intro { max-width: 42rem; color: var(--color-text-muted); font-size: clamp(1.05rem, 2vw, 1.25rem); line-height: 1.65; }
 .heroActions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }
@@ -58,4 +60,4 @@
 .contactCta { grid-template-columns: minmax(0,1fr) auto; border-color: rgba(255,98,0,.35); }
 
 @media (max-width: 900px) { .gardeningFeature, .editorial, .multiservice { grid-template-columns: 1fr; } .editorial blockquote { max-width: 18ch; } .rental { grid-template-columns: auto minmax(0,1fr); } .rental .secondaryAction { grid-column: 2; justify-self: start; } }
-@media (max-width: 700px) { .main { gap: 4.5rem; } .hero { min-height: 36rem; padding: 2.5rem 1.5rem; } .hero::before { background: linear-gradient(180deg, rgba(247,246,242,.98) 0%, rgba(247,246,242,.94) 51%, rgba(247,246,242,.62) 77%, rgba(247,246,242,.22) 100%); } .heroImage { object-position: 58% center; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .cardLink { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0; } .gardeningFeature, .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .gardeningVisual { min-height: 11rem; } .contactCta .primaryAction { justify-self: start; } }
+@media (max-width: 700px) { .main { width: min(100% - 2rem, var(--container-width)); gap: 4.5rem; padding-top: 4.5rem; } .hero { min-height: 36rem; } .hero::before { background: linear-gradient(180deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.93) 48%, rgba(248,247,243,.58) 76%, rgba(248,247,243,.12) 100%); } .heroInner { width: min(100% - 2rem, var(--container-width)); padding: 2.5rem 0; } .heroImage { object-position: 58% center; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .cardLink { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0; } .gardeningFeature, .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .gardeningVisual { min-height: 11rem; } .contactCta .primaryAction { justify-self: start; } }
