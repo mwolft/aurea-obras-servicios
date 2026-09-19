@@ -5,6 +5,8 @@ import { getCategorySlug } from "@/lib/category-slug";
 import type { CatalogTool } from "@/lib/api";
 import { getRentalProductPageContent } from "@/lib/rental-product-content";
 
+import { RentalToolGallery } from "./rental-tool-gallery";
+
 import styles from "./rental-tool-details.module.css";
 
 type RentalToolDetailsProps = {
@@ -23,7 +25,6 @@ function ToolPlaceholder() {
 }
 
 export function RentalToolDetails({ tool }: RentalToolDetailsProps) {
-  const [mainImage, ...secondaryImages] = tool.images;
   const categoryPath = `/alquiler/${getCategorySlug(tool.category)}`;
   const content = getRentalProductPageContent(tool);
   const formatAmount = (amount: string) =>
@@ -44,18 +45,13 @@ export function RentalToolDetails({ tool }: RentalToolDetailsProps) {
       </nav>
 
       <article className={styles.product}>
-        <section aria-label={`Imágenes de ${tool.name}`} className={styles.gallery}>
-          {mainImage ? (
-            // Cloudinary supplies a public HTTPS URL; no remote image config is needed.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt={content.imageAlt} className={styles.mainImage} src={mainImage.url} />
-          ) : <ToolPlaceholder />}
-          {secondaryImages.length > 0 && <div className={styles.secondaryImages}>{secondaryImages.map((image) => (
-            // Cloudinary supplies a public HTTPS URL; no remote image config is needed.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img alt={`${tool.name} — imagen ${image.position + 1}`} className={styles.secondaryImage} key={image.position} src={image.url} />
-          ))}</div>}
-        </section>
+        {tool.images.length > 0 ? (
+          <RentalToolGallery imageAlt={content.imageAlt} images={tool.images} toolName={tool.name} />
+        ) : (
+          <section aria-label={`Imágenes de ${tool.name}`} className={styles.gallery}>
+            <ToolPlaceholder />
+          </section>
+        )}
 
         <div className={styles.overview}>
           <p className={styles.category}>{content.eyebrow}</p>
