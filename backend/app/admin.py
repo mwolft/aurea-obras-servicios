@@ -104,6 +104,11 @@ ADMIN_TEXT_OVERRIDES = {
     "Save and Continue Editing": "Guardar y continuar editando",
 }
 
+TOOL_CATEGORY_CHOICES = (
+    ("Maquinaria", "Maquinaria"),
+    ("Herramientas", "Herramientas"),
+)
+
 
 def spanish_admin_gettext(message: str, **variables: str) -> str:
     """Keep Flask-Admin's Spanish catalog, correcting its save labels for Spain."""
@@ -186,6 +191,7 @@ def admin_logout():
 
 class ToolAdmin(SecureModelView):
     can_delete = False
+    form_choices = {"category": TOOL_CATEGORY_CHOICES}
     column_list = (
         "name",
         "category",
