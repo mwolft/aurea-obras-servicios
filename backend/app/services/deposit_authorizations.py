@@ -1032,7 +1032,6 @@ def capture_deposit_authorization(
                 intent = stripe.PaymentIntent.capture(
                     payment.external_payment_id,
                     amount_to_capture=_amount_in_cents(amount),
-                    final_capture=True,
                 )
             except stripe.StripeError as error:
                 raise DepositAuthorizationError("Stripe no ha aceptado capturar la fianza.") from error

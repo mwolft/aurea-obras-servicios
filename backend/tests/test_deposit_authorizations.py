@@ -119,6 +119,7 @@ class DepositAuthorizationTestCase(unittest.TestCase):
             payment,
             event_id=f"evt_deposit_{payment.id}",
             id=f"pi_deposit_{payment.id}",
+            amount_capturable=int(payment.amount * 100),
             latest_charge={"id": f"ch_deposit_{payment.id}", "payment_method_details": {"card": {"capture_before": 1_800_000_000}}},
         )
         db.session.rollback()
@@ -933,18 +934,21 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         self.assertIsNotNone(released.released_at)
 
     def test_partial_and_full_capture_and_reason_validation(self):
-        reservation = self.create_confirmed_reservation(self.create_tool())
+        reservation = self.create_confirmed_reservation(self.create_tool(Decimal("120.00")))
         reservation_id = reservation.id
         payment = self.authorize_payment(reservation)
         reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
         reservation.returned_at = datetime.now(timezone.utc)
         db.session.commit()
-        partial = {"status": "succeeded", "amount_received": 4000, "latest_charge": "ch_captured"}
-        with patch("app.services.deposit_authorizations.stripe.PaymentIntent.capture", return_value=partial):
-            captured = capture_deposit_authorization(reservation_id, Decimal("40.00"), "Daño documentado")
+        partial = {"status": "succeeded", "amount_received": 5000, "latest_charge": "ch_captured"}
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.capture", return_value=partial
+        ) as capture:
+            captured = capture_deposit_authorization(reservation_id, Decimal("50.00"), "Daño documentado")
         self.assertEqual(captured.status, PAYMENT_STATUS_CAPTURED_PARTIALLY)
-        self.assertEqual(captured.captured_amount, Decimal("40.00"))
+        self.assertEqual(captured.captured_amount, Decimal("50.00"))
         self.assertEqual(captured.capture_reason, "Daño documentado")
+        capture.assert_called_once_with(payment.external_payment_id, amount_to_capture=5000)
         with self.assertRaises(DepositAuthorizationError):
             capture_deposit_authorization(reservation_id, Decimal("1.00"), "")
         db.session.rollback()
@@ -957,12 +961,38 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         second.returned_at = datetime.now(timezone.utc)
         db.session.commit()
         full = {"status": "succeeded", "amount_received": 10000, "latest_charge": "ch_full"}
-        with patch("app.services.deposit_authorizations.stripe.PaymentIntent.capture", return_value=full):
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.capture", return_value=full
+        ) as capture_full:
             captured_full = capture_deposit_authorization(second_id, Decimal("100.00"), "Daño total")
         self.assertEqual(captured_full.status, PAYMENT_STATUS_CAPTURED)
+        capture_full.assert_called_once_with(
+            captured_full.external_payment_id, amount_to_capture=10000
+        )
         db.session.rollback()
         with self.assertRaises(DepositAuthorizationError):
             capture_deposit_authorization(second_id, Decimal("101.00"), "Exceso")
+
+    def test_stripe_capture_error_preserves_the_authorization_for_a_retry(self):
+        reservation = self.create_confirmed_reservation(self.create_tool(Decimal("120.00")))
+        reservation_id = reservation.id
+        payment = self.authorize_payment(reservation)
+        reservation.status = RESERVATION_STATUS_RETURNED_PENDING_CLOSURE
+        reservation.returned_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+        with patch(
+            "app.services.deposit_authorizations.stripe.PaymentIntent.capture",
+            side_effect=stripe.StripeError("capture rejected"),
+        ):
+            with self.assertRaisesRegex(DepositAuthorizationError, "Stripe no ha aceptado"):
+                capture_deposit_authorization(reservation_id, Decimal("50.00"), "Daño documentado")
+
+        stored_payment = db.session.get(Payment, payment.id)
+        stored_reservation = db.session.get(Reservation, reservation_id)
+        self.assertEqual(stored_payment.status, PAYMENT_STATUS_AUTHORIZED)
+        self.assertIsNone(stored_payment.captured_amount)
+        self.assertEqual(stored_reservation.status, RESERVATION_STATUS_RETURNED_PENDING_CLOSURE)
 
     def test_unpaid_reservation_and_expired_authorization_are_rejected(self):
         pending = self.create_confirmed_reservation(self.create_tool(), status=RESERVATION_STATUS_PENDING_PAYMENT)
