@@ -6,7 +6,7 @@ import { getPublicUrl } from "@/lib/site";
 
 import styles from "./page.module.css";
 
-const socialImageUrl = getPublicUrl("/icon.png");
+const socialImageUrl = getPublicUrl("/alquiler-de-maquinaria-en-ciudad-real.webp");
 const commercialTitle = "AUREA | Alquiler y servicios en Ciudad Real";
 const commercialDescription =
   "Alquiler de maquinaria y herramientas y servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real capital y provincia.";
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     description: commercialDescription,
     url: getPublicUrl(),
     type: "website",
-    images: [{ url: socialImageUrl, width: 1536, height: 1024, alt: "Icono de AUREA" }],
+    images: [{ url: socialImageUrl, alt: "Alquiler de maquinaria y herramientas de AUREA" }],
   },
   twitter: {
     card: "summary_large_image",
