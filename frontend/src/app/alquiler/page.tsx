@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   alternates: { canonical: "/alquiler" },
 };
 
+const categoryCtaLabelBySlug = {
+  maquinaria: "Ver maquinaria",
+  herramientas: "Ver herramientas",
+} as const;
+
+function getCategoryCtaLabel(category: { name: string; slug: string }) {
+  return categoryCtaLabelBySlug[category.slug as keyof typeof categoryCtaLabelBySlug]
+    ?? `Ver ${category.name.toLocaleLowerCase("es-ES")}`;
+}
+
 export default async function RentalCatalogPage() {
   const catalog = await getCatalogTools();
   const categories = catalog.status === "success" ? getRentalCategories(catalog.tools) : [];
@@ -48,7 +58,9 @@ export default async function RentalCatalogPage() {
             <h2 id="categories-title">¿Qué necesitas alquilar?</h2>
             <div className={styles.categoryLinks}>
               {categories.map((category) => (
-                <Link href={`/alquiler/${category.slug}`} key={category.slug}>{category.name}</Link>
+                <Link href={`/alquiler/${category.slug}`} key={category.slug}>
+                  {getCategoryCtaLabel(category)}
+                </Link>
               ))}
             </div>
           </section>

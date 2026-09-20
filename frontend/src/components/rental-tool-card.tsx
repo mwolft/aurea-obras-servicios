@@ -9,6 +9,16 @@ type RentalToolCardProps = {
   tool: CatalogTool;
 };
 
+const detailCtaLabelByCategory = {
+  Maquinaria: "Ver maquinaria",
+  Herramientas: "Ver herramienta",
+} as const;
+
+function getDetailCtaLabel(category: string) {
+  return detailCtaLabelByCategory[category as keyof typeof detailCtaLabelByCategory]
+    ?? "Ver herramienta";
+}
+
 function ToolPlaceholder() {
   return (
     <div aria-label="Imagen de herramienta no disponible" className={styles.placeholder} role="img">
@@ -41,7 +51,9 @@ export function RentalToolCard({ tool }: RentalToolCardProps) {
         {tool.description && <p className={styles.description}>{tool.description}</p>}
         <div className={styles.cardFooter}>
           <p className={styles.price}><strong>{tool.daily_price} €</strong><span>/ día</span></p>
-          <Link className={styles.detailLink} href={getToolPublicPath(tool)}>Ver herramienta</Link>
+          <Link className={styles.detailLink} href={getToolPublicPath(tool)}>
+            {getDetailCtaLabel(tool.category)}
+          </Link>
         </div>
       </div>
     </article>
