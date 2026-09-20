@@ -204,6 +204,22 @@ def _retrieve_payment_intent(payment_intent_id: str) -> Any:
         ) from error
 
 
+def _retrieve_charge(charge_id: str) -> Any:
+    """Retrieve the Charge when a webhook only supplies ``latest_charge`` as an ID.
+
+    Stripe's PaymentIntent webhook payload normally leaves expandable fields as
+    IDs.  The capture deadline belongs to the Charge, so it must be read from
+    Stripe before a manual authorization can be accepted as usable.
+    """
+    stripe.api_key = _stripe_secret_key()
+    try:
+        return stripe.Charge.retrieve(charge_id)
+    except stripe.StripeError as error:
+        raise DepositAuthorizationError(
+            "No se ha podido comprobar la vigencia de la autorización en Stripe."
+        ) from error
+
+
 def _latest_deposit_payment(session: Session, reservation_id: int, *, lock: bool = False) -> Payment | None:
     statement = select(Payment).where(
         Payment.reservation_id == reservation_id,
@@ -478,8 +494,7 @@ def resend_deposit_authorization_request(
         raise deferred_error
 
 
-def _capture_before(payment_intent: Any) -> datetime | None:
-    charge = _object_value(payment_intent, "latest_charge")
+def _capture_before(charge: Any) -> datetime | None:
     details = _object_value(charge, "payment_method_details", {})
     card = _object_value(details, "card", {})
     timestamp = _object_value(card, "capture_before")
@@ -492,6 +507,34 @@ def _charge_id(payment_intent: Any) -> str | None:
     charge = _object_value(payment_intent, "latest_charge")
     value = _object_value(charge, "id") if not isinstance(charge, str) else charge
     return value if isinstance(value, str) else None
+
+
+def _charge_for_authorization(payment_intent: Any, intent_id: str) -> tuple[str | None, Any | None, str | None]:
+    """Return the Charge needed to validate a manual authorization.
+
+    ``latest_charge`` may be expanded in a webhook fixture or may be the
+    normal Stripe ID.  Do not infer a capture deadline from the PaymentIntent;
+    retrieve the Charge only for the latter case.
+    """
+    latest_charge = _object_value(payment_intent, "latest_charge")
+    charge_id = _charge_id(payment_intent)
+    if charge_id is None:
+        return None, None, "missing_charge_id"
+
+    if isinstance(latest_charge, str):
+        try:
+            charge = _retrieve_charge(charge_id)
+        except (DepositAuthorizationError, StripeConfigurationError):
+            return charge_id, None, "charge_retrieval_failed"
+    else:
+        charge = latest_charge
+
+    related_intent_id = _stripe_id(_object_value(charge, "payment_intent"))
+    if related_intent_id is not None and related_intent_id != intent_id:
+        return charge_id, charge, "charge_payment_intent_mismatch"
+    if _capture_before(charge) is None:
+        return charge_id, charge, "missing_capture_before"
+    return charge_id, charge, None
 
 
 def _event_seen(session: Session, provider_event_id: str) -> bool:
@@ -527,8 +570,19 @@ def _stripe_id(value: Any) -> str | None:
 
 
 def _mark_deposit_requires_review(
-    session: Session, payment: Payment, outbox_ids: list[int] | None
+    session: Session,
+    payment: Payment,
+    outbox_ids: list[int] | None,
+    *,
+    reason: str | None = None,
 ) -> None:
+    if reason is not None:
+        logger.warning(
+            "Deposit authorization requires review: %s (payment_id=%s, reservation_id=%s)",
+            reason,
+            payment.id,
+            payment.reservation_id,
+        )
     payment.status = PAYMENT_STATUS_REQUIRES_REVIEW
     _record_outbox_id(
         outbox_ids,
@@ -775,19 +829,32 @@ def process_stripe_deposit_event(
             return "requires_review"
         if event_type == "payment_intent.amount_capturable_updated":
             amount_capturable = _from_cents(_object_value(payment_intent, "amount_capturable"))
-            capture_before = _capture_before(payment_intent)
-            if (
-                _object_value(payment_intent, "status") != "requires_capture"
-                or amount_capturable != Decimal(payment.amount)
-                or capture_before is None
-            ):
-                payment.status = PAYMENT_STATUS_REQUIRES_REVIEW
-                _record_outbox_id(outbox_ids, queue_financial_alert(payment_session, payment, "financial_review_required"))
+            intent_status = _object_value(payment_intent, "status")
+            if intent_status != "requires_capture":
+                _mark_deposit_requires_review(
+                    payment_session, payment, outbox_ids,
+                    reason="unexpected_payment_intent_status",
+                )
                 return "requires_review"
+            if amount_capturable != Decimal(payment.amount):
+                _mark_deposit_requires_review(
+                    payment_session, payment, outbox_ids,
+                    reason="capturable_amount_mismatch",
+                )
+                return "requires_review"
+            charge_id, charge, charge_error = _charge_for_authorization(payment_intent, intent_id)
+            if charge_error is not None or charge_id is None or charge is None:
+                _mark_deposit_requires_review(
+                    payment_session, payment, outbox_ids,
+                    reason=charge_error or "missing_charge",
+                )
+                return "requires_review"
+            capture_before = _capture_before(charge)
             payment.status = PAYMENT_STATUS_AUTHORIZED
             payment.authorized_amount = amount_capturable
             payment.authorized_at = current_time
             payment.capture_before = capture_before
+            payment.provider_charge_id = charge_id
             _record_outbox_id(outbox_ids, queue_deposit_authorized(payment_session, reservation, payment))
             return "authorized"
         if event_type == "payment_intent.succeeded":

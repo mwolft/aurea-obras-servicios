@@ -4,6 +4,8 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+import stripe
+
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["SECRET_KEY"] = "deposit-authorizations-test-secret"
 os.environ["STRIPE_SECRET_KEY"] = "sk_test_unit_test"
@@ -124,6 +126,22 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         stored = db.session.get(Payment, payment.id)
         db.session.rollback()
         return stored
+
+    @staticmethod
+    def pending_deposit(reservation, *, idempotency_key="deposit-pending"):
+        payment = Payment(
+            reservation_id=reservation.id,
+            provider=PAYMENT_PROVIDER_STRIPE,
+            purpose=PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
+            status=PAYMENT_STATUS_PENDING_AUTHORIZATION,
+            amount=Decimal(reservation.deposit_amount_snapshot),
+            currency="eur",
+            idempotency_key=idempotency_key,
+            expires_at=datetime.now(timezone.utc) + PAYMENT_WINDOW,
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return payment
 
     def test_new_reservation_snapshots_deposit_and_tool_changes_do_not_change_it(self):
         tool = self.create_tool(Decimal("100.00"))
@@ -685,14 +703,118 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         db.session.add(payment); db.session.commit()
         event = self.intent_event(payment)
         db.session.rollback()
-        self.assertEqual(process_stripe_deposit_event(event), "authorized")
-        self.assertEqual(process_stripe_deposit_event(event), "duplicate")
+        with patch("app.services.deposit_authorizations.stripe.Charge.retrieve") as retrieve_charge:
+            self.assertEqual(process_stripe_deposit_event(event), "authorized")
+            self.assertEqual(process_stripe_deposit_event(event), "duplicate")
+        retrieve_charge.assert_not_called()
         stored = db.session.get(Payment, payment.id)
         self.assertEqual(stored.status, PAYMENT_STATUS_AUTHORIZED)
         self.assertEqual(stored.authorized_amount, Decimal("100.00"))
         self.assertIsNotNone(stored.capture_before)
         self.assertEqual(PaymentEvent.query.count(), 1)
+        self.assertEqual(EmailOutbox.query.filter_by(event_type="deposit_authorized").count(), 1)
         self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
+
+    def test_authorization_webhook_retrieves_string_latest_charge_before_authorizing(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        payment = self.pending_deposit(reservation, idempotency_key="deposit-string-charge")
+        event = self.intent_event(
+            payment,
+            event_id="evt_string_charge",
+            latest_charge="ch_string_charge",
+        )
+        charge = {
+            "id": "ch_string_charge",
+            "payment_intent": "pi_deposit_1",
+            "payment_method_details": {"card": {"capture_before": 1_800_000_000}},
+        }
+
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.Charge.retrieve",
+            return_value=charge,
+        ) as retrieve_charge:
+            self.assertEqual(process_stripe_deposit_event(event), "authorized")
+            self.assertEqual(process_stripe_deposit_event(event), "duplicate")
+
+        retrieve_charge.assert_called_once_with("ch_string_charge")
+        stored = db.session.get(Payment, payment.id)
+        self.assertEqual(stored.status, PAYMENT_STATUS_AUTHORIZED)
+        self.assertEqual(stored.provider_charge_id, "ch_string_charge")
+        self.assertEqual(stored.authorized_amount, Decimal("100.00"))
+        self.assertIsNotNone(stored.capture_before)
+        self.assertEqual(EmailOutbox.query.filter_by(event_type="deposit_authorized").count(), 1)
+
+    def test_authorization_webhook_requires_review_when_string_charge_cannot_be_retrieved(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        payment = self.pending_deposit(reservation, idempotency_key="deposit-charge-retrieval-failure")
+        event = self.intent_event(
+            payment,
+            event_id="evt_charge_retrieval_failure",
+            latest_charge="ch_unavailable",
+        )
+
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.Charge.retrieve",
+            side_effect=stripe.StripeError("unavailable"),
+        ):
+            self.assertEqual(process_stripe_deposit_event(event), "requires_review")
+
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_REQUIRES_REVIEW)
+        self.assertEqual(EmailOutbox.query.filter_by(event_type="deposit_authorized").count(), 0)
+
+    def test_authorization_webhook_requires_review_when_retrieved_charge_has_no_capture_before(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        payment = self.pending_deposit(reservation, idempotency_key="deposit-charge-without-deadline")
+        event = self.intent_event(
+            payment,
+            event_id="evt_charge_without_deadline",
+            latest_charge="ch_without_deadline",
+        )
+        charge = {"id": "ch_without_deadline", "payment_intent": "pi_deposit_1"}
+
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.Charge.retrieve",
+            return_value=charge,
+        ):
+            self.assertEqual(process_stripe_deposit_event(event), "requires_review")
+
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_REQUIRES_REVIEW)
+        self.assertEqual(EmailOutbox.query.filter_by(event_type="deposit_authorized").count(), 0)
+
+    def test_authorization_webhook_requires_review_before_charge_lookup_for_invalid_intent(self):
+        reservation = self.create_confirmed_reservation(self.create_tool())
+        payment = self.pending_deposit(reservation, idempotency_key="deposit-invalid-intent")
+        invalid_status = self.intent_event(
+            payment,
+            event_id="evt_invalid_intent_status",
+            status="processing",
+            latest_charge="ch_should_not_load",
+        )
+        db.session.rollback()
+        with patch("app.services.deposit_authorizations.stripe.Charge.retrieve") as retrieve_charge:
+            self.assertEqual(process_stripe_deposit_event(invalid_status), "requires_review")
+        retrieve_charge.assert_not_called()
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_REQUIRES_REVIEW)
+
+        second = self.create_confirmed_reservation(
+            self.create_tool(), start_date=date(2026, 9, 22), end_date=date(2026, 9, 23)
+        )
+        second_payment = self.pending_deposit(second, idempotency_key="deposit-invalid-amount")
+        invalid_amount = self.intent_event(
+            second_payment,
+            event_id="evt_invalid_capturable_amount",
+            id="pi_deposit_2",
+            amount_capturable=9999,
+            latest_charge="ch_should_not_load_either",
+        )
+        db.session.rollback()
+        with patch("app.services.deposit_authorizations.stripe.Charge.retrieve") as retrieve_charge:
+            self.assertEqual(process_stripe_deposit_event(invalid_amount), "requires_review")
+        retrieve_charge.assert_not_called()
+        self.assertEqual(db.session.get(Payment, second_payment.id).status, PAYMENT_STATUS_REQUIRES_REVIEW)
 
     def test_late_authorization_for_cancelled_reservation_is_cancelled_not_retained(self):
         reservation = self.create_confirmed_reservation(self.create_tool())
