@@ -47,6 +47,7 @@ from app.services.email.rental import (
     queue_deposit_authorization_requested,
     queue_deposit_authorization_reminder,
     queue_deposit_authorized,
+    queue_deposit_authorized_internal,
     queue_deposit_captured,
     queue_deposit_released,
     queue_financial_alert,
@@ -856,6 +857,10 @@ def process_stripe_deposit_event(
             payment.capture_before = capture_before
             payment.provider_charge_id = charge_id
             _record_outbox_id(outbox_ids, queue_deposit_authorized(payment_session, reservation, payment))
+            _record_outbox_id(
+                outbox_ids,
+                queue_deposit_authorized_internal(payment_session, reservation, payment),
+            )
             return "authorized"
         if event_type == "payment_intent.succeeded":
             captured_amount = _from_cents(_object_value(payment_intent, "amount_received"))

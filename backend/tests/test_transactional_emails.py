@@ -48,7 +48,11 @@ from app.services.rental_lifecycle import (
 )
 from app.services.reservations import cancel_reservation
 from app.services.reservations import create_reservation, review_delivery_reservation
-from app.services.email.rental import queue_delivery_review_requested
+from app.services.email.rental import (
+    EVENT_DEPOSIT_AUTHORIZED,
+    EVENT_DEPOSIT_AUTHORIZED_INTERNAL,
+    queue_delivery_review_requested,
+)
 from app.services.stripe_checkout import process_stripe_event
 from app.services.email.base import EmailContent
 
@@ -390,6 +394,56 @@ class TransactionalEmailTestCase(unittest.TestCase):
         self.assertNotIn("Nota interna privada", captured.html_body)
         self.assertNotIn("Nota interna privada", captured.text_body)
 
+    def test_authorized_deposit_queues_one_customer_and_one_internal_operational_email(self):
+        reservation = self.reservation(self.tool(Decimal("100.00")), status=RESERVATION_STATUS_CONFIRMED)
+        payment = self.deposit_payment(reservation)
+        ids = []
+        event = self.deposit_event(payment, event_id="evt_authorized_internal")
+        db.session.rollback()
+
+        self.assertEqual(process_stripe_deposit_event(event, outbox_ids=ids), "authorized")
+        self.assertEqual(process_stripe_deposit_event(event, outbox_ids=ids), "duplicate")
+
+        customer_email = EmailOutbox.query.filter_by(event_type=EVENT_DEPOSIT_AUTHORIZED).one()
+        internal_email = EmailOutbox.query.filter_by(
+            event_type=EVENT_DEPOSIT_AUTHORIZED_INTERNAL
+        ).one()
+        self.assertEqual(customer_email.recipient, "cliente@example.test")
+        self.assertEqual(internal_email.recipient, "operations@example.test")
+        self.assertIn(reservation.tool.name, internal_email.html_body)
+        self.assertIn("Cliente &lt;prueba&gt;", internal_email.html_body)
+        self.assertIn("100.00 €", internal_email.html_body)
+        self.assertIn("Válida hasta", internal_email.html_body)
+        self.assertIn("hora peninsular", internal_email.text_body)
+        self.assertEqual(EmailOutbox.query.count(), 2)
+        self.assertEqual(len(ids), 2)
+
+    def test_failed_internal_authorized_deposit_email_does_not_revert_authorization(self):
+        reservation = self.reservation(self.tool(Decimal("100.00")), status=RESERVATION_STATUS_CONFIRMED)
+        payment = self.deposit_payment(reservation)
+        ids = []
+        event = self.deposit_event(payment, event_id="evt_authorized_internal_delivery_failure")
+        db.session.rollback()
+        self.assertEqual(
+            process_stripe_deposit_event(
+                event,
+                outbox_ids=ids,
+            ),
+            "authorized",
+        )
+        internal_email = EmailOutbox.query.filter_by(
+            event_type=EVENT_DEPOSIT_AUTHORIZED_INTERNAL
+        ).one()
+
+        with patch(
+            "app.services.email.outbox.send_resend_email",
+            side_effect=ResendDeliveryError("x"),
+        ):
+            self.assertFalse(deliver_outbox_email(internal_email.id))
+
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_AUTHORIZED)
+        self.assertEqual(db.session.get(EmailOutbox, internal_email.id).status, EMAIL_OUTBOX_STATUS_FAILED)
+
     def test_deposit_failure_and_financial_review_queue_only_internal_alerts(self):
         reservation = self.reservation(self.tool(Decimal("100.00")), status=RESERVATION_STATUS_CONFIRMED)
         payment = self.deposit_payment(reservation)
@@ -400,6 +454,19 @@ class TransactionalEmailTestCase(unittest.TestCase):
         email = EmailOutbox.query.one()
         self.assertEqual(email.recipient, "operations@example.test")
         self.assertEqual(email.event_type, "deposit_authorization_failed")
+
+        review_reservation = self.reservation(
+            self.tool(Decimal("100.00")), status=RESERVATION_STATUS_CONFIRMED
+        )
+        review_payment = self.deposit_payment(review_reservation)
+        review = self.deposit_event(review_payment, event_id="evt_invalid_authorization")
+        review["data"]["object"]["amount_capturable"] = 9999
+        db.session.rollback()
+        self.assertEqual(process_stripe_deposit_event(review), "requires_review")
+        self.assertEqual(
+            EmailOutbox.query.filter_by(event_type=EVENT_DEPOSIT_AUTHORIZED_INTERNAL).count(),
+            0,
+        )
 
     def test_failed_resend_delivery_does_not_rollback_and_manual_retry_sends_once(self):
         reservation = self.reservation(self.tool())
