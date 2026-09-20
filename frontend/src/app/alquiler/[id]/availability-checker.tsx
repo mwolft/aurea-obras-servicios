@@ -87,6 +87,13 @@ export default function AvailabilityChecker({
   const today = getTodayIso();
   const hasFulfillmentOption = pickupAvailable || deliveryAvailable;
   const isAvailable = availabilityStatus.kind === "available";
+  const isPickup = fulfillmentMethod === "pickup";
+  const reservationStepLabel = isPickup ? "Paso 3 · Completa tu reserva" : "Paso 3 · Completa tu solicitud";
+  const reservationHeading = isPickup ? "Completa tu reserva" : "Completa tu solicitud";
+  const reservationSubmitLabel = isPickup
+    ? "Reservar y continuar al pago"
+    : "Enviar solicitud de reserva";
+  const reservationSubmittingLabel = isPickup ? "Preparando el pago…" : "Enviando solicitud…";
 
   useEffect(() => {
     if (reservationStatus.kind === "error" || reservationStatus.kind === "success") {
@@ -360,8 +367,8 @@ export default function AvailabilityChecker({
 
       {isAvailable && (
         <form className={styles.reservationForm} noValidate onSubmit={handleReservationSubmit}>
-          <p className={styles.step}>Paso 3 · Completa la solicitud</p>
-          <h3>Completa tu solicitud</h3>
+          <p className={styles.step}>{reservationStepLabel}</p>
+          <h3>{reservationHeading}</h3>
           <p>Los importes y la disponibilidad se confirmarán siempre en el servidor.</p>
 
           <label>
@@ -431,7 +438,7 @@ export default function AvailabilityChecker({
           )}
 
           <button disabled={reservationStatus.kind === "submitting" || !hasFulfillmentOption} type="submit">
-            {reservationStatus.kind === "submitting" ? "Enviando solicitud…" : "Enviar solicitud de reserva"}
+            {reservationStatus.kind === "submitting" ? reservationSubmittingLabel : reservationSubmitLabel}
           </button>
         </form>
       )}
