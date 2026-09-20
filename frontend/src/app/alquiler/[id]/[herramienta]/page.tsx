@@ -48,11 +48,26 @@ export async function generateMetadata({ params }: RentalToolPublicPageProps): P
     content.metaDescription ??
     result.tool.description ??
     `Consulta ${result.tool.name}, una herramienta de la categoría ${result.tool.category}.`;
+  const mainImage = result.tool.images[0];
+  const productPath = getToolPublicPath(result.tool);
 
   return {
     title: content.metaTitle ?? `Alquiler de ${result.tool.name} | AUREA`,
     description,
-    alternates: { canonical: getToolPublicPath(result.tool) },
+    alternates: { canonical: productPath },
+    openGraph: {
+      title: content.metaTitle ?? `Alquiler de ${result.tool.name} | AUREA`,
+      description,
+      url: productPath,
+      type: "website",
+      ...(mainImage && { images: [{ url: mainImage.url, alt: result.tool.name }] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: content.metaTitle ?? `Alquiler de ${result.tool.name} | AUREA`,
+      description,
+      ...(mainImage && { images: [mainImage.url] }),
+    },
   };
 }
 
