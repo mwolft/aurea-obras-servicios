@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from flask import current_app
 from sqlalchemy.orm import Session
@@ -18,6 +19,7 @@ EVENT_RESERVATION_PENDING_REVIEW_ADMIN = "reservation_pending_review_admin"
 EVENT_RESERVATION_PENDING_PAYMENT = "reservation_pending_payment"
 EVENT_RESERVATION_CANCELLED = "reservation_cancelled"
 EVENT_DEPOSIT_AUTHORIZED = "deposit_authorized"
+EVENT_DEPOSIT_AUTHORIZED_INTERNAL = "deposit_authorized_internal"
 EVENT_DEPOSIT_AUTHORIZATION_REQUESTED = "deposit_authorization_requested"
 EVENT_DEPOSIT_AUTHORIZATION_REMINDER = "deposit_authorization_reminder"
 EVENT_DEPOSIT_AUTOMATION_FAILED = "deposit_automation_failed"
@@ -40,6 +42,13 @@ def _format_datetime(value: datetime | None) -> str:
         return "—"
     timestamp = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
     return timestamp.astimezone(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
+
+
+def _format_madrid_datetime(value: datetime | None) -> str:
+    if value is None:
+        return "—"
+    timestamp = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(ZoneInfo("Europe/Madrid")).strftime("%d/%m/%Y %H:%M")
 
 
 def _format_amount(value: Decimal | None) -> str:
@@ -313,6 +322,42 @@ def queue_deposit_authorized(session: Session, reservation: Reservation, payment
             message="La fianza es una retención temporal asociada al alquiler; no forma parte del cobro inicial del alquiler.",
             footer="Información de fianza enviada por AUREA Obras y Servicios.",
         ),
+    )
+
+
+def queue_deposit_authorized_internal(session: Session, reservation: Reservation, payment: Payment):
+    """Notify operations only after a deposit has been validated as authorized."""
+    amount = _format_amount(payment.authorized_amount or payment.amount)
+    valid_until = _format_madrid_datetime(payment.capture_before)
+    return queue_transactional_email(
+        session,
+        event_type=EVENT_DEPOSIT_AUTHORIZED_INTERNAL,
+        idempotency_key=f"deposit:{payment.id}:authorized:internal",
+        recipient=internal_alert_recipient(),
+        subject=f"Fianza autorizada · {_tool_name(reservation)}",
+        content=_build_email(
+            title="Fianza autorizada",
+            preheader="Una fianza de reserva ha sido autorizada correctamente.",
+            rows=(
+                _reservation_rows(reservation, include_deposit=True)
+                + information_row("Fianza autorizada", amount)
+                + information_row("Válida hasta", f"{valid_until} (hora peninsular)")
+            ),
+            text_lines=(
+                _reservation_text(reservation, include_deposit=True)
+                + [
+                    f"Fianza autorizada: {amount}",
+                    f"Válida hasta: {valid_until} (hora peninsular)",
+                ]
+            ),
+            message=(
+                "La fianza está autorizada correctamente. La reserva puede continuar "
+                "con la entrega siempre que la autorización siga vigente."
+            ),
+            footer="Aviso operativo de fianza enviado por AUREA Obras y Servicios.",
+            action_label=None,
+        ),
+        reservation_id=reservation.id,
     )
 
 
