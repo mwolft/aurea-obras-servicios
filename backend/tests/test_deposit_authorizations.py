@@ -745,6 +745,54 @@ class DepositAuthorizationTestCase(unittest.TestCase):
         self.assertIsNotNone(stored.capture_before)
         self.assertEqual(EmailOutbox.query.filter_by(event_type="deposit_authorized").count(), 1)
 
+    def test_authorization_webhook_accepts_observed_stripe_charge_object_shape(self):
+        """Regression for a manual-capture Checkout event from Stripe test mode."""
+        reservation = self.create_confirmed_reservation(self.create_tool(Decimal("150.00")))
+        payment = self.pending_deposit(reservation, idempotency_key="deposit-observed-charge-shape")
+        event = self.intent_event(
+            payment,
+            id="pi_observed_17",
+            event_id="evt_observed_17",
+            amount_capturable=15000,
+            latest_charge="ch_observed_17",
+        )
+        charge = stripe.Charge.construct_from(
+            {
+                "id": "ch_observed_17",
+                "payment_intent": "pi_observed_17",
+                "amount": 15000,
+                "amount_captured": 0,
+                "captured": False,
+                "paid": True,
+                "status": "succeeded",
+                "payment_method_details": {
+                    "card": {
+                        "amount_authorized": 15000,
+                        "capture_before": 1790531686,
+                    }
+                },
+            },
+            "sk_test_unit_test",
+        )
+
+        db.session.rollback()
+        with patch(
+            "app.services.deposit_authorizations.stripe.Charge.retrieve",
+            return_value=charge,
+        ) as retrieve_charge:
+            self.assertEqual(process_stripe_deposit_event(event), "authorized")
+
+        retrieve_charge.assert_called_once_with("ch_observed_17")
+        stored = db.session.get(Payment, payment.id)
+        self.assertEqual(stored.status, PAYMENT_STATUS_AUTHORIZED)
+        self.assertEqual(stored.authorized_amount, Decimal("150.00"))
+        self.assertEqual(stored.provider_charge_id, "ch_observed_17")
+        self.assertEqual(
+            stored.capture_before.replace(tzinfo=timezone.utc),
+            datetime.fromtimestamp(1790531686, tz=timezone.utc),
+        )
+        self.assertEqual(EmailOutbox.query.filter_by(event_type="deposit_authorized").count(), 1)
+
     def test_authorization_webhook_requires_review_when_string_charge_cannot_be_retrieved(self):
         reservation = self.create_confirmed_reservation(self.create_tool())
         payment = self.pending_deposit(reservation, idempotency_key="deposit-charge-retrieval-failure")
