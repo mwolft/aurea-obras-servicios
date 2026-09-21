@@ -4,6 +4,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -220,10 +221,16 @@ class TransactionalEmailTestCase(unittest.TestCase):
         self.assertIn("Todavía no debes realizar ningún pago", customer.text_body)
         self.assertIn("Calle &lt;entrega&gt; 1", customer.html_body)
         self.assertNotIn("Total final", customer.text_body)
-        self.assertIn(
-            f"https://api.example.test/admin/reservation/details/?id={reservation.id}",
-            admin.html_body,
-        )
+        admin_url = f"https://api.example.test/admin/reservation/details/?id={reservation.id}"
+        self.assertIn("Gestionar reserva", admin.html_body)
+        self.assertIn(admin_url, admin.html_body)
+        self.assertIn("Gestionar reserva", admin.text_body)
+        self.assertIn(admin_url, admin.text_body)
+        parsed_url = urlparse(admin_url)
+        self.assertEqual(parsed_url.path, "/admin/reservation/details/")
+        self.assertEqual(parse_qs(parsed_url.query), {"id": [str(reservation.id)]})
+        self.assertNotIn("token", admin_url)
+        self.assertNotIn("auth", admin_url)
         self.assertIn("Cliente &lt;transporte&gt;", admin.html_body)
 
         db.session.rollback()

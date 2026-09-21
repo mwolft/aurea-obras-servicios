@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-from flask import current_app
+from flask import current_app, url_for
 from sqlalchemy.orm import Session
 
 from app.models import Payment, Reservation
@@ -152,7 +152,9 @@ def _admin_reservation_url(reservation: Reservation) -> str | None:
     origin = current_app.config.get("BACKEND_ORIGIN")
     if not isinstance(origin, str) or not origin.strip():
         return None
-    return f"{origin.rstrip('/')}/admin/reservation/details/?id={reservation.id}"
+    with current_app.test_request_context():
+        details_path = url_for("reservation.details_view", id=reservation.id)
+    return f"{origin.rstrip('/')}{details_path}"
 
 
 def _delivery_review_rows(reservation: Reservation, *, include_customer: bool) -> str:
@@ -225,7 +227,7 @@ def queue_delivery_review_requested(session: Session, reservation: Reservation):
             text_lines=_delivery_review_text(reservation, include_customer=True),
             message="Revisa el kilometraje y prepara el importe final antes de habilitar el pago.",
             footer="Alerta interna de AUREA Obras y Servicios.",
-            action_label="Revisar reserva" if admin_url else None,
+            action_label="Gestionar reserva" if admin_url else None,
             action_url=admin_url,
         ),
         reservation_id=reservation.id,
