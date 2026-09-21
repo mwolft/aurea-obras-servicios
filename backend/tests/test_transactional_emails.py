@@ -30,6 +30,7 @@ from app.services.email.outbox import (
 )
 from app.services.email.resend import ResendDeliveryError
 from app.services.payment_domain import (
+    PAYMENT_PROVIDER_PAYPAL,
     PAYMENT_PROVIDER_STRIPE,
     PAYMENT_PURPOSE_DEPOSIT_AUTHORIZATION,
     PAYMENT_PURPOSE_RENTAL_CHARGE,
@@ -52,8 +53,11 @@ from app.services.reservations import create_reservation, review_delivery_reserv
 from app.services.email.rental import (
     EVENT_DEPOSIT_AUTHORIZED,
     EVENT_DEPOSIT_AUTHORIZED_INTERNAL,
+    EVENT_RESERVATION_CONFIRMED,
+    EVENT_RESERVATION_CONFIRMED_INTERNAL,
     queue_delivery_review_requested,
 )
+from app.services.paypal_checkout import process_paypal_event
 from app.services.stripe_checkout import process_stripe_event
 from app.services.email.base import EmailContent
 
@@ -116,15 +120,20 @@ class TransactionalEmailTestCase(unittest.TestCase):
         db.session.commit()
         return reservation
 
-    def rental_payment(self, reservation):
+    def rental_payment(self, reservation, *, provider=PAYMENT_PROVIDER_STRIPE):
+        external_payment_id = (
+            f"cs_{reservation.id}"
+            if provider == PAYMENT_PROVIDER_STRIPE
+            else f"paypal_order_{reservation.id}"
+        )
         payment = Payment(
             reservation_id=reservation.id,
-            provider=PAYMENT_PROVIDER_STRIPE,
+            provider=provider,
             purpose=PAYMENT_PURPOSE_RENTAL_CHARGE,
-            external_payment_id=f"cs_{reservation.id}",
+            external_payment_id=external_payment_id,
             status=PAYMENT_STATUS_PENDING,
             amount=Decimal(reservation.total_amount),
-            currency="eur",
+            currency="EUR" if provider == PAYMENT_PROVIDER_PAYPAL else "eur",
             idempotency_key=uuid.uuid4().hex,
             expires_at=reservation.payment_expires_at,
         )
@@ -133,18 +142,30 @@ class TransactionalEmailTestCase(unittest.TestCase):
         return payment
 
     @staticmethod
-    def checkout_event(payment, event_id="evt_confirmed"):
+    def checkout_event(payment, event_id="evt_confirmed", *, amount_total=None):
         return {
             "id": event_id,
             "type": "checkout.session.completed",
             "data": {"object": {
                 "id": payment.external_payment_id,
                 "payment_status": "paid",
-                "amount_total": 2000,
+                "amount_total": int(Decimal(payment.amount) * 100) if amount_total is None else amount_total,
                 "currency": "eur",
                 "client_reference_id": str(payment.id),
                 "metadata": {"payment_id": str(payment.id)},
             }},
+        }
+
+    @staticmethod
+    def paypal_event(payment, event_id="WH-confirmed"):
+        return {
+            "id": event_id,
+            "event_type": "PAYMENT.CAPTURE.COMPLETED",
+            "resource": {
+                "status": "COMPLETED",
+                "amount": {"value": str(payment.amount), "currency_code": "EUR"},
+                "supplementary_data": {"related_ids": {"order_id": payment.external_payment_id}},
+            },
         }
 
     def deposit_payment(self, reservation, *, status=PAYMENT_STATUS_PENDING_AUTHORIZATION):
@@ -177,7 +198,7 @@ class TransactionalEmailTestCase(unittest.TestCase):
             }},
         }
 
-    def test_confirmed_payment_queues_one_escaped_customer_email_and_duplicate_does_not_repeat(self):
+    def test_confirmed_pickup_payment_queues_customer_and_internal_emails_once(self):
         reservation = self.reservation(self.tool())
         payment = self.rental_payment(reservation)
         outbox_ids = []
@@ -185,13 +206,122 @@ class TransactionalEmailTestCase(unittest.TestCase):
         db.session.rollback()
         self.assertEqual(process_stripe_event(event, outbox_ids=outbox_ids), "confirmed")
         self.assertEqual(process_stripe_event(event, outbox_ids=outbox_ids), "duplicate")
-        self.assertEqual(EmailOutbox.query.count(), 1)
-        email = EmailOutbox.query.one()
-        self.assertEqual(outbox_ids, [email.id])
-        self.assertEqual(email.event_type, "reservation_confirmed")
-        self.assertIn("Cliente &lt;prueba&gt;", email.html_body)
-        self.assertNotIn(payment.external_payment_id, email.html_body)
-        self.assertNotIn(payment.external_payment_id, email.text_body)
+        self.assertEqual(EmailOutbox.query.count(), 2)
+        customer_email = EmailOutbox.query.filter_by(event_type=EVENT_RESERVATION_CONFIRMED).one()
+        internal_email = EmailOutbox.query.filter_by(
+            event_type=EVENT_RESERVATION_CONFIRMED_INTERNAL
+        ).one()
+        self.assertEqual(set(outbox_ids), {customer_email.id, internal_email.id})
+        self.assertEqual(customer_email.recipient, "cliente@example.test")
+        self.assertEqual(internal_email.recipient, "operations@example.test")
+        self.assertIn("Cliente &lt;prueba&gt;", customer_email.html_body)
+        self.assertIn("Recogida en almacén", internal_email.html_body)
+        self.assertIn("20.00 €", internal_email.html_body)
+        self.assertIn("Gestionar reserva", internal_email.html_body)
+        self.assertNotIn(payment.external_payment_id, internal_email.html_body)
+        self.assertNotIn(payment.external_payment_id, internal_email.text_body)
+
+    def test_confirmed_delivery_payment_includes_confirmed_transport_snapshots_for_aurea(self):
+        tool_id = self.tool(Decimal("100.00"), delivery_available=True).id
+        db.session.rollback()
+        reservation = create_reservation(
+            tool_id,
+            date(2026, 10, 1),
+            date(2026, 10, 2),
+            "Cliente transporte",
+            "cliente@example.test",
+            "600000000",
+            True,
+            True,
+            "delivery",
+            "Calle de entrega 1",
+        )
+        reservation_id = reservation.id
+        db.session.rollback()
+        review_delivery_reservation(reservation_id, Decimal("12.50"))
+        reservation = db.session.get(Reservation, reservation_id)
+        payment = self.rental_payment(reservation)
+        outbox_ids = []
+        event = self.checkout_event(payment, event_id="evt_delivery_confirmed")
+        db.session.rollback()
+
+        self.assertEqual(process_stripe_event(event, outbox_ids=outbox_ids), "confirmed")
+        self.assertEqual(process_stripe_event(event, outbox_ids=outbox_ids), "duplicate")
+
+        internal_email = EmailOutbox.query.filter_by(
+            event_type=EVENT_RESERVATION_CONFIRMED_INTERNAL,
+            reservation_id=reservation_id,
+        ).one()
+        admin_url = f"https://api.example.test/admin/reservation/details/?id={reservation_id}"
+        self.assertIn("Modalidad", internal_email.html_body)
+        self.assertIn("Entrega", internal_email.html_body)
+        self.assertIn("Calle de entrega 1", internal_email.html_body)
+        self.assertIn("12.50 km", internal_email.html_body)
+        self.assertIn("1.50 €/km", internal_email.html_body)
+        self.assertIn("18.75 €", internal_email.html_body)
+        self.assertIn("38.75 €", internal_email.html_body)
+        self.assertIn("100.00 €", internal_email.html_body)
+        self.assertIn("Gestionar reserva", internal_email.html_body)
+        self.assertIn(admin_url, internal_email.html_body)
+        self.assertIn(admin_url, internal_email.text_body)
+        self.assertEqual(
+            EmailOutbox.query.filter_by(
+                event_type=EVENT_RESERVATION_CONFIRMED_INTERNAL,
+                reservation_id=reservation_id,
+            ).count(),
+            1,
+        )
+
+    def test_paypal_confirmation_queues_the_same_customer_and_internal_email_events(self):
+        reservation = self.reservation(self.tool())
+        payment = self.rental_payment(reservation, provider=PAYMENT_PROVIDER_PAYPAL)
+        outbox_ids = []
+        event = self.paypal_event(payment)
+        db.session.rollback()
+
+        self.assertEqual(process_paypal_event(event, outbox_ids=outbox_ids), "confirmed")
+        self.assertEqual(process_paypal_event(event, outbox_ids=outbox_ids), "duplicate")
+        self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_PAID)
+        self.assertEqual(
+            EmailOutbox.query.filter_by(event_type=EVENT_RESERVATION_CONFIRMED).count(), 1
+        )
+        self.assertEqual(
+            EmailOutbox.query.filter_by(event_type=EVENT_RESERVATION_CONFIRMED_INTERNAL).count(), 1
+        )
+
+    def test_invalid_payment_does_not_queue_confirmed_internal_email(self):
+        reservation = self.reservation(self.tool())
+        payment = self.rental_payment(reservation)
+        event = self.checkout_event(payment, amount_total=1999)
+        db.session.rollback()
+
+        self.assertEqual(process_stripe_event(event), "requires_review")
+        self.assertEqual(
+            EmailOutbox.query.filter_by(event_type=EVENT_RESERVATION_CONFIRMED_INTERNAL).count(),
+            0,
+        )
+
+    def test_failed_internal_confirmation_email_does_not_revert_the_paid_reservation(self):
+        reservation = self.reservation(self.tool())
+        payment = self.rental_payment(reservation)
+        outbox_ids = []
+        event = self.checkout_event(payment, event_id="evt_confirmation_internal_delivery_failure")
+        db.session.rollback()
+        self.assertEqual(process_stripe_event(event, outbox_ids=outbox_ids), "confirmed")
+        internal_email = EmailOutbox.query.filter_by(
+            event_type=EVENT_RESERVATION_CONFIRMED_INTERNAL
+        ).one()
+
+        with patch(
+            "app.services.email.outbox.send_resend_email",
+            side_effect=ResendDeliveryError("x"),
+        ):
+            self.assertFalse(deliver_outbox_email(internal_email.id))
+
+        self.assertEqual(db.session.get(Payment, payment.id).status, PAYMENT_STATUS_PAID)
+        self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
+        self.assertEqual(db.session.get(EmailOutbox, internal_email.id).status, EMAIL_OUTBOX_STATUS_FAILED)
 
     def test_delivery_request_queues_customer_and_admin_emails_once(self):
         tool_id = self.tool(delivery_available=True).id

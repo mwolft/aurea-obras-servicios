@@ -14,6 +14,7 @@ from .outbox import internal_alert_recipient, queue_transactional_email
 
 
 EVENT_RESERVATION_CONFIRMED = "reservation_confirmed"
+EVENT_RESERVATION_CONFIRMED_INTERNAL = "reservation_confirmed_internal"
 EVENT_RESERVATION_PENDING_REVIEW_CUSTOMER = "reservation_pending_review_customer"
 EVENT_RESERVATION_PENDING_REVIEW_ADMIN = "reservation_pending_review_admin"
 EVENT_RESERVATION_PENDING_PAYMENT = "reservation_pending_payment"
@@ -86,6 +87,70 @@ def _reservation_text(reservation: Reservation, *, include_total: bool = False, 
         lines.append(f"Total pagado: {_format_amount(reservation.total_amount)}")
     if include_deposit:
         lines.append(f"Fianza: {_format_amount(reservation.deposit_amount_snapshot)}")
+    return lines
+
+
+def _confirmed_reservation_internal_rows(reservation: Reservation) -> str:
+    rows = information_row("Referencia", f"#{reservation.id}")
+    rows += information_row("Cliente", reservation.customer_name or "Cliente")
+    if reservation.customer_email:
+        rows += information_row("Email", reservation.customer_email)
+    if reservation.customer_phone:
+        rows += information_row("Teléfono", reservation.customer_phone)
+    rows += information_row("Herramienta", _tool_name(reservation))
+    rows += information_row(
+        "Fechas", f"{_format_date(reservation.start_date)} — {_format_date(reservation.end_date)}"
+    )
+    is_delivery = reservation.fulfillment_method == "delivery"
+    rows += information_row("Modalidad", "Entrega" if is_delivery else "Recogida en almacén")
+    if is_delivery:
+        if reservation.delivery_address:
+            rows += information_row("Dirección", reservation.delivery_address)
+        if reservation.billable_km is not None:
+            rows += information_row("Kilómetros facturables", f"{reservation.billable_km} km")
+        if reservation.delivery_price_per_km_snapshot is not None:
+            rows += information_row(
+                "Tarifa de transporte",
+                f"{_format_amount(reservation.delivery_price_per_km_snapshot)}/km",
+            )
+        if reservation.delivery_amount is not None:
+            rows += information_row("Importe de transporte", _format_amount(reservation.delivery_amount))
+    rows += information_row("Total pagado", _format_amount(reservation.total_amount))
+    if reservation.deposit_amount_snapshot is not None and Decimal(reservation.deposit_amount_snapshot) > 0:
+        rows += information_row("Fianza contractual", _format_amount(reservation.deposit_amount_snapshot))
+    return rows
+
+
+def _confirmed_reservation_internal_text(reservation: Reservation) -> list[str]:
+    lines = [
+        f"Referencia: #{reservation.id}",
+        f"Cliente: {reservation.customer_name or 'Cliente'}",
+    ]
+    if reservation.customer_email:
+        lines.append(f"Email: {reservation.customer_email}")
+    if reservation.customer_phone:
+        lines.append(f"Teléfono: {reservation.customer_phone}")
+    lines.extend(
+        [
+            f"Herramienta: {_tool_name(reservation)}",
+            f"Fechas: {_format_date(reservation.start_date)} — {_format_date(reservation.end_date)}",
+            f"Modalidad: {'Entrega' if reservation.fulfillment_method == 'delivery' else 'Recogida en almacén'}",
+        ]
+    )
+    if reservation.fulfillment_method == "delivery":
+        if reservation.delivery_address:
+            lines.append(f"Dirección: {reservation.delivery_address}")
+        if reservation.billable_km is not None:
+            lines.append(f"Kilómetros facturables: {reservation.billable_km} km")
+        if reservation.delivery_price_per_km_snapshot is not None:
+            lines.append(
+                f"Tarifa de transporte: {_format_amount(reservation.delivery_price_per_km_snapshot)}/km"
+            )
+        if reservation.delivery_amount is not None:
+            lines.append(f"Importe de transporte: {_format_amount(reservation.delivery_amount)}")
+    lines.append(f"Total pagado: {_format_amount(reservation.total_amount)}")
+    if reservation.deposit_amount_snapshot is not None and Decimal(reservation.deposit_amount_snapshot) > 0:
+        lines.append(f"Fianza contractual: {_format_amount(reservation.deposit_amount_snapshot)}")
     return lines
 
 
@@ -275,8 +340,13 @@ def queue_delivery_review_completed(session: Session, reservation: Reservation):
     )
 
 
-def queue_reservation_confirmed(session: Session, reservation: Reservation):
-    return _queue_customer(
+def queue_reservation_confirmed(
+    session: Session,
+    reservation: Reservation,
+    payment: Payment,
+    outbox_ids: list[int] | None = None,
+):
+    customer_email = _queue_customer(
         session, reservation,
         event_type=EVENT_RESERVATION_CONFIRMED,
         idempotency_key=f"reservation:{reservation.id}:confirmed",
@@ -290,6 +360,28 @@ def queue_reservation_confirmed(session: Session, reservation: Reservation):
             footer="Confirmación de reserva enviada por AUREA Obras y Servicios.",
         ),
     )
+    admin_url = _admin_reservation_url(reservation)
+    internal_email = queue_transactional_email(
+        session,
+        event_type=EVENT_RESERVATION_CONFIRMED_INTERNAL,
+        idempotency_key=f"payment:{payment.id}:reservation_confirmed:internal",
+        recipient=internal_alert_recipient(),
+        subject="Nueva reserva confirmada y pagada · AUREA",
+        content=_build_email(
+            title="Nueva reserva confirmada y pagada",
+            preheader="Un pago de alquiler ha sido validado correctamente.",
+            rows=_confirmed_reservation_internal_rows(reservation),
+            text_lines=_confirmed_reservation_internal_text(reservation),
+            message="El pago ha sido validado correctamente y la reserva ya puede gestionarse desde Administración.",
+            footer="Alerta interna de AUREA Obras y Servicios.",
+            action_label="Gestionar reserva" if admin_url else None,
+            action_url=admin_url,
+        ),
+        reservation_id=reservation.id,
+    )
+    if outbox_ids is not None and internal_email is not None:
+        outbox_ids.append(internal_email.id)
+    return customer_email
 
 
 def queue_reservation_cancelled(session: Session, reservation: Reservation):

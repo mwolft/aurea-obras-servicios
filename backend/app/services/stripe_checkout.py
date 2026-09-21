@@ -386,5 +386,10 @@ def process_stripe_event(
         payment.provider_event_id = event_id
         payment.paid_at = current_time
         reservation.status = RESERVATION_STATUS_CONFIRMED
-        _record_outbox_id(outbox_ids, queue_reservation_confirmed(payment_session, reservation))
+        _record_outbox_id(
+            outbox_ids,
+            queue_reservation_confirmed(
+                payment_session, reservation, payment, outbox_ids=outbox_ids
+            ),
+        )
         return "confirmed"
