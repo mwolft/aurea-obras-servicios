@@ -30,10 +30,6 @@ export const metadata: Metadata = {
   },
 };
 
-function ServicesIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 48 48"><path d="M8 39h32M14 39V18l10-8 10 8v21M20 39V27h8v12M10 18h28" /></svg>;
-}
-
 function GardenIcon() {
   return <svg aria-hidden="true" viewBox="0 0 48 48"><path d="M24 40V24M24 30c-9 0-13-6-13-13 9 0 13 6 13 13ZM24 25c0-9 5-14 13-15 0 9-5 14-13 15ZM14 40h20" /></svg>;
 }
@@ -92,33 +88,62 @@ export default function Home() {
           </div>
           <div className={styles.serviceGrid}>
             <article className={`${styles.serviceCard} ${styles.gardenCard}`}>
+              <div aria-hidden="true" className={styles.gardenCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 66vw, 44rem"
+                  src="/jardinero-desbrozando-jardin-profesional.webp"
+                />
+              </div>
               <div className={styles.icon}><GardenIcon /></div>
               <h3>Jardinería</h3>
-              <p>Un área destacada de AUREA para preparar y cuidar espacios exteriores.</p>
+              <p>Desbroce, cuidado de jardines y trabajos para preparar y mantener espacios exteriores.</p>
               <Link className={styles.cardLink} href="/servicios/jardineria">
                 Ver servicios de jardinería <span aria-hidden="true">→</span>
               </Link>
             </article>
-            <article className={styles.serviceCard}>
-              <div className={styles.icon}><ServicesIcon /></div>
+            <article className={`${styles.serviceCard} ${styles.plumbingCard}`}>
+              <div aria-hidden="true" className={styles.plumbingCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 33vw, 22rem"
+                  src="/fontanero-reparando-tuberia-profesional.webp"
+                />
+              </div>
               <h3>Fontanería</h3>
-              <p>Una de las áreas de servicio de AUREA.</p>
+              <p>Reparaciones e instalaciones de fontanería para viviendas y otros espacios.</p>
               <Link className={styles.cardLink} href="/servicios/fontaneria">
                 Ver servicios de fontanería <span aria-hidden="true">→</span>
               </Link>
             </article>
-            <article className={styles.serviceCard}>
-              <div className={styles.icon}><ServicesIcon /></div>
+            <article className={`${styles.serviceCard} ${styles.electricityCard}`}>
+              <div aria-hidden="true" className={styles.electricityCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 33vw, 22rem"
+                  src="/electricista-trabajando-cuadro-electrico-vivienda.webp"
+                />
+              </div>
               <h3>Electricidad</h3>
-              <p>Una de las áreas de servicio de AUREA.</p>
+              <p>Reparaciones e instalaciones eléctricas para viviendas y otros espacios.</p>
               <Link className={styles.cardLink} href="/servicios/electricidad">
                 Ver servicios de electricidad <span aria-hidden="true">→</span>
               </Link>
             </article>
-            <article className={styles.serviceCard}>
-              <div className={styles.icon}><ServicesIcon /></div>
+            <article className={`${styles.serviceCard} ${styles.renovationCard}`}>
+              <div aria-hidden="true" className={styles.renovationCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 33vw, 22rem"
+                  src="/reforma-vivienda-interior.webp"
+                />
+              </div>
               <h3>Obras y reformas</h3>
-              <p>Una de las áreas de servicio de AUREA.</p>
+              <p>Obras y reformas adaptadas a las necesidades de cada proyecto y espacio.</p>
               <Link className={styles.cardLink} href="/servicios/obras-reformas">
                 Ver obras y reformas <span aria-hidden="true">→</span>
               </Link>
@@ -128,7 +153,16 @@ export default function Home() {
         </section>
 
         <section aria-labelledby="gardening-title" className={styles.gardeningFeature}>
-          <div aria-hidden="true" className={styles.gardeningVisual}><GardenIcon /></div>
+          <div className={styles.gardeningVisual}>
+            <div className={styles.gardeningImage}>
+              <Image
+                alt="Jardín cuidado en Ciudad Real"
+                fill
+                sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 900px) calc(100vw - 3rem), 32rem"
+                src="/jardineria-ciudad-real.webp"
+              />
+            </div>
+          </div>
           <div>
             <p className={styles.eyebrow}>Jardinería</p>
             <h2 id="gardening-title">Cuidar, despejar y preparar los espacios exteriores.</h2>

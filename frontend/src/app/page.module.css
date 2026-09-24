@@ -42,20 +42,51 @@
 .serviceCard p, .gardeningFeature p, .multiservice > p, .rental p, .contactCta p { color: var(--color-text-muted); line-height: 1.65; }
 .icon { display: grid; place-items: center; width: 3.25rem; aspect-ratio: 1; border-radius: var(--radius-md); color: var(--color-accent); background: #fff0e6; }
 .icon svg, .rentalIcon svg { width: 1.8rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.25; }
-.gardenCard { grid-column: span 2; border-color: var(--color-brand-blue); background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
+.gardenCard { position: relative; grid-column: span 2; overflow: hidden; border-color: var(--color-brand-blue); background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
+.gardenCard > :not(.gardenCardMedia) { position: relative; z-index: 1; }
+.gardenCardMedia { position: absolute; z-index: 0; inset: 0; overflow: hidden; }
+.gardenCardMedia::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(100deg, rgba(5,37,67,.96) 0%, rgba(5,37,67,.88) 46%, rgba(5,37,67,.62) 100%); content: ""; }
+.gardenCardMedia img { object-fit: cover; filter: brightness(.8) saturate(.82); transition: transform 520ms ease-out, filter 520ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .gardenCard:hover .gardenCardMedia img { filter: brightness(.88) saturate(.92); transform: scale(1.022); } .gardenCard:hover .gardenCardMedia::after { background: linear-gradient(100deg, rgba(5,37,67,.94) 0%, rgba(5,37,67,.84) 46%, rgba(5,37,67,.56) 100%); } }
+@media (prefers-reduced-motion: reduce) { .gardenCardMedia img { transition: none; } .gardenCard:hover .gardenCardMedia img { transform: none; } }
 .gardenCard h3 { font-size: clamp(1.7rem, 3vw, 2.35rem); color: var(--color-surface); }
 .gardenCard p { max-width: 34rem; color: #c8d5e3; font-size: 1.05rem; }
 .gardenCard .icon { color: var(--color-surface); background: var(--color-accent); }
+.plumbingCard { position: relative; overflow: hidden; }
+.plumbingCard > :not(.plumbingCardMedia) { position: relative; z-index: 1; }
+.plumbingCardMedia { position: absolute; z-index: 0; inset: 0; overflow: hidden; }
+.plumbingCardMedia::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.96) 40%, rgba(248,247,243,.78) 54%, rgba(248,247,243,.38) 72%, rgba(248,247,243,.12) 100%); content: ""; transition: background 500ms ease-out; }
+.plumbingCardMedia img { object-fit: cover; object-position: 58% center; filter: saturate(.9) brightness(.98); transition: transform 500ms ease-out, filter 500ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .plumbingCard:hover .plumbingCardMedia::after { background: linear-gradient(90deg, rgba(248,247,243,.97) 0%, rgba(248,247,243,.93) 36%, rgba(248,247,243,.66) 52%, rgba(248,247,243,.28) 70%, rgba(248,247,243,.06) 100%); } .plumbingCard:hover .plumbingCardMedia img { filter: saturate(1) brightness(1); transform: scale(1.018); } }
+@media (prefers-reduced-motion: reduce) { .plumbingCardMedia img { transition: none; } .plumbingCard:hover .plumbingCardMedia img { transform: none; } }
+.electricityCard { position: relative; overflow: hidden; }
+.electricityCard > :not(.electricityCardMedia) { position: relative; z-index: 1; }
+.electricityCardMedia { position: absolute; z-index: 0; inset: 0; overflow: hidden; }
+.electricityCardMedia::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.96) 38%, rgba(248,247,243,.75) 52%, rgba(248,247,243,.32) 72%, rgba(248,247,243,.1) 100%); content: ""; transition: background 500ms ease-out; }
+.electricityCardMedia img { object-fit: cover; object-position: 42% center; filter: saturate(.9) brightness(.98); transition: transform 500ms ease-out, filter 500ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .electricityCard:hover .electricityCardMedia::after { background: linear-gradient(90deg, rgba(248,247,243,.97) 0%, rgba(248,247,243,.93) 34%, rgba(248,247,243,.63) 50%, rgba(248,247,243,.23) 70%, rgba(248,247,243,.05) 100%); } .electricityCard:hover .electricityCardMedia img { filter: saturate(1) brightness(1); transform: scale(1.018); } }
+@media (prefers-reduced-motion: reduce) { .electricityCardMedia img { transition: none; } .electricityCard:hover .electricityCardMedia img { transform: none; } }
+.renovationCard { position: relative; overflow: hidden; }
+.renovationCard > :not(.renovationCardMedia) { position: relative; z-index: 1; }
+.renovationCardMedia { position: absolute; z-index: 0; inset: 0; overflow: hidden; }
+.renovationCardMedia::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.95) 38%, rgba(248,247,243,.77) 54%, rgba(248,247,243,.34) 72%, rgba(248,247,243,.1) 100%); content: ""; transition: background 500ms ease-out; }
+.renovationCardMedia img { object-fit: cover; object-position: 55% center; filter: saturate(.9) brightness(.98); transition: transform 500ms ease-out, filter 500ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .renovationCard:hover .renovationCardMedia::after { background: linear-gradient(90deg, rgba(248,247,243,.97) 0%, rgba(248,247,243,.92) 34%, rgba(248,247,243,.65) 52%, rgba(248,247,243,.24) 70%, rgba(248,247,243,.05) 100%); } .renovationCard:hover .renovationCardMedia img { filter: saturate(1) brightness(1); transform: scale(1.018); } }
+@media (prefers-reduced-motion: reduce) { .renovationCardMedia img { transition: none; } .renovationCard:hover .renovationCardMedia img { transform: none; } }
 .cardLink, .servicesAction { width: fit-content; color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: .3rem; }
 .gardenCard .cardLink { color: var(--color-surface); }
 .gardenCard .cardLink:hover { color: #ffb17d; }
 .cardLink { align-self: end; margin-top: auto; }
 .cardLink:hover, .servicesAction:hover { color: var(--color-accent-dark); }
 
-.gardeningFeature { grid-template-columns: minmax(14rem,.75fr) minmax(0,1.25fr); align-items: center; padding: clamp(2rem,5vw,4rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.gardeningFeature { grid-template-columns: minmax(0,.92fr) minmax(0,1.08fr); align-items: center; gap: clamp(2.5rem,7vw,6.5rem); padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .gardeningFeature h2 { max-width: 18ch; margin: var(--space-3) 0; }
-.gardeningVisual { display: grid; place-items: center; min-height: 14rem; border-radius: var(--radius-md); color: var(--color-accent); background: #fff0e6; }
-.gardeningVisual svg { width: min(55%, 9rem); fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.gardeningVisual { position: relative; z-index: 0; width: 100%; aspect-ratio: 3 / 2; overflow: visible; background: transparent; }
+.gardeningVisual::before { position: absolute; z-index: -1; inset: 1rem -0.75rem -1rem 1.25rem; background: var(--color-accent); clip-path: polygon(0 0, 95% 0, 84% 50%, 95% 100%, 0 100%); content: ""; }
+.gardeningImage { position: absolute; z-index: 1; inset: 0; overflow: hidden; clip-path: polygon(0 0, 95% 0, 84% 50%, 95% 100%, 0 100%); }
+.gardeningImage img { object-fit: cover; transition: transform 520ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .gardeningVisual:hover .gardeningImage img { transform: scale(1.015); } }
+@media (prefers-reduced-motion: reduce) { .gardeningImage img { transition: none; } .gardeningVisual:hover .gardeningImage img { transform: none; } }
 .gardeningFeature .primaryAction { margin-top: var(--space-6); }
 
 .editorial { display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: var(--space-6); padding: clamp(2rem,5vw,4rem); border-radius: var(--radius-lg); color: var(--color-surface); background: var(--color-brand-blue-dark); }
@@ -73,5 +104,5 @@
 .rentalIcon svg { width: 2.25rem; }
 .contactCta { grid-template-columns: minmax(0,1fr) auto; border-color: rgba(255,98,0,.35); }
 
-@media (max-width: 900px) { .gardeningFeature, .editorial, .multiservice { grid-template-columns: 1fr; } .editorial blockquote { max-width: 18ch; } .rental { grid-template-columns: auto minmax(0,1fr); } .rental .secondaryAction { grid-column: 2; justify-self: start; } }
-@media (max-width: 700px) { .main { width: min(100% - 2rem, var(--container-width)); gap: 4.5rem; padding-top: 4.5rem; } .hero { min-height: 36rem; } .hero::before { background: linear-gradient(180deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.93) 44%, rgba(248,247,243,.52) 66%, rgba(248,247,243,.12) 79%, transparent 88%); } .heroInner { width: min(100% - 2rem, var(--container-width)); padding-top: 1.25rem; padding-right: 0; padding-bottom: 2.5rem; padding-left: 0; } .heroImage { object-position: 58% center; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .hero .secondaryAction { border-color: var(--color-primary); color: var(--color-surface); background: var(--color-primary); } .hero .secondaryAction:hover, .hero .secondaryAction:focus-visible { color: var(--color-primary); background: transparent; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .cardLink { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0; } .gardeningFeature, .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .gardeningVisual { min-height: 11rem; } .contactCta .primaryAction { justify-self: start; } }
+@media (max-width: 900px) { .gardeningFeature, .editorial, .multiservice { grid-template-columns: 1fr; } .gardeningFeature { gap: clamp(2rem,6vw,3rem); } .editorial blockquote { max-width: 18ch; } .rental { grid-template-columns: auto minmax(0,1fr); } .rental .secondaryAction { grid-column: 2; justify-self: start; } }
+@media (max-width: 700px) { .main { width: min(100% - 2rem, var(--container-width)); gap: 4.5rem; padding-top: 4.5rem; } .hero { min-height: 36rem; } .hero::before { background: linear-gradient(180deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.93) 44%, rgba(248,247,243,.52) 66%, rgba(248,247,243,.12) 79%, transparent 88%); } .heroInner { width: min(100% - 2rem, var(--container-width)); padding-top: 1.25rem; padding-right: 0; padding-bottom: 2.5rem; padding-left: 0; } .heroImage { object-position: 58% center; } .hero h1 { font-size: clamp(2.8rem,14vw,4.35rem); } .heroActions { align-items: stretch; flex-direction: column; } .primaryAction, .secondaryAction { width: 100%; } .hero .secondaryAction { border-color: var(--color-primary); color: var(--color-surface); background: var(--color-primary); } .hero .secondaryAction:hover, .hero .secondaryAction:focus-visible { color: var(--color-primary); background: transparent; } .serviceGrid { grid-template-columns: 1fr; } .serviceCard { min-height: auto; } .gardenCard { grid-column: auto; } .cardLink { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0; } .editorial, .rental, .contactCta { grid-template-columns: 1fr; padding: 2rem 1.5rem; } .gardeningVisual::before { inset: 0.65rem -0.45rem -0.65rem 0.85rem; clip-path: polygon(0 0, 98% 0, 94% 50%, 98% 100%, 0 100%); } .gardeningImage { clip-path: polygon(0 0, 98% 0, 94% 50%, 98% 100%, 0 100%); } .rental .secondaryAction { grid-column: auto; justify-self: start; } .editorial blockquote { font-size: clamp(2rem,11vw,3.2rem); } .contactCta .primaryAction { justify-self: start; } }
