@@ -4,6 +4,14 @@ import os
 VALID_APP_ENVS = {"development", "production", "test"}
 
 
+def read_boolean_env(name: str, *, default: bool = False) -> bool:
+    """Read an explicit boolean feature flag without truthy-string surprises."""
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def normalize_database_url(database_url: str) -> str:
     """Use the installed psycopg v3 driver for standard PostgreSQL URLs."""
     if database_url.startswith("postgresql://"):
@@ -52,6 +60,9 @@ def load_config() -> dict[str, str | bool | None]:
         "STRIPE_WEBHOOK_SECRET": os.getenv("STRIPE_WEBHOOK_SECRET"),
     }
     paypal_values = {
+        # PayPal remains integrated for existing Orders and verified webhooks, but
+        # new customer checkouts are opt-in until the provider is re-enabled.
+        "PAYPAL_ENABLED": read_boolean_env("PAYPAL_ENABLED"),
         "PAYPAL_CLIENT_ID": os.getenv("PAYPAL_CLIENT_ID"),
         "PAYPAL_CLIENT_SECRET": os.getenv("PAYPAL_CLIENT_SECRET"),
         "PAYPAL_WEBHOOK_ID": os.getenv("PAYPAL_WEBHOOK_ID"),

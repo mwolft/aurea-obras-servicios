@@ -55,6 +55,10 @@ class ProductionConfigurationTestCase(unittest.TestCase):
         self.assertTrue(config["SESSION_COOKIE_SECURE"])
         self.assertEqual(config["SESSION_COOKIE_SAMESITE"], "Lax")
 
+    def test_paypal_checkout_is_disabled_unless_explicitly_enabled(self):
+        self.assertFalse(self.load_production_config()["PAYPAL_ENABLED"])
+        self.assertTrue(self.load_production_config(PAYPAL_ENABLED="true")["PAYPAL_ENABLED"])
+
     def test_production_session_cookie_is_secure_and_httponly(self):
         app = self.create_production_app()
         with app.app_context():

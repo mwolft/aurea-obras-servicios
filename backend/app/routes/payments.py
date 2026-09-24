@@ -20,6 +20,7 @@ from app.services.stripe_checkout import (
 from app.services.paypal_checkout import (
     PayPalCheckoutError,
     PayPalConfigurationError,
+    PayPalDisabledError,
     PayPalWebhookVerificationError,
     capture_paypal_order,
     get_paypal_order_status,
@@ -135,6 +136,8 @@ def start_paypal_payment(reservation_id: int):
         approval_url = start_or_recover_paypal_order(
             reservation_id, get_authenticated_user_id()
         )
+    except PayPalDisabledError:
+        return jsonify({"error": "PayPal no está disponible actualmente."}), 503
     except ReservationPaymentNotFoundError:
         return jsonify({"error": "Reservation not found."}), 404
     except ReservationPaymentExpiredError:

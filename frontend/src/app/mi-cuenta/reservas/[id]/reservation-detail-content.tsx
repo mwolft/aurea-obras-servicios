@@ -11,6 +11,7 @@ import {
   startStripeCheckout,
   type AccountReservationDetail,
 } from "@/lib/api";
+import { paypalPaymentsEnabled } from "@/lib/payment-providers";
 
 import styles from "./page.module.css";
 
@@ -109,14 +110,16 @@ function PaymentActions({ reservationId }: { reservationId: number }) {
         >
           {paymentStatus.kind === "loading" ? "Abriendo pago seguro…" : "Pagar con tarjeta"}
         </button>
-        <button
-          className={styles.paypalButton}
-          disabled={paymentStatus.kind === "loading"}
-          onClick={() => void startPayPalPayment()}
-          type="button"
-        >
-          Pagar con PayPal
-        </button>
+        {paypalPaymentsEnabled && (
+          <button
+            className={styles.paypalButton}
+            disabled={paymentStatus.kind === "loading"}
+            onClick={() => void startPayPalPayment()}
+            type="button"
+          >
+            Pagar con PayPal
+          </button>
+        )}
       </div>
       {paymentStatus.kind === "error" && (
         <p className={styles.paymentError} role="alert">{paymentStatus.message}</p>

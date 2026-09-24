@@ -10,6 +10,7 @@ import {
   startPayPalOrder,
   type ReservationResponse,
 } from "@/lib/api";
+import { paypalPaymentsEnabled } from "@/lib/payment-providers";
 
 import styles from "./availability-checker.module.css";
 import RentalDateRangePicker from "./rental-date-range-picker";
@@ -299,9 +300,11 @@ export default function AvailabilityChecker({
               <button className={styles.paymentButton} disabled={paymentStartStatus.kind === "loading"} onClick={() => void handleStripeCheckout(reservation.id)} type="button">
                 {paymentStartStatus.kind === "loading" ? "Abriendo pago seguro…" : "Pagar con tarjeta"}
               </button>
-              <button className={styles.paypalButton} disabled={paymentStartStatus.kind === "loading"} onClick={() => void handlePayPalCheckout(reservation.id)} type="button">
-                Pagar con PayPal
-              </button>
+              {paypalPaymentsEnabled && (
+                <button className={styles.paypalButton} disabled={paymentStartStatus.kind === "loading"} onClick={() => void handlePayPalCheckout(reservation.id)} type="button">
+                  Pagar con PayPal
+                </button>
+              )}
             </div>
             {paymentStartStatus.kind === "error" && (
               <p className={styles.formError} role="alert">{paymentStartStatus.message}</p>

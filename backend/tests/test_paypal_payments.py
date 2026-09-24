@@ -10,6 +10,7 @@ os.environ["PAYPAL_CLIENT_ID"] = "paypal-client-id"
 os.environ["PAYPAL_CLIENT_SECRET"] = "paypal-client-secret"
 os.environ["PAYPAL_WEBHOOK_ID"] = "paypal-webhook-id"
 os.environ["PAYPAL_ENVIRONMENT"] = "sandbox"
+os.environ["PAYPAL_ENABLED"] = "true"
 os.environ["STRIPE_SECRET_KEY"] = "sk_test_payment_switching"
 os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_payment_switching"
 
@@ -131,6 +132,32 @@ class PayPalPaymentApiTestCase(unittest.TestCase):
         payment = Payment.query.one()
         self.assertEqual(payment.amount, Decimal("42.75"))
         self.assertEqual(payment.currency, "EUR")
+
+    def test_disabled_paypal_rejects_new_orders_without_creating_financial_records(self):
+        tool = self.create_tool()
+        reservation = self.create_reservation(tool)
+        self.app.config["PAYPAL_ENABLED"] = False
+
+        with patch("app.services.paypal_checkout.requests.post") as post:
+            response = self.client.post(f"/api/reservations/{reservation.id}/payments/paypal")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json()["error"], "PayPal no está disponible actualmente.")
+        self.assertEqual(Payment.query.count(), 0)
+        post.assert_not_called()
+
+    def test_disabled_paypal_keeps_verified_webhooks_for_existing_orders(self):
+        tool = self.create_tool()
+        reservation = self.create_reservation(tool)
+        payment = self.create_payment(reservation)
+        self.app.config["PAYPAL_ENABLED"] = False
+
+        with patch("app.routes.payments.verify_paypal_webhook", return_value=True):
+            response = self.client.post("/api/payments/paypal/webhook", json=self.event(payment))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["status"], "confirmed")
+        self.assertEqual(db.session.get(Reservation, reservation.id).status, RESERVATION_STATUS_CONFIRMED)
 
     def test_cannot_start_for_missing_expired_or_cancelled_reservation(self):
         tool = self.create_tool()

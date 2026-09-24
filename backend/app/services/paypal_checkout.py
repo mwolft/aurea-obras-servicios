@@ -51,6 +51,10 @@ class PayPalConfigurationError(RuntimeError):
     """Raised when PayPal credentials or environment are incomplete."""
 
 
+class PayPalDisabledError(RuntimeError):
+    """Raised when new customer PayPal Orders are intentionally disabled."""
+
+
 class PayPalCheckoutError(RuntimeError):
     """Raised when PayPal cannot create, retrieve, or capture an Order."""
 
@@ -194,6 +198,9 @@ def start_or_recover_paypal_order(
     reservation_id: int, user_id: int | None, session: Session | None = None, now: datetime | None = None
 ) -> str:
     """Create at most one active PayPal Order for an eligible reservation."""
+    if not current_app.config.get("PAYPAL_ENABLED", False):
+        raise PayPalDisabledError("PayPal payments are currently disabled.")
+
     payment_session = db.session if session is None else session
     current_time = utc_now() if now is None else now
     with payment_session.begin():
