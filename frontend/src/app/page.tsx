@@ -30,10 +30,6 @@ export const metadata: Metadata = {
   },
 };
 
-function ServicesIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 48 48"><path d="M8 39h32M14 39V18l10-8 10 8v21M20 39V27h8v12M10 18h28" /></svg>;
-}
-
 function GardenIcon() {
   return <svg aria-hidden="true" viewBox="0 0 48 48"><path d="M24 40V24M24 30c-9 0-13-6-13-13 9 0 13 6 13 13ZM24 25c0-9 5-14 13-15 0 9-5 14-13 15ZM14 40h20" /></svg>;
 }
@@ -137,8 +133,15 @@ export default function Home() {
                 Ver servicios de electricidad <span aria-hidden="true">→</span>
               </Link>
             </article>
-            <article className={styles.serviceCard}>
-              <div className={styles.icon}><ServicesIcon /></div>
+            <article className={`${styles.serviceCard} ${styles.renovationCard}`}>
+              <div aria-hidden="true" className={styles.renovationCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 33vw, 22rem"
+                  src="/reforma-vivienda-interior.webp"
+                />
+              </div>
               <h3>Obras y reformas</h3>
               <p>Una de las áreas de servicio de AUREA.</p>
               <Link className={styles.cardLink} href="/servicios/obras-reformas">
