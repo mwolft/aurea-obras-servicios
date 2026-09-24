@@ -98,7 +98,7 @@ export default function Home() {
               </div>
               <div className={styles.icon}><GardenIcon /></div>
               <h3>Jardinería</h3>
-              <p>Un área destacada de AUREA para preparar y cuidar espacios exteriores.</p>
+              <p>Desbroce, cuidado de jardines y trabajos para preparar y mantener espacios exteriores.</p>
               <Link className={styles.cardLink} href="/servicios/jardineria">
                 Ver servicios de jardinería <span aria-hidden="true">→</span>
               </Link>
@@ -113,7 +113,7 @@ export default function Home() {
                 />
               </div>
               <h3>Fontanería</h3>
-              <p>Una de las áreas de servicio de AUREA.</p>
+              <p>Reparaciones e instalaciones de fontanería para viviendas y otros espacios.</p>
               <Link className={styles.cardLink} href="/servicios/fontaneria">
                 Ver servicios de fontanería <span aria-hidden="true">→</span>
               </Link>
@@ -128,7 +128,7 @@ export default function Home() {
                 />
               </div>
               <h3>Electricidad</h3>
-              <p>Una de las áreas de servicio de AUREA.</p>
+              <p>Reparaciones e instalaciones eléctricas para viviendas y otros espacios.</p>
               <Link className={styles.cardLink} href="/servicios/electricidad">
                 Ver servicios de electricidad <span aria-hidden="true">→</span>
               </Link>
@@ -143,7 +143,7 @@ export default function Home() {
                 />
               </div>
               <h3>Obras y reformas</h3>
-              <p>Una de las áreas de servicio de AUREA.</p>
+              <p>Obras y reformas adaptadas a las necesidades de cada proyecto y espacio.</p>
               <Link className={styles.cardLink} href="/servicios/obras-reformas">
                 Ver obras y reformas <span aria-hidden="true">→</span>
               </Link>
