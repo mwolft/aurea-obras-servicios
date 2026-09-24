@@ -129,12 +129,14 @@ export default function Home() {
 
         <section aria-labelledby="gardening-title" className={styles.gardeningFeature}>
           <div className={styles.gardeningVisual}>
-            <Image
-              alt="Jardín cuidado en Ciudad Real"
-              fill
-              sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 900px) calc(100vw - 3rem), 32rem"
-              src="/jardineria-ciudad-real.webp"
-            />
+            <div className={styles.gardeningImage}>
+              <Image
+                alt="Jardín cuidado en Ciudad Real"
+                fill
+                sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 900px) calc(100vw - 3rem), 32rem"
+                src="/jardineria-ciudad-real.webp"
+              />
+            </div>
           </div>
           <div>
             <p className={styles.eyebrow}>Jardinería</p>
