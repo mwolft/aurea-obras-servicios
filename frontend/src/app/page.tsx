@@ -132,7 +132,7 @@ export default function Home() {
             <Image
               alt="Jardín cuidado en Ciudad Real"
               fill
-              sizes="(max-width: 700px) calc(100vw - 5rem), (max-width: 900px) calc(100vw - 8rem), 30vw"
+              sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 900px) calc(100vw - 3rem), 32rem"
               src="/jardineria-ciudad-real.webp"
             />
           </div>
