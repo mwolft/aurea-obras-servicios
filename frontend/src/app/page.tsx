@@ -92,6 +92,14 @@ export default function Home() {
           </div>
           <div className={styles.serviceGrid}>
             <article className={`${styles.serviceCard} ${styles.gardenCard}`}>
+              <div aria-hidden="true" className={styles.gardenCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 66vw, 44rem"
+                  src="/jardinero-desbrozando-jardin-profesional.webp"
+                />
+              </div>
               <div className={styles.icon}><GardenIcon /></div>
               <h3>Jardinería</h3>
               <p>Un área destacada de AUREA para preparar y cuidar espacios exteriores.</p>

@@ -42,7 +42,13 @@
 .serviceCard p, .gardeningFeature p, .multiservice > p, .rental p, .contactCta p { color: var(--color-text-muted); line-height: 1.65; }
 .icon { display: grid; place-items: center; width: 3.25rem; aspect-ratio: 1; border-radius: var(--radius-md); color: var(--color-accent); background: #fff0e6; }
 .icon svg, .rentalIcon svg { width: 1.8rem; fill: none; stroke: currentcolor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.25; }
-.gardenCard { grid-column: span 2; border-color: var(--color-brand-blue); background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
+.gardenCard { position: relative; grid-column: span 2; overflow: hidden; border-color: var(--color-brand-blue); background: var(--color-brand-blue); box-shadow: var(--shadow-md); }
+.gardenCard > :not(.gardenCardMedia) { position: relative; z-index: 1; }
+.gardenCardMedia { position: absolute; z-index: 0; inset: 0; overflow: hidden; }
+.gardenCardMedia::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(100deg, rgba(5,37,67,.96) 0%, rgba(5,37,67,.88) 46%, rgba(5,37,67,.62) 100%); content: ""; }
+.gardenCardMedia img { object-fit: cover; filter: brightness(.8) saturate(.82); transition: transform 520ms ease-out, filter 520ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .gardenCard:hover .gardenCardMedia img { filter: brightness(.88) saturate(.92); transform: scale(1.022); } .gardenCard:hover .gardenCardMedia::after { background: linear-gradient(100deg, rgba(5,37,67,.94) 0%, rgba(5,37,67,.84) 46%, rgba(5,37,67,.56) 100%); } }
+@media (prefers-reduced-motion: reduce) { .gardenCardMedia img { transition: none; } .gardenCard:hover .gardenCardMedia img { transform: none; } }
 .gardenCard h3 { font-size: clamp(1.7rem, 3vw, 2.35rem); color: var(--color-surface); }
 .gardenCard p { max-width: 34rem; color: #c8d5e3; font-size: 1.05rem; }
 .gardenCard .icon { color: var(--color-surface); background: var(--color-accent); }
