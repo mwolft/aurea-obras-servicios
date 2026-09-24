@@ -113,7 +113,7 @@ export default function Home() {
                   alt=""
                   fill
                   sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 33vw, 22rem"
-                  src="/fontanero-reparando-tubería-profesional.webp"
+                  src="/fontanero-reparando-tuberia-profesional.webp"
                 />
               </div>
               <h3>Fontanería</h3>
