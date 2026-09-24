@@ -122,8 +122,15 @@ export default function Home() {
                 Ver servicios de fontanería <span aria-hidden="true">→</span>
               </Link>
             </article>
-            <article className={styles.serviceCard}>
-              <div className={styles.icon}><ServicesIcon /></div>
+            <article className={`${styles.serviceCard} ${styles.electricityCard}`}>
+              <div aria-hidden="true" className={styles.electricityCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 33vw, 22rem"
+                  src="/electricista-trabajando-cuadro-electrico-vivienda.webp"
+                />
+              </div>
               <h3>Electricidad</h3>
               <p>Una de las áreas de servicio de AUREA.</p>
               <Link className={styles.cardLink} href="/servicios/electricidad">

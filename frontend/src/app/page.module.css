@@ -59,6 +59,13 @@
 .plumbingCardMedia img { object-fit: cover; object-position: 58% center; filter: saturate(.9) brightness(.98); transition: transform 500ms ease-out, filter 500ms ease-out; }
 @media (hover: hover) and (pointer: fine) { .plumbingCard:hover .plumbingCardMedia::after { background: linear-gradient(90deg, rgba(248,247,243,.97) 0%, rgba(248,247,243,.93) 36%, rgba(248,247,243,.66) 52%, rgba(248,247,243,.28) 70%, rgba(248,247,243,.06) 100%); } .plumbingCard:hover .plumbingCardMedia img { filter: saturate(1) brightness(1); transform: scale(1.018); } }
 @media (prefers-reduced-motion: reduce) { .plumbingCardMedia img { transition: none; } .plumbingCard:hover .plumbingCardMedia img { transform: none; } }
+.electricityCard { position: relative; overflow: hidden; }
+.electricityCard > :not(.electricityCardMedia) { position: relative; z-index: 1; }
+.electricityCardMedia { position: absolute; z-index: 0; inset: 0; overflow: hidden; }
+.electricityCardMedia::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(248,247,243,.98) 0%, rgba(248,247,243,.96) 38%, rgba(248,247,243,.75) 52%, rgba(248,247,243,.32) 72%, rgba(248,247,243,.1) 100%); content: ""; transition: background 500ms ease-out; }
+.electricityCardMedia img { object-fit: cover; object-position: 42% center; filter: saturate(.9) brightness(.98); transition: transform 500ms ease-out, filter 500ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .electricityCard:hover .electricityCardMedia::after { background: linear-gradient(90deg, rgba(248,247,243,.97) 0%, rgba(248,247,243,.93) 34%, rgba(248,247,243,.63) 50%, rgba(248,247,243,.23) 70%, rgba(248,247,243,.05) 100%); } .electricityCard:hover .electricityCardMedia img { filter: saturate(1) brightness(1); transform: scale(1.018); } }
+@media (prefers-reduced-motion: reduce) { .electricityCardMedia img { transition: none; } .electricityCard:hover .electricityCardMedia img { transform: none; } }
 .cardLink, .servicesAction { width: fit-content; color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: .3rem; }
 .gardenCard .cardLink { color: var(--color-surface); }
 .gardenCard .cardLink:hover { color: #ffb17d; }
