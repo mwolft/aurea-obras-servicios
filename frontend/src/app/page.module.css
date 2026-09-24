@@ -52,6 +52,13 @@
 .gardenCard h3 { font-size: clamp(1.7rem, 3vw, 2.35rem); color: var(--color-surface); }
 .gardenCard p { max-width: 34rem; color: #c8d5e3; font-size: 1.05rem; }
 .gardenCard .icon { color: var(--color-surface); background: var(--color-accent); }
+.plumbingCard { position: relative; overflow: hidden; }
+.plumbingCard > :not(.plumbingCardMedia) { position: relative; z-index: 1; }
+.plumbingCardMedia { position: absolute; z-index: 0; inset: 0; overflow: hidden; }
+.plumbingCardMedia::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(105deg, rgba(248,247,243,.94) 0%, rgba(248,247,243,.86) 52%, rgba(248,247,243,.72) 100%); content: ""; }
+.plumbingCardMedia img { object-fit: cover; object-position: 66% center; filter: saturate(.82) brightness(.94); transition: transform 500ms ease-out, filter 500ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .plumbingCard:hover .plumbingCardMedia::after { background: linear-gradient(105deg, rgba(248,247,243,.91) 0%, rgba(248,247,243,.81) 52%, rgba(248,247,243,.64) 100%); } .plumbingCard:hover .plumbingCardMedia img { filter: saturate(.94) brightness(.98); transform: scale(1.02); } }
+@media (prefers-reduced-motion: reduce) { .plumbingCardMedia img { transition: none; } .plumbingCard:hover .plumbingCardMedia img { transform: none; } }
 .cardLink, .servicesAction { width: fit-content; color: var(--color-primary); font-weight: 800; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: .3rem; }
 .gardenCard .cardLink { color: var(--color-surface); }
 .gardenCard .cardLink:hover { color: #ffb17d; }

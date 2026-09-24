@@ -107,8 +107,15 @@ export default function Home() {
                 Ver servicios de jardinería <span aria-hidden="true">→</span>
               </Link>
             </article>
-            <article className={styles.serviceCard}>
-              <div className={styles.icon}><ServicesIcon /></div>
+            <article className={`${styles.serviceCard} ${styles.plumbingCard}`}>
+              <div aria-hidden="true" className={styles.plumbingCardMedia}>
+                <Image
+                  alt=""
+                  fill
+                  sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 1100px) 33vw, 22rem"
+                  src="/fontanero-reparando-tubería-profesional.webp"
+                />
+              </div>
               <h3>Fontanería</h3>
               <p>Una de las áreas de servicio de AUREA.</p>
               <Link className={styles.cardLink} href="/servicios/fontaneria">
