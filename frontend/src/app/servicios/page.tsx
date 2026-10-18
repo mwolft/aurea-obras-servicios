@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import styles from "./page.module.css";
@@ -31,40 +32,44 @@ export const metadata: Metadata = {
   alternates: { canonical: "/servicios" },
 };
 
-function GardenIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 48 48">
-      <path d="M24 41V25M24 31c-10 0-14-6-14-14 9 0 14 6 14 14ZM24 25c0-9 5-15 14-16 0 10-5 15-14 16ZM12 41h24" />
-    </svg>
-  );
-}
-
 export default function ServicesPage() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
         <section aria-labelledby="services-title" className={styles.hero}>
-          <p className={styles.eyebrow}>Servicios</p>
-          <h1 id="services-title">Servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real</h1>
-          <p className={styles.intro}>
-            AUREA reúne distintos servicios para viviendas, terrenos e instalaciones en Ciudad Real capital y provincia. Cuéntanos qué trabajo necesitas y valoraremos la mejor forma de ayudarte.
-          </p>
-          <div className={styles.heroActions}>
-            <Link className={styles.primaryAction} href="/contacto">
-              Cuéntanos qué necesitas
-            </Link>
-            <Link className={styles.secondaryAction} href="/servicios/jardineria">
-              Conocer Jardinería
-            </Link>
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>Servicios</p>
+            <h1 id="services-title">Servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real</h1>
+            <p className={styles.intro}>
+              AUREA reúne distintos servicios para viviendas, terrenos e instalaciones en Ciudad Real capital y provincia. Cuéntanos qué trabajo necesitas y valoraremos la mejor forma de ayudarte.
+            </p>
+            <div className={styles.heroActions}>
+              <Link className={styles.primaryAction} href="/contacto">
+                Cuéntanos qué necesitas
+              </Link>
+              <Link className={styles.secondaryAction} href="/servicios/jardineria">
+                Conocer Jardinería
+              </Link>
+            </div>
+          </div>
+          <div className={styles.heroVisual}>
+            <Image
+              alt="Trabajador realizando labores de jardinería"
+              className={styles.heroImage}
+              fill
+              priority
+              sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 920px) calc(100vw - 3rem), 30rem"
+              src="/trabajador-de-jardineria.webp"
+            />
           </div>
         </section>
 
         <section aria-labelledby="gardening-title" className={styles.featuredService}>
           <div className={styles.featuredCopy}>
-            <p className={styles.eyebrow}>Área destacada</p>
-            <h2 id="gardening-title">Jardinería</h2>
+            <p className={styles.eyebrow}>Jardinería</p>
+            <h2 id="gardening-title">Jardinería y mantenimiento de espacios exteriores</h2>
             <p>
-              Una línea protagonista de AUREA para el cuidado y la preparación de espacios exteriores, con atención a parcelas, zonas comunes y trabajos vinculados al jardín.
+              Trabajamos en parcelas, jardines y zonas exteriores de Ciudad Real, con actuaciones de desbroce, control de maleza y preparación de terrenos.
             </p>
             <ul className={styles.gardeningList}>
               <li>Desbroce de parcelas y maleza</li>
@@ -75,15 +80,14 @@ export default function ServicesPage() {
               Ver servicios de jardinería
             </Link>
           </div>
-          <div aria-hidden="true" className={styles.featuredVisual}>
-            <div className={styles.sun} />
-            <div className={styles.stem} />
-            <div className={`${styles.leaf} ${styles.leafLeft}`} />
-            <div className={`${styles.leaf} ${styles.leafRight}`} />
-            <div className={styles.ground} />
-            <div className={styles.gardenIcon}>
-              <GardenIcon />
-            </div>
+          <div className={styles.featuredVisual}>
+            <Image
+              alt="Jardín de urbanización con césped, árboles y zonas verdes"
+              className={styles.featuredImage}
+              fill
+              sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 850px) calc(100vw - 3rem), 32rem"
+              src="/jardin-soleado-con-sombrillas.webp"
+            />
           </div>
         </section>
 

@@ -59,6 +59,19 @@ class ProductionConfigurationTestCase(unittest.TestCase):
         self.assertFalse(self.load_production_config()["PAYPAL_ENABLED"])
         self.assertTrue(self.load_production_config(PAYPAL_ENABLED="true")["PAYPAL_ENABLED"])
 
+    def test_engine_checks_and_recycles_connections_for_neon(self):
+        app = self.create_production_app()
+
+        self.assertEqual(
+            app.config["SQLALCHEMY_ENGINE_OPTIONS"],
+            {"pool_pre_ping": True, "pool_recycle": 300},
+        )
+
+        with app.app_context():
+            self.assertTrue(db.engine.pool._pre_ping)
+            self.assertEqual(db.engine.pool._recycle, 300)
+            db.engine.dispose()
+
     def test_production_session_cookie_is_secure_and_httponly(self):
         app = self.create_production_app()
         with app.app_context():

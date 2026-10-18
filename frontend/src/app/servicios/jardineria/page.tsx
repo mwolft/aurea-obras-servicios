@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import styles from "./page.module.css";
@@ -75,13 +76,15 @@ export default function GardeningPage() {
               </div>
             </div>
 
-            <div aria-hidden="true" className={styles.heroVisual}>
-              <div className={styles.visualSun} />
-              <div className={styles.visualStem} />
-              <div className={`${styles.visualLeaf} ${styles.leafLeft}`} />
-              <div className={`${styles.visualLeaf} ${styles.leafRight}`} />
-              <div className={styles.visualGround} />
-              <span className={styles.visualLabel}>Jardinería AUREA</span>
+            <div className={styles.heroVisual}>
+              <Image
+                alt="Profesionales realizando labores de mantenimiento de jardín"
+                className={styles.heroImage}
+                fill
+                priority
+                sizes="(max-width: 800px) calc(100vw - 2rem), 32rem"
+                src="/mantenimiento-profesional-de-jardin-mediterraneo.webp"
+              />
             </div>
           </section>
         </div>

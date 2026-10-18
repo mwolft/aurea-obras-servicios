@@ -25,7 +25,13 @@
 }
 
 .hero {
-  max-width: 55rem;
+  max-width: none;
+}
+
+.heroCopy {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 41rem;
 }
 
 .hero h1,
@@ -38,9 +44,26 @@
 }
 
 .hero h1 {
-  max-width: 20ch;
+  max-width: 15ch;
   margin-top: var(--space-2);
-  font-size: clamp(3rem, 7vw, 6rem);
+  font-size: clamp(2.5rem, 4.2vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.052em;
+}
+
+.heroVisual {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.heroImage {
+  object-fit: cover;
+  object-position: 50% 62%;
+  transition: transform 550ms ease-out;
 }
 
 .intro,
@@ -58,6 +81,34 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-3);
+}
+
+@media (min-width: 921px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.2fr) minmax(22rem, 0.9fr);
+    gap: clamp(2rem, 4vw, 3rem);
+    align-items: start;
+  }
+
+  .heroVisual {
+    aspect-ratio: 4 / 5;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .heroVisual:hover .heroImage {
+    transform: scale(1.015);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroImage {
+    transition: none;
+  }
+
+  .heroVisual:hover .heroImage {
+    transform: none;
+  }
 }
 
 .primaryAction,
@@ -139,99 +190,31 @@
 
 .featuredVisual {
   position: relative;
-  min-height: 29rem;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
-  background: var(--color-brand-blue);
+  background: var(--color-background);
 }
 
-.featuredVisual::before,
-.featuredVisual::after {
-  position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  content: "";
+.featuredImage {
+  object-fit: cover;
+  object-position: 50% center;
+  transition: transform 500ms ease-out;
 }
 
-.featuredVisual::before {
-  top: 2rem;
-  left: 2rem;
-  width: 11rem;
-  aspect-ratio: 1;
+@media (hover: hover) and (pointer: fine) {
+  .featuredVisual:hover .featuredImage {
+    transform: scale(1.015);
+  }
 }
 
-.featuredVisual::after {
-  right: -5rem;
-  bottom: -5rem;
-  width: 20rem;
-  aspect-ratio: 1;
-}
+@media (prefers-reduced-motion: reduce) {
+  .featuredImage {
+    transition: none;
+  }
 
-.sun {
-  position: absolute;
-  top: 3.5rem;
-  right: 4rem;
-  width: 4rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--color-accent);
-}
-
-.stem,
-.ground {
-  position: absolute;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.stem {
-  bottom: 5.6rem;
-  left: 50%;
-  width: 0.4rem;
-  height: 12rem;
-}
-
-.ground {
-  right: 13%;
-  bottom: 5.3rem;
-  left: 13%;
-  height: 0.4rem;
-}
-
-.leaf {
-  position: absolute;
-  bottom: 12.8rem;
-  width: 7rem;
-  height: 3.7rem;
-  border: 0.4rem solid var(--color-accent);
-  border-radius: 100% 0 100% 0;
-}
-
-.leafLeft {
-  left: calc(50% - 6.75rem);
-  transform: rotate(-28deg);
-}
-
-.leafRight {
-  right: calc(50% - 6.75rem);
-  transform: scaleX(-1) rotate(-28deg);
-}
-
-.gardenIcon {
-  position: absolute;
-  right: 1.5rem;
-  bottom: 1.5rem;
-  width: 3rem;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.gardenIcon svg {
-  display: block;
-  width: 100%;
-  fill: none;
-  stroke: currentcolor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.2;
+  .featuredVisual:hover .featuredImage {
+    transform: none;
+  }
 }
 
 .serviceAreas {
@@ -332,7 +315,7 @@
   }
 
   .featuredVisual {
-    min-height: 20rem;
+    aspect-ratio: 4 / 3;
   }
 
   .areasGrid {
@@ -346,7 +329,8 @@
   }
 
   .hero h1 {
-    font-size: clamp(2.75rem, 11vw, 4rem);
+    font-size: clamp(2.5rem, 10vw, 3.5rem);
+    line-height: 1.04;
     overflow-wrap: anywhere;
   }
 
@@ -360,13 +344,7 @@
   }
 
   .featuredVisual {
-    min-height: 18rem;
-  }
-
-  .sun {
-    top: 2.5rem;
-    right: 2.5rem;
-    width: 3rem;
+    aspect-ratio: 4 / 3;
   }
 
   .areasGrid {

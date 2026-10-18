@@ -23,7 +23,7 @@ def normalize_database_url(database_url: str) -> str:
     return database_url
 
 
-def load_config() -> dict[str, str | bool | None]:
+def load_config() -> dict[str, object]:
     """Load the minimal runtime configuration from environment variables."""
     database_url = os.getenv("DATABASE_URL")
     secret_key = os.getenv("SECRET_KEY")
@@ -92,6 +92,13 @@ def load_config() -> dict[str, str | bool | None]:
         "DATABASE_URL": database_url,
         "SQLALCHEMY_DATABASE_URI": normalize_database_url(database_url),
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        # Neon can close idle TLS connections while a long-lived Render worker
+        # still has them in SQLAlchemy's pool. Check a connection before it is
+        # reused and recycle it at Neon's default five-minute idle window.
+        "SQLALCHEMY_ENGINE_OPTIONS": {
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
+        },
         "SECRET_KEY": secret_key,
         "DEBUG": app_env == "development",
         "SESSION_COOKIE_NAME": "aurea_session",
