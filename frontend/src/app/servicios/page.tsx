@@ -32,14 +32,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/servicios" },
 };
 
-function GardenIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 48 48">
-      <path d="M24 41V25M24 31c-10 0-14-6-14-14 9 0 14 6 14 14ZM24 25c0-9 5-15 14-16 0 10-5 15-14 16ZM12 41h24" />
-    </svg>
-  );
-}
-
 export default function ServicesPage() {
   return (
     <div className={styles.page}>
@@ -74,10 +66,10 @@ export default function ServicesPage() {
 
         <section aria-labelledby="gardening-title" className={styles.featuredService}>
           <div className={styles.featuredCopy}>
-            <p className={styles.eyebrow}>Área destacada</p>
-            <h2 id="gardening-title">Jardinería</h2>
+            <p className={styles.eyebrow}>Jardinería</p>
+            <h2 id="gardening-title">Jardinería y mantenimiento de espacios exteriores</h2>
             <p>
-              Una línea protagonista de AUREA para el cuidado y la preparación de espacios exteriores, con atención a parcelas, zonas comunes y trabajos vinculados al jardín.
+              Trabajamos en parcelas, jardines y zonas exteriores de Ciudad Real, con actuaciones de desbroce, control de maleza y preparación de terrenos.
             </p>
             <ul className={styles.gardeningList}>
               <li>Desbroce de parcelas y maleza</li>
@@ -88,15 +80,14 @@ export default function ServicesPage() {
               Ver servicios de jardinería
             </Link>
           </div>
-          <div aria-hidden="true" className={styles.featuredVisual}>
-            <div className={styles.sun} />
-            <div className={styles.stem} />
-            <div className={`${styles.leaf} ${styles.leafLeft}`} />
-            <div className={`${styles.leaf} ${styles.leafRight}`} />
-            <div className={styles.ground} />
-            <div className={styles.gardenIcon}>
-              <GardenIcon />
-            </div>
+          <div className={styles.featuredVisual}>
+            <Image
+              alt="Jardín de urbanización con césped, árboles y zonas verdes"
+              className={styles.featuredImage}
+              fill
+              sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 850px) calc(100vw - 3rem), 32rem"
+              src="/jardin-soleado-con-sombrillas.webp"
+            />
           </div>
         </section>
 
