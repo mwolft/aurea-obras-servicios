@@ -131,95 +131,32 @@
 
 .heroVisual {
   position: relative;
-  min-height: 28rem;
+  width: 100%;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   border-radius: var(--radius-lg);
-  background: var(--color-brand-blue);
-  box-shadow: var(--shadow-md);
 }
 
-.heroVisual::before,
-.heroVisual::after {
-  position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 50%;
-  content: "";
+.heroImage {
+  object-fit: cover;
+  object-position: center;
+  transition: transform 520ms ease-out;
 }
 
-.heroVisual::before {
-  top: 2rem;
-  left: 2rem;
-  width: 11rem;
-  aspect-ratio: 1;
+@media (hover: hover) and (pointer: fine) {
+  .heroVisual:hover .heroImage {
+    transform: scale(1.015);
+  }
 }
 
-.heroVisual::after {
-  right: -5rem;
-  bottom: -5rem;
-  width: 19rem;
-  aspect-ratio: 1;
-}
+@media (prefers-reduced-motion: reduce) {
+  .heroImage {
+    transition: none;
+  }
 
-.visualSun {
-  position: absolute;
-  top: 3.5rem;
-  right: 4rem;
-  width: 4rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--color-accent);
-}
-
-.visualStem,
-.visualGround {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.visualStem {
-  bottom: 5.5rem;
-  left: 50%;
-  width: 0.4rem;
-  height: 12rem;
-  border-radius: 999px;
-}
-
-.visualGround {
-  right: 13%;
-  bottom: 5.2rem;
-  left: 13%;
-  height: 0.4rem;
-  border-radius: 999px;
-}
-
-.visualLeaf {
-  position: absolute;
-  bottom: 12.8rem;
-  width: 7rem;
-  height: 3.7rem;
-  border: 0.4rem solid var(--color-accent);
-  border-radius: 100% 0 100% 0;
-}
-
-.leafLeft {
-  left: calc(50% - 6.75rem);
-  transform: rotate(-28deg);
-}
-
-.leafRight {
-  right: calc(50% - 6.75rem);
-  transform: scaleX(-1) rotate(-28deg);
-}
-
-.visualLabel {
-  position: absolute;
-  bottom: 1.5rem;
-  left: 1.5rem;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  .heroVisual:hover .heroImage {
+    transform: none;
+  }
 }
 
 .presentation,
@@ -417,7 +354,7 @@
   }
 
   .heroVisual {
-    min-height: 22rem;
+    aspect-ratio: 4 / 3;
   }
 
   .finalCta {
@@ -446,16 +383,6 @@
   .secondaryAction,
   .finalAction {
     width: 100%;
-  }
-
-  .heroVisual {
-    min-height: 19rem;
-  }
-
-  .visualSun {
-    top: 2.5rem;
-    right: 2.5rem;
-    width: 3rem;
   }
 
   .presentation,
