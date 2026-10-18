@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import styles from "./page.module.css";
@@ -44,18 +45,30 @@ export default function ServicesPage() {
     <div className={styles.page}>
       <main className={styles.main}>
         <section aria-labelledby="services-title" className={styles.hero}>
-          <p className={styles.eyebrow}>Servicios</p>
-          <h1 id="services-title">Servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real</h1>
-          <p className={styles.intro}>
-            AUREA reúne distintos servicios para viviendas, terrenos e instalaciones en Ciudad Real capital y provincia. Cuéntanos qué trabajo necesitas y valoraremos la mejor forma de ayudarte.
-          </p>
-          <div className={styles.heroActions}>
-            <Link className={styles.primaryAction} href="/contacto">
-              Cuéntanos qué necesitas
-            </Link>
-            <Link className={styles.secondaryAction} href="/servicios/jardineria">
-              Conocer Jardinería
-            </Link>
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>Servicios</p>
+            <h1 id="services-title">Servicios de jardinería, fontanería, electricidad y reformas en Ciudad Real</h1>
+            <p className={styles.intro}>
+              AUREA reúne distintos servicios para viviendas, terrenos e instalaciones en Ciudad Real capital y provincia. Cuéntanos qué trabajo necesitas y valoraremos la mejor forma de ayudarte.
+            </p>
+            <div className={styles.heroActions}>
+              <Link className={styles.primaryAction} href="/contacto">
+                Cuéntanos qué necesitas
+              </Link>
+              <Link className={styles.secondaryAction} href="/servicios/jardineria">
+                Conocer Jardinería
+              </Link>
+            </div>
+          </div>
+          <div className={styles.heroVisual}>
+            <Image
+              alt="Trabajador realizando labores de jardinería"
+              className={styles.heroImage}
+              fill
+              priority
+              sizes="(max-width: 700px) calc(100vw - 2rem), (max-width: 920px) calc(100vw - 3rem), 30rem"
+              src="/trabajador-de-jardineria.webp"
+            />
           </div>
         </section>
 

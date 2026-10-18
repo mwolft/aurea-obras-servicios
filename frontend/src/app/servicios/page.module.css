@@ -25,7 +25,13 @@
 }
 
 .hero {
-  max-width: 55rem;
+  max-width: none;
+}
+
+.heroCopy {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 41rem;
 }
 
 .hero h1,
@@ -38,9 +44,24 @@
 }
 
 .hero h1 {
-  max-width: 20ch;
+  max-width: 15ch;
   margin-top: var(--space-2);
-  font-size: clamp(3rem, 7vw, 6rem);
+  font-size: clamp(2.75rem, 5vw, 4.75rem);
+}
+
+.heroVisual {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.heroImage {
+  object-fit: cover;
+  object-position: 50% 62%;
+  transition: transform 550ms ease-out;
 }
 
 .intro,
@@ -58,6 +79,34 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-3);
+}
+
+@media (min-width: 921px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.2fr) minmax(22rem, 0.9fr);
+    gap: clamp(2rem, 4vw, 3rem);
+    align-items: center;
+  }
+
+  .heroVisual {
+    aspect-ratio: 4 / 5;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .heroVisual:hover .heroImage {
+    transform: scale(1.015);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroImage {
+    transition: none;
+  }
+
+  .heroVisual:hover .heroImage {
+    transform: none;
+  }
 }
 
 .primaryAction,
